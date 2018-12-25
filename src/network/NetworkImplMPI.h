@@ -63,10 +63,6 @@ private:
 		const Task* tsk;
 //		boost::mpi::request req;
 		MPI_Request req;
-#ifdef ZT_TIME_MEASURE
-		double stime;
-#endif // ZT_TIME_MEASURE
-
 	};
 
 	std::deque<TaskSendMPI> unconfirmed_send_buffer;
