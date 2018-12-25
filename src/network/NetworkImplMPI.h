@@ -43,6 +43,10 @@ public:
 	int id() const;
 	int size() const;
 
+	void startMeasureBW();
+	void finishMeasureBW();
+	std::vector<double> getBWUsage() const;
+
 	// Check unfinished send buffer and remove those have succeeded, return left task number.
 	size_t collectFinishedSend();
 	// Get info of the unfinished sending tasks (do not update it)
@@ -54,6 +58,7 @@ public:
 private:
 	NetworkImplMPI(int argc, char* argv[]);
 	static NetworkImplMPI* self;
+	void updateBWUsage(const size_t bytes, double t_s, double t_e);
 private:
 	MPI_Comm world;
 	int id_;
@@ -63,10 +68,14 @@ private:
 		const Task* tsk;
 //		boost::mpi::request req;
 		MPI_Request req;
+		double stime;
 	};
 
 	std::deque<TaskSendMPI> unconfirmed_send_buffer;
 	mutable std::recursive_mutex us_lock;
+
+	double t_bw_start; // start time of measuring bandwidth usage
+	std::vector<double> bwUsage;
 };
 
 inline int NetworkImplMPI::id() const{
