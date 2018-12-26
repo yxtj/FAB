@@ -5,6 +5,7 @@
  *      Author: tzhou
  */
 #include "NetworkImplMPI.h"
+#include <chrono>
 
 using namespace std;
 //namespace mpi = boost::mpi;
@@ -31,6 +32,8 @@ NetworkImplMPI::NetworkImplMPI(int argc, char* argv[]): id_(-1),size_(0){
 
 	MPI_Comm_rank(world, &id_);
 	MPI_Comm_size(world, &size_);
+	
+	measuring = false;
 }
 
 NetworkImplMPI* NetworkImplMPI::self = nullptr;
@@ -93,6 +96,7 @@ void NetworkImplMPI::send(const Task* t){
 	TaskSendMPI tm;
 	tm.tsk = t;
 	MPI_Isend(const_cast<char*>(t->payload.data()), t->payload.size(), MPI_BYTE, t->src_dst, t->type, world, &tm.req);
+	tm.stime = now();
 	unconfirmed_send_buffer.push_back(tm);
 }
 
@@ -126,6 +130,8 @@ size_t NetworkImplMPI::collectFinishedSend(){
 		MPI_Test(&it->req, &flag, &st);
 		//if(it->req.Test()){
 		if(flag){
+			if(measuring)
+				updateBWUsage(it->tsk->payload.size(), it->stime, now());
 			delete it->tsk;
 			it=unconfirmed_send_buffer.erase(it);
 		}else
@@ -152,4 +158,44 @@ size_t NetworkImplMPI::unconfirmedBytes() const{
 		res+=ts.tsk->payload.size();
 	}
 	return res;
+}
+
+void NetworkImplMPI::startMeasureBW(const int estimated_seconds){
+	measuring = true;
+	measure_start_time = now();
+	if(estimated_seconds > 0)
+		bwUsage.resize(estimated_seconds + 5);
+}
+void NetworkImplMPI::finishMeasureBW(){
+	measuring = true;
+}
+std::vector<double> NetworkImplMPI::getBWUsage() const{
+	return bwUsage;
+}
+
+void NetworkImplMPI::updateBWUsage(const size_t bytes, uint32_t t_s, uint32_t t_e){
+	int idx_s = time2index(t_s);
+	int idx_e = time2index(t_e);
+	if(bwUsage.size() <= idx_e){
+		bwUsage.resize(idx_e * 2);
+	}
+	if(idx_s == idx_e){
+		bwUsage[idx_s] += bytes;
+	} else{
+		double r = bytes / (idx_e - idx_s);
+		for(int i = idx_s; i <= idx_e; ++i)
+			bwUsage[i] += r;
+	}
+}
+
+uint32_t NetworkImplMPI::now() const
+{
+	auto d = chrono::system_clock::now().time_since_epoch();
+	return chrono::duration_cast<chrono::duration<uint32_t>>(d).count();
+}
+
+uint32_t NetworkImplMPI::time2index(const uint32_t t) const
+{
+	auto p = t - measure_start_time;
+	return p >= 0 ? p : 0;
 }

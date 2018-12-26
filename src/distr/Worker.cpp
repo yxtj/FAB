@@ -67,6 +67,7 @@ void Worker::run()
 	sendOnline();
 	DLOG(INFO) << "waiting worker list";
 	waitWorkerList();
+	net->startMeasureBW(opt->tcTime);
 	DLOG(INFO) << "send x length";
 	sendXLength();
 	DLOG(INFO) << "waiting init parameter";
@@ -94,7 +95,9 @@ void Worker::run()
 	}
 
 	DLOG(INFO) << "finish training";
+	net->finishMeasureBW();
 	sendClosed();
+	dumpBwUsage(net->getBWUsage());
 	stopMsgLoop();
 }
 

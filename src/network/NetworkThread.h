@@ -56,6 +56,10 @@ public:
 	int id() const;
 	int size() const;
 
+	void startMeasureBW(const int estimated_seconds);
+	void finishMeasureBW();
+	std::vector<double> getBWUsage() const;
+
 	static NetworkThread *GetInstance();
 	static void Init(int argc, char* argv[]);
 	// finish current tasks and terminate
@@ -88,7 +92,6 @@ private:
 	// Directly (Physically) send the request.
 	int sendDirect(Task *req);
 	int broadcast(Task *req);
-
 
 	bool checkReceiveQueue(std::string& data, TaskBase& info);
 

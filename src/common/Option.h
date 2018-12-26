@@ -30,6 +30,9 @@ struct Option{
 	double tcTime; // maximum training time
 	double tcDiff; // minimum improvement cross iterations
 
+	// directory of bandwidth usage log
+	std::string dirBwUsage;
+
 	bool parse(int argc, char* argv[], const size_t nWorker);
 	void showUsage() const;
 

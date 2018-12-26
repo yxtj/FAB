@@ -66,6 +66,8 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 			arvTime = stod(argv[idx++]);
 		if(argc > optIdx++)
 			logIter = stoiKMG(argv[idx++]);
+		if(argc > optIdx++)
+			dirBwUsage = argv[idx++];
 	} catch(exception& e){
 		cerr << "Cannot parse the " << idx << "-th parameter: " << argv[idx] << endl;
 		cerr << "Error message: " << e.what() << endl;
@@ -87,12 +89,13 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 
 void Option::showUsage() const {
 	cout << "usage: <mode> <alg> <param> <data-file> <output-file> <id-skip> <id-y> <normalize>"
-		" <lrate> <batch-size> <term-iter> <term-time> [arv-iter=1000] [arv-time=0.5] [log-iter=1000]" << endl;
+		" <lrate> <batch-size> <term-iter> <term-time> [arv-iter=1000] [arv-time=0.5] [log-iter=1000] [bandwdith-dir]" << endl;
 	//cout << "usage: <algorithm> <mode> <data-file> <output-file> <id-skip> <id-y> <nw> <batch-size> <term-iter> <term-time>" << endl;
 	cout << "  <mode>: sync, async, fsb, fab"
 		<< "  <alg>: algorithm name. Support: lr, mlp.\n"
 		<< "  <param>: parameter of the algorithm, usually the shape of the algorithm.\n"
-		<< "  <id-skip>: a list separated with space or comma."
+		<< "  <id-skip>: a list separated with space or comma.\n"
+		<< "  [bandwidth-dir]: the directory of writing bandwidth usage log."
 		<< endl;
 }
 

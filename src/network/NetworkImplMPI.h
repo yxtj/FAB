@@ -43,7 +43,7 @@ public:
 	int id() const;
 	int size() const;
 
-	void startMeasureBW();
+	void startMeasureBW(const int estimated_seconds);
 	void finishMeasureBW();
 	std::vector<double> getBWUsage() const;
 
@@ -58,7 +58,10 @@ public:
 private:
 	NetworkImplMPI(int argc, char* argv[]);
 	static NetworkImplMPI* self;
-	void updateBWUsage(const size_t bytes, double t_s, double t_e);
+
+	void updateBWUsage(const size_t bytes, uint32_t t_s, uint32_t t_e);
+	uint32_t now() const;
+	uint32_t time2index(const uint32_t t) const;
 private:
 	MPI_Comm world;
 	int id_;
@@ -68,13 +71,15 @@ private:
 		const Task* tsk;
 //		boost::mpi::request req;
 		MPI_Request req;
-		double stime;
+		//double stime;
+		uint32_t stime;
 	};
 
 	std::deque<TaskSendMPI> unconfirmed_send_buffer;
 	mutable std::recursive_mutex us_lock;
 
-	double t_bw_start; // start time of measuring bandwidth usage
+	bool measuring;
+	uint32_t measure_start_time;
 	std::vector<double> bwUsage;
 };
 

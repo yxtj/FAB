@@ -56,6 +56,7 @@ void Master::run()
 	suOnline.wait();
 	LOG(INFO) << "Send worker list";
 	broadcastWorkerList();
+	net->startMeasureBW(opt->tcTime);
 	LOG(INFO)<<"Waiting x-length to initialize parameters";
 	initializeParameter();
 	LOG(INFO) << "Got x-length = " << nx;
@@ -85,9 +86,11 @@ void Master::run()
 	LOG(INFO) << "Finish training. Time cost: " << t << ". Iterations: " << iter
 		<< ". Average iteration time: " << t / iter;
 
+	net->finishMeasureBW();
 	broadcastSignalTerminate();
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaTail));
 	foutput.close();
+	dumpBwUsage(net->getBWUsage());
 	DLOG(INFO) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
 	suAllClosed.wait();
 	stopMsgLoop();

@@ -33,6 +33,8 @@ public:
 	void msgResumePush();
 	void msgResumePop();
 
+	void dumpBwUsage(const std::vector<double>& usage);
+
 // helpers:
 protected:
 	void sleep();

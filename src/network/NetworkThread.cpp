@@ -60,6 +60,17 @@ int64_t NetworkThread::unpicked_bytes() const{
 	return t;
 }
 
+void NetworkThread::startMeasureBW(const int estimated_seconds){
+	net->startMeasureBW(estimated_seconds);
+}
+void NetworkThread::finishMeasureBW(){
+	net->finishMeasureBW();
+}
+std::vector<double> NetworkThread::getBWUsage() const{
+	return net->getBWUsage();
+}
+
+
 void NetworkThread::Run(){
 	TaskHeader hdr;
 	unsigned cnt_idle_loop=0;

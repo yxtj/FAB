@@ -2,6 +2,8 @@
 #include "network/NetworkThread.h"
 #include "message/MType.h"
 #include "logging/logging.h"
+#include "common/Option.h"
+#include <fstream>
 using namespace std;
 
 Runner::Runner()
@@ -65,6 +67,17 @@ void Runner::msgResumePush(){
 }
 void Runner::msgResumePop(){
 	msg_do_push = true;
+}
+
+void Runner::dumpBwUsage(const std::vector<double>& usage)
+{
+	if(opt->dirBwUsage.empty())
+		return;
+	ofstream fout(opt->dirBwUsage + "/bw-" + logName + ".txt");
+	for(size_t i = 0; i < usage.size(); ++i){
+		fout << usage[i] << ",";
+	}
+	fout.close();
 }
 
 // register helpers
