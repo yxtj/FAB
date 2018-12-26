@@ -167,7 +167,11 @@ void NetworkImplMPI::startMeasureBW(const int estimated_seconds){
 		bwUsage.resize(estimated_seconds + 5);
 }
 void NetworkImplMPI::finishMeasureBW(){
-	measuring = true;
+	measuring = false;
+	int last = time2index(now());
+	if(last+1 < bwUsage.size()){
+		bwUsage.resize(last + 1);
+	}
 }
 std::vector<double> NetworkImplMPI::getBWUsage() const{
 	return bwUsage;
