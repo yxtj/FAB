@@ -4,6 +4,7 @@ set(HEADERS
 )
 set(SOURCES
 	Option.cpp
+	Statistics.cpp
 )
 add_library(common
 	${HEADERS} ${SOURCES})

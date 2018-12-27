@@ -3,6 +3,7 @@
 #include "network/NetworkThread.h"
 #include "message/MType.h"
 #include "logging/logging.h"
+#include "util/Timer.h"
 
 using namespace std;
 
@@ -95,6 +96,7 @@ void Worker::run()
 
 	DLOG(INFO) << "finish training";
 	sendClosed();
+	showStat();
 	stopMsgLoop();
 }
 
@@ -117,9 +119,12 @@ void Worker::syncProcess()
 			continue;
 		}
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
+		Timer tmr;
 		bfDelta = trainer.batchDelta(dataPointer, localBatchSize, true);
 		updatePointer(localBatchSize);
+		stat.t_dlt_calc+= tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  send delta";
+		tmr.restart();
 		sendDelta(bfDelta);
 		if(exitTrain==true){
 			break;
@@ -129,7 +134,10 @@ void Worker::syncProcess()
 		if(exitTrain==true){
 			break;
 		}
+		stat.t_par_wait += tmr.elapseSd();
+		tmr.restart();
 		applyBufferParameter();
+		stat.t_par_calc += tmr.elapseSd();
 		++iter;
 	}
 }
@@ -147,9 +155,12 @@ void Worker::asyncProcess()
 			continue;
 		}
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
+		Timer tmr;
 		bfDelta = trainer.batchDelta(dataPointer, localBatchSize, true);
 		updatePointer(localBatchSize);
+		stat.t_dlt_calc += tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  send delta";
+		tmr.restart();
 		sendDelta(bfDelta);
 		if(exitTrain==true){
 			break;
@@ -159,7 +170,10 @@ void Worker::asyncProcess()
 		if(exitTrain==true){
 			break;
 		}
+		stat.t_par_wait += tmr.elapseSd();
+		tmr.restart();
 		applyBufferParameter();
+		stat.t_par_calc += tmr.elapseSd();
 		++iter;
 	}
 }
@@ -177,12 +191,15 @@ void Worker::fsbProcess()
 			continue;
 		}
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
+		Timer tmr;
 		size_t cnt;
 		// try to use localBatchSize data-points, the actual usage is returned via cnt 
 		tie(cnt, bfDelta) = trainer.batchDelta(allowTrain, dataPointer, localBatchSize, true);
-		VLOG_EVERY_N(ln, 2) << "  calculate delta with " << cnt << " data points";
 		updatePointer(cnt);
+		stat.t_dlt_calc += tmr.elapseSd();
+		VLOG_EVERY_N(ln, 2) << "  calculate delta with " << cnt << " data points";
 		VLOG_EVERY_N(ln, 2) << "  send delta";
+		tmr.restart();
 		sendDelta(bfDelta);
 		if(exitTrain==true){
 			break;
@@ -192,7 +209,10 @@ void Worker::fsbProcess()
 		if(exitTrain==true){
 			break;
 		}
+		stat.t_par_wait += tmr.elapseSd();
+		tmr.restart();
 		applyBufferParameter();
+		stat.t_par_calc += tmr.elapseSd();
 		++iter;
 	}
 }
@@ -214,22 +234,28 @@ void Worker::fabProcess()
 		//}
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";// << ". msg waiting: " << driver.queSize();
 		size_t left = localBatchSize;
+		Timer tmr;
 		bfDelta.assign(n, 0.0);
 		while(!exitTrain && left != 0){
+			tmr.restart();
 			size_t cnt = 0;
 			vector<double> tmp;
 			resumeTrain();
 			tie(cnt, tmp) = trainer.batchDelta(allowTrain, dataPointer, left, false);
 			left -= cnt;
 			updatePointer(cnt);
-			applyBufferParameter();
 			//DVLOG(3) <<"tmp: "<< tmp;
 			VLOG_EVERY_N(ln, 2) << "  calculate delta with " << cnt << " data points, left: " << left;
-			if(cnt == 0)
-				continue;
-			for(size_t i = 0; i < n; ++i)
-				bfDelta[i] += tmp[i];
+			if(cnt != 0){
+				for(size_t i = 0; i < n; ++i)
+					bfDelta[i] += tmp[i];
+			}
+			stat.t_dlt_calc += tmr.elapseSd();
+			tmr.restart();
+			applyBufferParameter();
+			stat.t_par_calc += tmr.elapseSd();
 		}
+		tmr.restart();
 		for(size_t i = 0; i < n; ++i)
 			bfDelta[i] *= factor;
 		VLOG_EVERY_N(ln, 2) << "  send delta";
@@ -239,6 +265,7 @@ void Worker::fabProcess()
 		// OR: use staleness tolerance logic in sendDelta
 		if(opt->fabWait)
 			waitParameter();
+		stat.t_par_wait += tmr.elapseSd();
 		++iter;
 	}
 }
@@ -294,6 +321,7 @@ void Worker::sendDelta(std::vector<double>& delta)
 	DVLOG(3) << "send delta: " << delta;
 	//DVLOG_EVERY_N(ln, 1) << "n-send: " << iter << " un-cmt msg: " << net->pending_pkgs() << " cmt msg: " << net->stat_send_pkg;
 	net->send(masterNID, MType::DDelta, delta);
+	++stat.n_dlt_send;
 }
 
 void Worker::bufferParameter(Parameter & p)
@@ -329,6 +357,7 @@ void Worker::fetchParmeter()
 {
 	net->send(masterNID, MType::DRParameter, localID);
 	suParam.wait();
+	++stat.n_dlt_recv;
 }
 
 void Worker::pauseTrain()
@@ -374,6 +403,7 @@ void Worker::handleParameter(const std::string & data, const RPCInfo & info)
 	bufferParameter(p);
 	suParam.notify();
 	//sendReply(info);
+	++stat.n_par_recv;
 }
 
 void Worker::handleParameterFsb(const std::string & data, const RPCInfo & info)
@@ -386,6 +416,7 @@ void Worker::handleParameterFsb(const std::string & data, const RPCInfo & info)
 	//sendReply(info);
 	// continue training
 	resumeTrain();
+	++stat.n_par_recv;
 }
 
 void Worker::handleParameterFab(const std::string & data, const RPCInfo & info)
@@ -399,6 +430,7 @@ void Worker::handleParameterFab(const std::string & data, const RPCInfo & info)
 	// break the trainning and apply the received parameter (in main thread)
 	pauseTrain();
 	//applyBufferParameter();
+	++stat.n_par_recv;
 }
 
 void Worker::handlePause(const std::string & data, const RPCInfo & info)

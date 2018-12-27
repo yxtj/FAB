@@ -5,6 +5,7 @@
 #include "driver/tools/SyncUnit.h"
 #include "model/Model.h"
 #include "train/GD.h"
+#include "common/Statistics.h"
 #include <string>
 #include <thread>
 //#include <chrono>
@@ -38,6 +39,9 @@ protected:
 	void sleep();
 	void msgLoop(const std::string& name = "");
 
+	void finishStat();
+	void showStat() const;
+
 // handler helpers
 protected:
 	using callback_t = std::function<void(const std::string&, const RPCInfo&)>;
@@ -68,4 +72,6 @@ protected:
 	bool msg_do_push;
 	bool msg_do_pop;
 	bool running;
+
+	Statistics stat;
 };

@@ -89,6 +89,7 @@ void Master::run()
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaTail));
 	foutput.close();
 	DLOG(INFO) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
+	showStat();
 	suAllClosed.wait();
 	stopMsgLoop();
 }
@@ -270,12 +271,14 @@ void Master::sendParameter(const int target)
 {
 	DVLOG(3) << "send parameter to " << target << " with: " << model.getParameter().weights;
 	net->send(wm.lid2nid(target), MType::DParameter, model.getParameter().weights);
+	++stat.n_par_send;
 }
 
 void Master::broadcastParameter()
 {
 	DVLOG(3) << "broad parameter: " << model.getParameter().weights;
 	net->broadcast(MType::DParameter, model.getParameter().weights);
+	stat.n_par_send += nWorker;
 }
 
 void Master::waitParameterConfirmed()
@@ -386,6 +389,7 @@ void Master::handleDelta(const std::string & data, const RPCInfo & info)
 	rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
 	//sendReply(info);
+	++stat.n_dlt_recv;
 }
 
 void Master::handleDeltaAsync(const std::string & data, const RPCInfo & info)
@@ -397,6 +401,7 @@ void Master::handleDeltaAsync(const std::string & data, const RPCInfo & info)
 	rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
 	//sendReply(info);
+	++stat.n_dlt_recv;
 	// directly send new parameter
 	sendParameter(s);
 }
@@ -414,6 +419,7 @@ void Master::handleDeltaFab(const std::string & data, const RPCInfo & info)
 	rph.input(typeDDeltaAny, s);
 	if(opt->fabWait)
 		sendReply(info);
+	++stat.n_dlt_recv;
 	// broadcast new parameter in main thread
 }
 
@@ -422,4 +428,5 @@ void Master::handleDeltaTail(const std::string & data, const RPCInfo & info)
 	auto delta = deserialize<vector<double>>(data);
 	int s = wm.nid2lid(info.source);
 	applyDelta(delta, s);
+	++stat.n_dlt_recv;
 }
