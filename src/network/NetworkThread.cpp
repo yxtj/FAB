@@ -155,14 +155,13 @@ int NetworkThread::sendDirect(Task *req){
 	return size;
 }
 
-
 int NetworkThread::broadcast(Task* req) {
 	int size = req->payload.size();
 	lock_guard<recursive_mutex> sl(ps_lock);
 	pending_sends_->emplace_back(req, true);
 	//net->broadcast(req);
-	++stat_send_pkg;
-	stat_send_byte += size;
+	stat_send_pkg += this->size() - 1;
+	stat_send_byte += size * (this->size() - 1);
 	return size;
 }
 
