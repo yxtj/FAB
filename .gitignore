@@ -99,8 +99,8 @@ log-*/
 *~
 
 # project specific ignore files:
-[dD]ata/
-[dD]ataset/
+/[dD]ata/
+/[dD]ataset/
 conf/
 /bin
 log
