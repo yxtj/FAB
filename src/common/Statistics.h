@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef> // for size_t on GCC
 
 struct Statistics {
 	// network
@@ -12,5 +13,5 @@ struct Statistics {
 	size_t n_par_send, n_par_recv;
 	double t_par_calc, t_par_wait;
 
-	Statistics::Statistics();
+	Statistics();
 };
