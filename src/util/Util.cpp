@@ -71,6 +71,21 @@ std::vector<double> getDoubleList(const std::string & str, const std::string& se
 	return res;
 }
 
+std::vector<std::string> getStringList(const std::string & str, const std::string& sepper)
+{
+	std::vector<std::string> res;
+	size_t pl = 0;
+	size_t p = str.find_first_of(sepper);
+	while(p != string::npos){
+		res.push_back(str.substr(pl, p - pl));
+		pl = p + 1;
+		p = str.find_first_of(sepper, pl);
+	}
+	if(!str.empty() && pl < str.size())
+		res.push_back(str.substr(pl));
+	return res;
+}
+
 int stoiKMG(const std::string & str, const bool binary)
 {
 	if(str.empty())
