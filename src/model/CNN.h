@@ -23,7 +23,4 @@ public:
 private:
 	double getWeight(const std::vector<double>& w, const int layer, const int from, const int to) const;
 
-	// require: proxy.bind(&w) had been called before
-	std::vector<double> activateLayer(
-		const std::vector<double>& x, const std::vector<double>& w, const int layer) const;
 };

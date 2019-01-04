@@ -17,6 +17,7 @@ void CNN::init(const int xlength, const std::string & param)
     int n0;
     try{
         n0=stoi(param);
+        
         if(param.empty() || xlength != stoi(param))
             throw invalid_argument("");
     }catch(exception& e){
@@ -145,31 +146,3 @@ double CNN::getWeight(const std::vector<double>& w, const int layer, const int f
 	proxy.bind(&w);
 	return proxy.get(layer, from, to);
 }
-
-std::vector<double> CNN::activateLayer(
-	const std::vector<double>& x, const std::vector<double>& w, const int layer) const
-{
-	int n = nNodeLayer[layer];
-	//assert(x.size() == n);
-	int m = nNodeLayer[layer + 1];
-	std::vector<double> res(m, 0.0); // # of real nodes in next layer
-	ParameterProxyLayer wl = proxy[layer]; // assume w has already been bound
-	// real neuron part
-	for(int i = 0; i < n; ++i){
-		ParameterProxyNode wn = wl[i];
-		for(int j = 0; j < m; ++j){
-			res[j] += x[i] * wn[j];
-		}
-	}
-	// dummy neuron (constant value 1) part
-	ParameterProxyNode wn = wl[n];
-	for(int j = 0; j < m; ++j){
-		res[j] += wn[j];
-		// activation function
-		res[j] = sigmoid(res[j]);
-	}
-	//for(auto& v : res)
-	//	v = sigmoid(v);
-	return res;
-}
-
