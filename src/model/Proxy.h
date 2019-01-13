@@ -26,7 +26,7 @@ struct NodeBase{
 	size_t nweight() const;
     virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w) = 0;
 	// input: x, w, y, product of previous partial gradients. 
-	// pre-condition: predict(x,w) ==y && y.size() == pre.size()
+	// pre-condition: predict(x,w) == y && y.size() == pre.size()
 	// action 1: update corresponding entries of global <grad> vector (pre[i] * dy/dw)
 	// action 2: output product of all partial gradient (pre[i] * dy/dx)
 	// post-condition: result.size() == x.size() && w.size() == # of entries touched in <grad>
@@ -34,6 +34,7 @@ struct NodeBase{
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre) = 0;
 };
 
+// convolution only, no activation
 struct ConvNode1D
 	: public NodeBase
 {

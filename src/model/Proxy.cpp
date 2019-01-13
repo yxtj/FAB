@@ -101,17 +101,18 @@ ConvNode1D::ConvNode1D(const size_t offset, const std::vector<int>& shape)
 	: NodeBase(offset, shape), k(shape[0])
 {
 	assert(shape.size() == 1);
+	assert(k > 0);
 }
 
 std::vector<double> ConvNode1D::predict(const std::vector<double>& x, const std::vector<double>& w)
 {
-    const size_t n = x.size() - k;
-	std::vector<double> res(n + 1, w[off + k]);
-    for(size_t i=0; i<=n; ++i){
+	const size_t ny = x.size() - k + 1;
+	std::vector<double> res(ny);
+    for(size_t i=0; i<ny; ++i){
         double t = 0.0;
         for(size_t j=0; j<k; ++j)
             t += x[i+j] * w[off+j];
-        res[i] += t;
+        res[i] = t;
     }
     return res;
 }
@@ -119,12 +120,36 @@ std::vector<double> ConvNode1D::predict(const std::vector<double>& x, const std:
 std::vector<double> ConvNode1D::gradient(std::vector<double>& grad, const std::vector<double>& x,
 	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
 {
-    
+	assert(x.size() == y.size() + nw - 1);
+	assert(y.size() == pre.size());
+	const size_t nx = x.size();
+	const size_t ny = y.size();
+	// dy/dw
+	for(size_t i = 0; i < nw; ++i){
+		double t = 0.0;
+		for(size_t j = 0; j < ny; ++j){
+			t += pre[j] * x[j + i];
+		}
+		grad[off + i] = t;
+	}
+	// dy/dx
+	std::vector<double> res(nx);
+	for(size_t i = 0; i < nx; ++i){
+		double t = 0.0;
+		// cut the first and the last
+		for(size_t j = (i < ny ? 0 : i - ny + 1); j < nw && i >= j; ++j){
+			t += pre[i - j] * w[off + j];
+		}
+		res[i] = t;
+	}
+	return res;
 }
 
 ReluNode::ReluNode(const size_t offset, const std::vector<int>& shape)
 	: NodeBase(offset, shape)
-{}
+{
+	nw = 1;
+}
 
 std::vector<double> ReluNode::predict(const std::vector<double>& x, const std::vector<double>& w)
 {
@@ -140,8 +165,17 @@ std::vector<double> ReluNode::predict(const std::vector<double>& x, const std::v
 std::vector<double> ReluNode::gradient(std::vector<double>& grad, const std::vector<double>& x,
 	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
 {
-   
-    
+	assert(x.size() == y.size());
+	const size_t n = y.size();
+	std::vector<double> res(n); // dy/dx
+	double s = 0.0;
+	for(size_t i = 0; i < n; ++i){
+		double d = relu_derivative(x[i] + w[off]);
+		s += pre[i] * d * x[i]; // dy/dw
+		res[i] = pre[i] * d * w[off]; // dy/dx
+	}
+	grad[off] = s / n;
+	return res;
 }
 
 // Sigmoid node
@@ -165,16 +199,16 @@ std::vector<double> SigmoidNode::gradient(std::vector<double>& grad, const std::
 {
 	assert(x.size() == y.size());
     const size_t n = y.size();
-	std::vector<double> pg(n);
+	std::vector<double> res(n);
     double s = 0.0;
     for(size_t i=0; i<n; ++i){
 		//double d = sigmoid_derivative(x[i] + w[off], y[i]);
 		double d = sigmoid_derivative(0.0, y[i]);
-		s += pre[i] * d; // pre[i] * dy/dw
-		pg[i] = pre[i] * d;// pre[i] * dy/dx
+		s += pre[i] * d * x[i]; // dy/dw
+		res[i] = pre[i] * d * w[off]; // dy/dx
     }
     grad[off] = s / n;
-	return pg;
+	return res;
 }
 
 // FC 1D node
