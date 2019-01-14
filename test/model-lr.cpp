@@ -20,20 +20,20 @@ struct Option{
 	int niter;
 
 	bool parse(int argc, char* argv[]){
-		if(argc <= 8)
+		if(argc <= 7)
 			return false;
-		fnData = argv[1];
-		idSkip = getIntList(argv[2]);
-		idY = getIntList(argv[3]);
-		withHeader = beTrueOption(argv[4]);
-		doNormalize = beTrueOption(argv[5]);
-		batchSize = stoul(argv[6]);
-		lrate = stod(argv[7]);
-		niter = stoi(argv[8]);
+		int idx = 1;
+		fnData = argv[idx++];
+		idY = getIntList(argv[idx++]);
+		withHeader = beTrueOption(argv[idx++]);
+		doNormalize = beTrueOption(argv[idx++]);
+		batchSize = stoul(argv[idx++]);
+		lrate = stod(argv[idx++]);
+		niter = stoi(argv[idx++]);
 		return true;
 	}
 	void showUsage(){
-		LOG(INFO) << "Usage: <fn-data> <idx-skip> <idx-y> <with-header> <normalize> <batch-size> <lrate> <n-iter>";
+		LOG(INFO) << "Usage: <fn-data> <idx-y> <with-header> <normalize> <batch-size> <lrate> <n-iter>";
 	}
 };
 

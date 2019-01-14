@@ -21,21 +21,21 @@ struct Option{
 	int niter;
 
 	bool parse(int argc, char* argv[]){
-		if(argc <= 9)
+		if(argc <= 8)
 			return false;
-		fnData = argv[1];
-		idSkip = getIntList(argv[2]);
-		idY = getIntList(argv[3]);
-		withHeader = beTrueOption(argv[4]);
-		doNormalize = beTrueOption(argv[5]);
-		shape = argv[6];
-		batchSize = stoul(argv[7]);
-		lrate = stod(argv[8]);
-		niter = stoi(argv[9]);
+		int idx = 1;
+		fnData = argv[idx++];
+		idY = getIntList(argv[idx++]);
+		withHeader = beTrueOption(argv[idx++]);
+		doNormalize = beTrueOption(argv[idx++]);
+		shape = argv[idx++];
+		batchSize = stoul(argv[idx++]);
+		lrate = stod(argv[idx++]);
+		niter = stoi(argv[idx++]);
 		return true;
 	}
 	void showUsage(){
-		LOG(INFO) << "Usage: <fn-data> <idx-skip> <idx-y> <with-header> <normalize> <shape> <batch-size> <lrate> <n-iter>";
+		LOG(INFO) << "Usage: <fn-data> <idx-y> <with-header> <normalize> <shape> <batch-size> <lrate> <n-iter>";
 	}
 };
 
@@ -55,7 +55,7 @@ int main(int argc, char* argv[]){
 
 	DataHolder dh(false, 1, 0);
 	if(!opt.fnData.empty()){
-		dh.load(opt.fnData, ",", opt.idSkip, opt.idY, opt.withHeader, true);
+		dh.load(opt.fnData, ",", {}, opt.idY, opt.withHeader, true);
 	} else{
 		dh.add({ .2, .9 }, { 0.92 });
 		dh.add({ .1, .5 }, { 0.86 });
@@ -72,9 +72,9 @@ int main(int argc, char* argv[]){
 
 	Model m;
 	if(!opt.fnData.empty()){
-		m.init("mlp", dh.xlength(), opt.shape, 0.01);
+		m.init("cnn", dh.xlength(), opt.shape, 0.01);
 	} else{
-		m.init("mlp", dh.xlength(), "2-3-1", 0.01);
+		m.init("cnn", dh.xlength(), "2-3-1", 0.01);
 	}
 
 	vector<double> pred = m.predict(dh.get(0));
