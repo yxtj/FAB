@@ -1,12 +1,13 @@
 #include "ParameterIO.h"
 #include "util/Util.h"
+#include "model/Proxy.h"
 #include <stdexcept>
 using namespace std;
 
 ParameterIO::ParameterIO(const std::string & name, const std::string & param)
 	: name(name), param(param)
 {
-	vector<string> supported = { "lr", "mlp" };
+	vector<string> supported = { "lr", "mlp", "cnn" };
 	for(char& ch : this->name){
 		if(ch >= 'A' && ch <= 'Z')
 			ch += 'a' - 'A';
@@ -29,6 +30,8 @@ void ParameterIO::write(std::ostream & os, const std::vector<double>& w)
 		return writeLR(os, w);
 	} else if(name == "mlp"){
 		return writeMLP(os, w);
+	} else if(name == "cnn"){
+		return writeCNN(os, w);
 	}
 }
 
@@ -38,6 +41,8 @@ std::pair<std::string, std::vector<double>> ParameterIO::load(std::istream & is)
 		return loadLR(is);
 	} else if(name == "mlp"){
 		return loadMLP(is);
+	} else if(name == "cnn"){
+		return loadCNN(is);
 	}
 	return std::pair<std::string, std::vector<double>>();
 }
@@ -87,6 +92,43 @@ std::pair<std::string, std::vector<double>> ParameterIO::loadMLP(std::istream & 
 	vector<int> shape = getIntList(line, " ,-");
 	vector<double> vec;
 	for(size_t i = 0; i < shape.size() - 1; ++i){
+		getline(is, line);
+		vector<double> temp = getDoubleList(line);
+		vec.insert(vec.end(), temp.begin(), temp.end());
+	}
+	return make_pair(move(param), move(vec));
+}
+
+// -------- CNN --------
+
+void ParameterIO::writeCNN(std::ostream & os, const std::vector<double>& w)
+{
+	os << param << "\n";
+	Proxy p;
+	p.init(param);
+	vector<int> nWeightOffset = p.weightOffsetLayer;
+	for(size_t l = 1; l < nWeightOffset.size() - 1; ++l){
+		if(p.nWeightNode[l] == 0)
+			continue;
+		for(int i = nWeightOffset[l]; i < nWeightOffset[l + 1] - 1; ++i){
+			os << w[i] << ",";
+		}
+		os << w[nWeightOffset[l + 1] - 1] << "\n";
+	}
+	os.flush();
+}
+
+std::pair<std::string, std::vector<double>> ParameterIO::loadCNN(std::istream & is)
+{
+	string line;
+	getline(is, line);
+	string param = line;
+	Proxy p;
+	p.init(param);
+	vector<double> vec;
+	for(size_t i = 0; i < p.nLayer; ++i){
+		if(p.nWeightNode[i] == 0)
+			continue;
 		getline(is, line);
 		vector<double> temp = getDoubleList(line);
 		vec.insert(vec.end(), temp.begin(), temp.end());

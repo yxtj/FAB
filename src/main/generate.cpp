@@ -81,6 +81,9 @@ private:
 		} else if(algorithm == "mlp"){
 			vector<int> shape = getIntList(param, " ,-");
 			return shape.size() >= 2 && shape.front() == xlength && shape.back() == ylength;
+		} else if(algorithm == "cnn"){
+			vector<string> shape = getStringList(param, "-");
+			return shape.size() >= 2;
 		}
 		return false;
 	}
@@ -103,7 +106,9 @@ public:
 		if(k->name() == "lr"){
 			fpg = &ParameterGenerator::genLR;
 		} else if(k->name() == "mlp"){
-			fpg = &ParameterGenerator::genMLP;
+			fpg = &ParameterGenerator::genGeneral;
+		} else if(k->name() == "cnn"){
+			fpg = &ParameterGenerator::genGeneral;
 		}
 	}
 	vector<double> gen(mt19937& gen){
@@ -122,8 +127,7 @@ private:
 		}
 		return res;
 	}
-	// one additional one for each layer except the last one
-	vector<double> genMLP(mt19937& gen){
+	vector<double> genGeneral(mt19937& gen){
 		int n = k->lengthParameter();
 		vector<double> res;
 		uniform_real_distribution<double> dis(pmin, pmax);
@@ -159,6 +163,8 @@ public:
 		if(k->name() == "lr"){
 			fp = &Dumper::dumpClassify;
 		} else if(k->name() == "mlp"){
+			fp = &Dumper::dumpClassify;
+		} else if(k->name() == "cnn"){
 			fp = &Dumper::dumpClassify;
 		}
 		if(sigma != 0.0){

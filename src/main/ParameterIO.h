@@ -19,4 +19,7 @@ private:
 	// MLP
 	void writeMLP(std::ostream& os, const std::vector<double>& w);
 	std::pair<std::string, std::vector<double>> loadMLP(std::istream& is);
+	// CNN
+	void writeCNN(std::ostream& os, const std::vector<double>& w);
+	std::pair<std::string, std::vector<double>> loadCNN(std::istream& is);
 };
