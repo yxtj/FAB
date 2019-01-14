@@ -26,8 +26,8 @@ private:
     std::vector<int> getShape(const std::string& str);
     int getSize(const std::vector<int>& shape);
 
-	void setLayerParameter(int i); // called after set shapeNode[i]
-	void generateNode(const int i); // called after all properties of i are set
+	void setLayerParameter(const size_t i); // called after set shapeNode[i] && i>=1
+	void generateNode(const size_t i); // called after all properties of i are set
 };
 
 struct NodeBase{

@@ -10,7 +10,7 @@ using namespace std;
 
 void Proxy::init(const std::string& param){
     vector<string> strLayer = getStringList(param, "-");
-    nLayer = strLayer.size();
+    nLayer = static_cast<int>(strLayer.size());
     // raw string format: R"(...)"
     string srShapeNode = R"((\d+(?:\*\d+)*))"; // v1[*v2[*v3[*v4]]]
     //regex ri(srShapeNode); // input layer
@@ -33,7 +33,8 @@ void Proxy::init(const std::string& param){
     typeLayer[0] = LayerType::Input;
 	unitNode[0] = { 1 };
 	shapeNode[0] = shapeLayer[0] = getShape(strLayer[0]);
-    ndimLayer[0] = shapeLayer[0].size();
+    ndimLayer[0] = static_cast<int>(shapeLayer[0].size());
+	nWeightNode[0] = weightOffsetLayer[0] = 0;
     for(size_t i = 1; i<strLayer.size(); ++i){
         smatch m;
         if(regex_match(strLayer[i], m, ra)){ // activation
@@ -107,7 +108,7 @@ int Proxy::getSize(const std::vector<int>& ShapeNode){
     return r;
 }
 
-void Proxy::setLayerParameter(int i){
+void Proxy::setLayerParameter(const size_t i){
 	if(shapeLayer[i - 1].size() == shapeNode[i].size()){
 		nFeatureLayer[i] = nNodeLayer[i];
 	}else if(shapeLayer[i - 1].size() == shapeNode[i].size() + 1){
@@ -119,10 +120,10 @@ void Proxy::setLayerParameter(int i){
 	shapeLayer[i].push_back(nFeatureLayer[i]);
 	for(size_t j = 0; j < shapeNode[i].size(); ++j)
 		shapeLayer[i].push_back(shapeNode[i][j]);
-	ndimLayer[i] = shapeLayer[i].size();
+	ndimLayer[i] = static_cast<int>(shapeLayer[i].size());
 }
 
-void Proxy::generateNode(const int i)
+void Proxy::generateNode(const size_t i)
 {
 	int offset = weightOffsetLayer[i];
 	vector<NodeBase*>& vec = nodes[i];
@@ -149,8 +150,9 @@ void Proxy::generateNode(const int i)
 			throw invalid_argument("try to generate an unsupported node type.");
 			break;
 		}
-		offset += p->nweight();
-		nWeightNode[i] = p->nweight();
+		int nw = static_cast<int>(p->nweight());
+		offset += nw;
+		nWeightNode[i] = nw;
 		vec.push_back(p);
 	}
 	weightOffsetLayer[i + 1] = offset;
