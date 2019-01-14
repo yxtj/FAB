@@ -10,22 +10,34 @@ using namespace std;
 void CNN::init(const int xlength, const std::string & param)
 {
 	initBasic(xlength, param);
-    // example: 10-4,c,3*3-4,c,5*5-1
+    // example: 10*10-4,c,3*3-1,a,relu-1,p,max,2*2-1,f
+	// example: 10-4,c,3-1,a,relu-1,p,max,2-1,f
     // format: <n>,<type>[,<shape>]
     //     shape of convolutional node: <k1>*<k2>
     //     shape of fully-connected node: none
-    int n0;
     try{
-        n0=stoi(param);
-        
-        if(param.empty() || xlength != stoi(param))
-            throw invalid_argument("");
+		proxy.init(param);
     }catch(exception& e){
-        throw invalid_argument("CNN parameter not valid or does not match dataset");
+		throw invalid_argument(e.what());
     }
-	// set n
-	nLayer = static_cast<int>(nNodeLayer.size());
-	proxy.init(param);
+	// check input layer size
+	int n = 1;
+	for(auto& v : proxy.shapeLayer[0])
+		n *= v;
+	if(xlength != n)
+		throw invalid_argument("The dataset does not match the input layer of the network");
+	// check FC layer
+	for(size_t i = 0; i < proxy.nLayer; ++i){
+		if(i != proxy.nLayer - 1 && proxy.typeLayer[i] == LayerType::FC){
+			throw invalid_argument("Only the last layer can be a FC layer.");
+		} else if(i == proxy.nLayer - 1 && proxy.typeLayer[i] != LayerType::FC){
+			throw invalid_argument("The last layer must be a FC layer.");
+		}
+	}
+	// set local parameters
+	nLayer = proxy.nLayer;
+	nNodeLayer = proxy.nNodeLayer;
+	nWeight = proxy.lengthParameter();
 }
 
 std::string CNN::name() const{
@@ -38,18 +50,35 @@ bool CNN::dataNeedConstant() const{
 
 int CNN::lengthParameter() const
 {
-	return proxy.lengthParameter();
+	return nWeight;
 }
 
 std::vector<double> CNN::predict(
 	const std::vector<double>& x, const std::vector<double>& w) const
 {
-	proxy.bind(&w);
-	vector<double> mid = activateLayer(x, w, 0);
-	for(int l = 1; l < nLayer - 1; ++l){
-		mid = activateLayer(mid, w, l);
+	vector<vector<double>> input;
+	vector<vector<double>> output;
+	input.push_back(x);
+	// apart from the last FC layer, all nodes work on a single feature
+	for(int i = 1; i < proxy.nLayer - 1; ++i){
+		output.clear();
+		// apply one node on each previous features repeatedly
+		//assert(proxy.nFeatureLayer[i - 1] * proxy.nNodeLayer[i] == proxy.nFeatureLayer[i]);
+		for(int j = 0; j < proxy.nNodeLayer[i]; ++j){
+			for(int k = 0; k < proxy.nFeatureLayer[i - 1]; ++k){
+				output.push_back(proxy.nodes[i][j]->predict(input[k], w));
+			}
+		}
+		input = move(output);
 	}
-	return mid;
+	// the last FC layer
+	vector<double> res;
+	int i = proxy.nLayer - 1;
+	for(int j = 0; j < proxy.nNodeLayer[i]; ++j){
+		FCNode1D* p = dynamic_cast<FCNode1D*>(proxy.nodes[i][j]);
+		res.push_back(p->predict(input, w));
+	}
+	return res;
 }
 
 int CNN::classify(const double p) const
@@ -72,77 +101,66 @@ double CNN::loss(const std::vector<double>& pred, const std::vector<double>& lab
 std::vector<double> CNN::gradient(
 	const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y) const
 {
-	proxy.bind(&w);
 	// forward
-	vector<vector<double>> buffer; // buffer for <pred>
-	buffer.reserve(nLayer); // important: make sure earlier iterators valid all the time
-	vector<const vector<double>*> output; // the output of each layer
-	output.push_back(&x); // layer 0 same as x, the rest are <buffer>
-	for(int l = 0; l < nLayer - 1; ++l){
-		vector<double> mid = activateLayer(*output[l], w, l);
-		buffer.push_back(move(mid));
-		output.push_back(&buffer[l]);
+	vector<vector<vector<double>>> mid; // layer -> feature -> value
+	mid.reserve(proxy.nLayer); // intermediate result of all layers
+	mid.push_back({ x });
+	for(int i = 1; i < proxy.nLayer - 1; ++i){ // apart from the input and output (FC) layers
+		const vector<vector<double>>& input = mid[i - 1];
+		vector<vector<double>> output;
+		// apply one node on each previous features repeatedly
+		//assert(proxy.nFeatureLayer[i - 1] * proxy.nNodeLayer[i] == proxy.nFeatureLayer[i]);
+		for(int j = 0; j < proxy.nNodeLayer[i]; ++j){
+			for(int k = 0; k < proxy.nFeatureLayer[i - 1]; ++k){
+				output.push_back(proxy.nodes[i][j]->predict(input[k], w));
+			}
+		}
+		mid.push_back(move(output));
 	}
-	// backward
+	vector<vector<double>> output;
+	for(int j = 0; j < proxy.nNodeLayer.back(); ++j){
+		FCNode1D* p = dynamic_cast<FCNode1D*>(proxy.nodes.back()[j]);
+		output.push_back({ p->predict(mid[proxy.nLayer - 2], w) });
+	}
+	mid.push_back(output);
+	// back propagate
+	// BP (last layer)
 	vector<double> grad(w.size());
-	/*
-	delta = np.array()
-	for i in range(len(self.layers)-2, -1, -1):
-		pred = self.output[i+1]
-		if i == len(self.layers) - 2:
-			error = pred - y
-		else:
-			error = np.dot(delta, self.w[i+1].T)
-		delta = error * self.sigmoidPrime(pred)
-		grad = np.dot(self.output[i].T, delta)
-		self.w[i] += -self.lrate * grad
-	*/
-	vector<double> delta; // used for all but the first iteration (l==nLayer-2)
-	for(int l = nLayer - 2; l >= 0; --l){
-		// prepare
-		const int n = nNodeLayer[l];
-		const int m = nNodeLayer[l+1];
-		const vector<double>& pred = *output[l+1];
-		// error
-		vector<double> error(m);
-		if(l == nLayer - 2){
-			//error = pred - y;
-			for(int i = 0; i < m; ++i)
-				error[i] = pred[i] - y[i];
+	vector<vector<double>> partial; // partial gradient
+	//assert(y.size() == mid.back().size());
+	for(size_t i = 0; i < y.size(); ++i){ // last FC layer
+		double output = mid.back()[i][0];
+		double pg = output - y[i];
+		FCNode1D* p = dynamic_cast<FCNode1D*>(proxy.nodes.back()[i]);
+		vector<vector<double>> temp = p->gradient(grad, mid[proxy.nLayer - 2], w, output, pg);
+		if(i == 0){
+			partial = move(temp);
 		} else{
-			//error = np.dot(delta, self.w[i + 1].T)
-			ParameterProxyLayer wl = proxy[l + 1];
-			int h = nNodeLayer[l + 2];
-			for(int i = 0; i < m; ++i){
-				ParameterProxyNode wn = wl[i];
-				for(int j = 0; j < h; ++j)
-					error[i] += delta[j] * wn[j]; // <delta> is left by last iteration
-			}
-		}
-		// delta
-		//delta = error * self.sigmoidPrime(pred)
-		delta.resize(m);
-		for(int i = 0; i < m; ++i){
-			delta[i] = error[i] * sigmoid_derivative(pred[i]);
-		}
-		// grad
-		//grad = np.dot(self.output[i].T, delta)
-		ParameterProxyLayer wl = proxy[l];
-		for(int i = 0; i < n+1; ++i){
-			ParameterProxyNode wn = wl[i];
-			double v = (i != n) ? (*output[l])[i] : 1.0;
-			for(int j = 0; j < m; ++j){
-				int offset = wn.position(j);
-				grad[offset] = v * delta[j];
-			}
+			for(size_t a = 0; a < temp.size(); ++a)
+				for(size_t b = 0; b < temp[a].size(); ++b)
+					partial[a][b] += temp[a][b];
 		}
 	}
-
+	// BP (0 to n-1 layer)
+	for(int i = proxy.nLayer - 2; i > 0; --i){ // layer
+		int oidx = 0;
+		vector<vector<double>> newPartialGradient(proxy.nFeatureLayer[i]);
+		for(int j = 0; j < proxy.nNodeLayer[i]; ++j){ // node
+			for(int k = 0; k < proxy.nFeatureLayer[i - 1]; ++k){ // feature (input)
+				const vector<double>& input = mid[i - 1][k];
+				const vector<double>& output = mid[i][oidx];
+				const vector<double>& pg = partial[oidx];
+				++oidx;
+				vector<double> npg = proxy.nodes[i][j]->gradient(grad, input, w, output, pg);
+				if(j == 0){
+					newPartialGradient[k] = move(npg);
+				} else{
+					for(size_t a = 0; a < npg.size(); ++a)
+						newPartialGradient[k][a] += npg[a];
+				}
+			}
+		}
+		partial = move(newPartialGradient);
+	}
 	return grad;
-}
-
-double CNN::getWeight(const std::vector<double>& w, const int layer, const int from, const int to) const
-{
-	proxy.bind(&w);
-	return proxy.get(layer, from, to);
 }

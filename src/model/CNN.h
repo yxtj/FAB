@@ -7,6 +7,7 @@ class CNN
 {
 	int nLayer;
 	std::vector<int> nNodeLayer;
+	int nWeight;
 	mutable Proxy proxy; // non-const bind function required
 public:
 	void init(const int xlength, const std::string& param);
@@ -21,6 +22,5 @@ public:
 	std::vector<double> gradient(
 		const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y) const;
 private:
-	double getWeight(const std::vector<double>& w, const int layer, const int from, const int to) const;
-
+	
 };

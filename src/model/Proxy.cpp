@@ -29,6 +29,7 @@ void Proxy::init(const std::string& param){
 	nodes.resize(nLayer);
 
 	// input (first layer)
+	nNodeLayer[0] = 1;
     typeLayer[0] = LayerType::Input;
 	unitNode[0] = { 1 };
 	shapeNode[0] = shapeLayer[0] = getShape(strLayer[0]);
@@ -45,7 +46,7 @@ void Proxy::init(const std::string& param){
                 typeLayer[i] = LayerType::ActTanh;
 			unitNode[i] = { 1 };
 			shapeNode[i] = shapeNode[i - 1];
-			setShapeLayer(i);
+			setLayerParameter(i);
 			generateNode(i);
         }else if(regex_match(strLayer[i], m, rc)){ // convolutional
             nNodeLayer[i] = stoi(m[1]);
@@ -56,7 +57,7 @@ void Proxy::init(const std::string& param){
 			for(size_t j = 0; j < unitNode[i].size(); ++j){
 				shapeNode[i].push_back(shapeLayer[i - 1][p + j] - unitNode[i][j] + 1);
 			}
-			setShapeLayer(i);
+			setLayerParameter(i);
 			generateNode(i);
         }else if(regex_match(strLayer[i], m, rp)){ // pool
             nNodeLayer[i] = stoi(m[1]);
@@ -74,7 +75,7 @@ void Proxy::init(const std::string& param){
 				int v = (shapeLayer[i - 1][p + j] + unitNode[i][j] - 1) / unitNode[i][j];
 				shapeNode[i].push_back(v);
 			}
-			setShapeLayer(i);
+			setLayerParameter(i);
 			generateNode(i);
 		}else if(regex_match(strLayer[i], m, rf)){ // fully-connected
 			nNodeLayer[i] = stoi(m[1]);
@@ -88,6 +89,11 @@ void Proxy::init(const std::string& param){
     }
 }
   
+int Proxy::lengthParameter() const
+{
+	return weightOffsetLayer[nLayer];
+}
+
 std::vector<int> Proxy::getShape(const string& str){
     return getIntList(str, "*");
 }
@@ -101,15 +107,16 @@ int Proxy::getSize(const std::vector<int>& ShapeNode){
     return r;
 }
 
-void Proxy::setShapeLayer(int i){
+void Proxy::setLayerParameter(int i){
 	if(shapeLayer[i - 1].size() == shapeNode[i].size()){
-		shapeLayer[i].push_back(nNodeLayer[i]);
+		nFeatureLayer[i] = nNodeLayer[i];
 	}else if(shapeLayer[i - 1].size() == shapeNode[i].size() + 1){
-		shapeLayer[i].push_back(shapeLayer[i - 1][0] * nNodeLayer[i]);
+		nFeatureLayer[i] = shapeLayer[i - 1][0] * nNodeLayer[i];
 	} else{
 		throw invalid_argument("shape between layer "
 			+ to_string(i - 1) + " and " + to_string(i) + " does not match.");
 	}
+	shapeLayer[i].push_back(nFeatureLayer[i]);
 	for(size_t j = 0; j < shapeNode[i].size(); ++j)
 		shapeLayer[i].push_back(shapeNode[i][j]);
 	ndimLayer[i] = shapeLayer[i].size();
