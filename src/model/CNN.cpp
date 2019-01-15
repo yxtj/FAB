@@ -41,7 +41,7 @@ void CNN::init(const int xlength, const std::string & param)
 }
 
 std::string CNN::name() const{
-	return "CNN";
+	return "cnn";
 }
 
 bool CNN::dataNeedConstant() const{

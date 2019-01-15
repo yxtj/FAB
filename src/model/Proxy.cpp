@@ -19,11 +19,13 @@ void Proxy::init(const std::string& param){
     regex rp(R"((\d+),p,(max|mean|min),)"+srShapeNode); // pooling layer, i.e.: 1,p,max,3*3
 	regex rf(R"((\d+),f)"); // fully-connected layer, i.e.: 4,f
 
+	nNodeLayer.resize(nLayer);
     typeLayer.resize(nLayer);
-    shapeNode.resize(nLayer);
     unitNode.resize(nLayer);
+    shapeNode.resize(nLayer);
     shapeLayer.resize(nLayer);
     ndimLayer.resize(nLayer);
+	nFeatureLayer.resize(nLayer);
 	nWeightNode.resize(nLayer);
 	weightOffsetLayer.resize(nLayer + 1);
 	nodes.resize(nLayer);
@@ -34,6 +36,7 @@ void Proxy::init(const std::string& param){
 	unitNode[0] = { 1 };
 	shapeNode[0] = shapeLayer[0] = getShape(strLayer[0]);
     ndimLayer[0] = static_cast<int>(shapeLayer[0].size());
+	nFeatureLayer[0] = 1;
 	nWeightNode[0] = weightOffsetLayer[0] = 0;
     for(size_t i = 1; i<strLayer.size(); ++i){
         smatch m;
@@ -164,7 +167,7 @@ NodeBase::NodeBase(const size_t offset, const std::vector<int>& shape)
 	: off(offset), shape(shape)
 {
 	nw = accumulate(shape.begin(), shape.end(), 1,
-		[](double a, double b){return a * b; }
+		[](int a, int b){return a * b; }
 	);
 }
 
@@ -353,7 +356,9 @@ std::vector<double> PoolMaxNode1D::gradient(std::vector<double>& grad, const std
 
 FCNode1D::FCNode1D(const size_t offset, const std::vector<int>& shape)
 	: NodeBase(offset, shape)
-{}
+{
+	nw += 1;
+}
 
 double FCNode1D::predict(const std::vector<std::vector<double>>& x, const std::vector<double>& w)
 {
