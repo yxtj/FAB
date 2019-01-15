@@ -89,6 +89,8 @@ void Proxy::init(const std::string& param){
 			shapeLayer[i] = { nNodeLayer[i], 1 };
 			ndimLayer[i] = 2;
 			generateNode(i);
+		} else{
+			throw invalid_argument("Unsupported node parameter: " + strLayer[i]);
 		}
     }
 }
@@ -331,7 +333,7 @@ std::vector<double> PoolMaxNode1D::predict(const std::vector<double>& x, const s
 		for(size_t j = i*step + 1; j < limit; ++j)
 			v = max(v, x[j]);
 		// TODO: store the max index for gradient
-		res.push_back(v);
+		res[i] = v;
 	}
 	return res;
 }
