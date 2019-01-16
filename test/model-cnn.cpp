@@ -25,6 +25,8 @@ struct Option{
 			return false;
 		int idx = 1;
 		fnData = argv[idx++];
+		if(fnData == "-")
+			fnData.clear();
 		idY = getIntList(argv[idx++]);
 		withHeader = beTrueOption(argv[idx++]);
 		doNormalize = beTrueOption(argv[idx++]);
@@ -54,28 +56,30 @@ int main(int argc, char* argv[]){
 	}
 
 	DataHolder dh(false, 1, 0);
+	Model m;
 	if(!opt.fnData.empty()){
 		dh.load(opt.fnData, ",", {}, opt.idY, opt.withHeader, true);
+		m.init("cnn", dh.xlength(), opt.shape, 0.01);
 	} else{
-		dh.add({ .2, .9 }, { 0.92 });
-		dh.add({ .1, .5 }, { 0.86 });
-		dh.add({ .3, .6 }, { 0.89 });
+		// pattern: have sequence 0.3, 0.9, 0.6
+		dh.add({ 0.0, 0.2, 0.8, 0.3, 0.9, 0.6, 0.4, 0.9 }, { 1 });
+		dh.add({ 0.3, 0.9, 0.3, 0.6, 0.3, 0.9, 0.6, 0.6 }, { 1 });
+		dh.add({ 0.3, 0.9, 0.6, 0.3, 0.9, 0.6, 0.6, 0.1 }, { 1 });
+		dh.add({ 0.2, 0.9, 0.6, 0.3, 0.9, 0.6, 0.6, 0.1 }, { 0.9 });
+		dh.add({ 0.3, 0.9, 0.3, 0.6, 0.4, 0.9, 0.5, 0.6 }, { 0.8 });
 
-		dh.add({ .9, .2 }, { 0.08 });
-		dh.add({ .5, .1 }, { 0.14 });
-		dh.add({ .6, .3 }, { 0.11 });
+
+		dh.add({ 0.3, 0.1, 0.9, 0.5, 0.3, 0.6, 0.6, 0.1 }, { 0 });
+		dh.add({ 0.7, 0.9, 0.3, 0.3, 0.3, 0.5, 0.6, 0.1 }, { 0 });
+		dh.add({ 0.2, 0.3, 0.6, 0.9, 0.9, 0.2, 0.6, 0.1 }, { 0.1 });
+		dh.add({ 0.3, 0.7, 0.3, 0.6, 0.4, 0.9, 0.5, 0.6 }, { 0.2 });
+
+		m.init("cnn", dh.xlength(), "8-1,c,3-1,a,relu-1,p,max,2-1,f", 0.01);
 	}
 	if(opt.doNormalize)
 		dh.normalize(false);
 	LOG(INFO) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;
 	LOG(INFO) << "data[1]: " << dh.get(1).x << " -> " << dh.get(1).y;
-
-	Model m;
-	if(!opt.fnData.empty()){
-		m.init("cnn", dh.xlength(), opt.shape, 0.01);
-	} else{
-		m.init("cnn", dh.xlength(), "2-3-1", 0.01);
-	}
 
 	vector<double> pred = m.predict(dh.get(0));
 	double loss = m.loss(pred, dh.get(0).y);
