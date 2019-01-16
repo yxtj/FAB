@@ -23,6 +23,11 @@ struct Proxy {
 public:
 	int lengthParameter() const;
 private:
+	void createLayerAct(const size_t i, const int n, const std::string& type);
+	void createLayerConv(const size_t i, const int n, const std::vector<int>& shape);
+	void createLayerPool(const size_t i, const int n, const std::string& type, const std::vector<int>& shape);
+	void createLayerFC(const size_t i, const int n);
+
     std::vector<int> getShape(const std::string& str);
     int getSize(const std::vector<int>& shape);
 

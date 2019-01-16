@@ -14,7 +14,7 @@ void Proxy::init(const std::string& param){
     // raw string format: R"(...)"
     string srShapeNode = R"((\d+(?:\*\d+)*))"; // v1[*v2[*v3[*v4]]]
     //regex ri(srShapeNode); // input layer
-    regex ra(R"((\d+),a,(sigmoid|relu))"); // activation layer, i.e.: 4,a,relu
+    regex ra(R"((\d+),a,(sigmoid|relu))"); // activation layer, i.e.: 1,a,relu
     regex rc(R"((\d+),c,)"+srShapeNode); // convolutional layer, i.e.: 4,c,4*4
     regex rp(R"((\d+),p,(max|mean|min),)"+srShapeNode); // pooling layer, i.e.: 1,p,max,3*3
 	regex rf(R"((\d+),f)"); // fully-connected layer, i.e.: 4,f
@@ -41,54 +41,16 @@ void Proxy::init(const std::string& param){
     for(size_t i = 1; i<strLayer.size(); ++i){
         smatch m;
         if(regex_match(strLayer[i], m, ra)){ // activation
-            nNodeLayer[i] = stoi(m[1]);
-            if(m[2] == "sigmoid")
-                typeLayer[i] = LayerType::ActSigmoid;
-            else if(m[2] == "relu")
-                typeLayer[i] = LayerType::ActRelu;
-            else if(m[2] == "tanh")
-                typeLayer[i] = LayerType::ActTanh;
-			unitNode[i] = { 1 };
-			shapeNode[i] = shapeNode[i - 1];
-			setLayerParameter(i);
-			generateNode(i);
+			createLayerAct(i, stoi(m[1]), m[2]);
         }else if(regex_match(strLayer[i], m, rc)){ // convolutional
-            nNodeLayer[i] = stoi(m[1]);
-            typeLayer[i] = LayerType::Conv;
-            unitNode[i] = getShape(m[2]);
-			size_t p = shapeLayer[i - 1].size() - unitNode[i].size();
-			assert(p == 0 || p == 1);
-			for(size_t j = 0; j < unitNode[i].size(); ++j){
-				shapeNode[i].push_back(shapeLayer[i - 1][p + j] - unitNode[i][j] + 1);
-			}
-			setLayerParameter(i);
-			generateNode(i);
+			createLayerConv(i, stoi(m[1]), getShape(m[2]));
         }else if(regex_match(strLayer[i], m, rp)){ // pool
-            nNodeLayer[i] = stoi(m[1]);
-			string type = m[2];
-			if(type == "max")
-				typeLayer[i] = LayerType::PoolMax;
-			else if(m[2] == "mean")
-				typeLayer[i] = LayerType::PoolMean;
-			else if(m[2] == "min")
-				typeLayer[i] = LayerType::PoolMin;
-            unitNode[i] = getShape(m[3]);
-			size_t p = shapeLayer[i - 1].size() - unitNode[i].size();
-			assert(p == 0 || p == 1);
-			for(size_t j = 0; j < unitNode[i].size(); ++j){
-				int v = (shapeLayer[i - 1][p + j] + unitNode[i][j] - 1) / unitNode[i][j];
-				shapeNode[i].push_back(v);
-			}
-			setLayerParameter(i);
-			generateNode(i);
+			createLayerPool(i, stoi(m[1]), m[2], getShape(m[3]));
 		}else if(regex_match(strLayer[i], m, rf)){ // fully-connected
-			nNodeLayer[i] = stoi(m[1]);
-			typeLayer[i] = LayerType::FC;
-			unitNode[i] = shapeLayer[i - 1];
-			shapeNode[i] = { 1 };
-			shapeLayer[i] = { nNodeLayer[i], 1 };
-			ndimLayer[i] = 2;
-			generateNode(i);
+			createLayerFC(i, stoi(m[1]));
+		} else if(i == strLayer.size() - 1 && regex_match(strLayer[i], m, regex(R"((\d+))"))){
+			// fully-connected at the last layer
+			createLayerFC(i, stoi(m[1]));
 		} else{
 			throw invalid_argument("Unsupported node parameter: " + strLayer[i]);
 		}
@@ -98,6 +60,62 @@ void Proxy::init(const std::string& param){
 int Proxy::lengthParameter() const
 {
 	return weightOffsetLayer[nLayer];
+}
+
+void Proxy::createLayerAct(const size_t i, const int n, const std::string& type){
+	nNodeLayer[i] = n;
+	if(type == "sigmoid")
+		typeLayer[i] = LayerType::ActSigmoid;
+	else if(type == "relu")
+		typeLayer[i] = LayerType::ActRelu;
+	else if(type == "tanh")
+		typeLayer[i] = LayerType::ActTanh;
+	unitNode[i] = { 1 };
+	shapeNode[i] = shapeNode[i - 1];
+	setLayerParameter(i);
+	generateNode(i);
+}
+
+void Proxy::createLayerConv(const size_t i, const int n, const std::vector<int>& shape){
+	nNodeLayer[i] = n;
+	typeLayer[i] = LayerType::Conv;
+	unitNode[i] = shape;
+	size_t p = shapeLayer[i - 1].size() - unitNode[i].size();
+	assert(p == 0 || p == 1);
+	for(size_t j = 0; j < unitNode[i].size(); ++j){
+		shapeNode[i].push_back(shapeLayer[i - 1][p + j] - unitNode[i][j] + 1);
+	}
+	setLayerParameter(i);
+	generateNode(i);
+}
+
+void Proxy::createLayerPool(const size_t i, const int n, const std::string& type, const std::vector<int>& shape){
+	nNodeLayer[i] = n;
+	if(type == "max")
+		typeLayer[i] = LayerType::PoolMax;
+	else if(type == "mean")
+		typeLayer[i] = LayerType::PoolMean;
+	else if(type == "min")
+		typeLayer[i] = LayerType::PoolMin;
+	unitNode[i] = shape;
+	size_t p = shapeLayer[i - 1].size() - unitNode[i].size();
+	assert(p == 0 || p == 1);
+	for(size_t j = 0; j < unitNode[i].size(); ++j){
+		int v = (shapeLayer[i - 1][p + j] + unitNode[i][j] - 1) / unitNode[i][j];
+		shapeNode[i].push_back(v);
+	}
+	setLayerParameter(i);
+	generateNode(i);
+}
+
+void Proxy::createLayerFC(const size_t i, const int n){
+	nNodeLayer[i] = n;
+	typeLayer[i] = LayerType::FC;
+	unitNode[i] = shapeLayer[i - 1];
+	shapeNode[i] = { 1 };
+	shapeLayer[i] = { nNodeLayer[i], 1 };
+	ndimLayer[i] = 2;
+	generateNode(i);
 }
 
 std::vector<int> Proxy::getShape(const string& str){
@@ -271,8 +289,9 @@ std::vector<double> ReluNode::gradient(std::vector<double>& grad, const std::vec
 	double s = 0.0;
 	for(size_t i = 0; i < n; ++i){
 		double d = relu_derivative(x[i] + w[off]);
-		s += pre[i] * d * x[i]; // dy/dw
-		res[i] = pre[i] * d * w[off]; // dy/dx
+		double f = pre[i] * d;
+		s += f * x[i]; // dy/dw
+		res[i] = f * w[off]; // dy/dx
 	}
 	grad[off] = s / n;
 	return res;
@@ -306,8 +325,9 @@ std::vector<double> SigmoidNode::gradient(std::vector<double>& grad, const std::
     for(size_t i=0; i<n; ++i){
 		//double d = sigmoid_derivative(x[i] + w[off], y[i]);
 		double d = sigmoid_derivative(0.0, y[i]);
-		s += pre[i] * d * x[i]; // dy/dw
-		res[i] = pre[i] * d * w[off]; // dy/dx
+		double f = pre[i] * d;
+		s += f * x[i]; // dy/dw
+		res[i] = f * w[off]; // dy/dx
     }
     grad[off] = s / n;
 	return res;
@@ -341,14 +361,15 @@ std::vector<double> PoolMaxNode1D::predict(const std::vector<double>& x, const s
 std::vector<double> PoolMaxNode1D::gradient(std::vector<double>& grad, const std::vector<double>& x,
 	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
 {
+	// if argmax(x[1],...,x[n]) = i , then gradient[i] = 1.0 and 0 for others
 	const size_t step = shape[0];
 	const size_t ny = y.size();
-	vector<double> res(x.size(), 0.0);	
+	vector<double> res(x.size(), 0.0);
 	for(size_t i = 0; i < ny; ++i){
 		size_t limit = min((i + 1)*step, x.size());
 		for(size_t j = i * step; j < limit; ++j){
 			if(x[j] == y[i])
-				res[j] = 1.0;
+				res[j] = pre[i];
 		}
 	}
 	return res;
