@@ -45,7 +45,7 @@ struct NodeBase{
     virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w) = 0;
 	// input: x, w, y, product of previous partial gradients. 
 	// pre-condition: predict(x,w) == y && y.size() == pre.size()
-	// action 1: update corresponding entries of global <grad> vector (pre * dy/dw)
+	// action 1: update corresponding entries of global <grad> vector (+ pre * dy/dw)
 	// action 2: output product of all partial gradient (pre * dy/dx)
 	// post-condition: result.size() == x.size() && w.size() == # of entries touched in <grad>
     virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,

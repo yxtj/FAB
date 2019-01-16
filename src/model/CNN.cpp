@@ -118,8 +118,10 @@ std::vector<double> CNN::gradient(
 		mid.push_back(move(output));
 	}
 	vector<vector<double>> output;
+	vector<FCNode1D*> finalNodes;
 	for(int j = 0; j < proxy.nNodeLayer.back(); ++j){
 		FCNode1D* p = dynamic_cast<FCNode1D*>(proxy.nodes.back()[j]);
+		finalNodes.push_back(p);
 		output.push_back({ p->predict(mid[proxy.nLayer - 2], w) });
 	}
 	mid.push_back(output);
@@ -131,7 +133,7 @@ std::vector<double> CNN::gradient(
 	for(size_t i = 0; i < y.size(); ++i){ // last FC layer
 		double output = mid.back()[i][0];
 		double pg = output - y[i];
-		FCNode1D* p = dynamic_cast<FCNode1D*>(proxy.nodes.back()[i]);
+		FCNode1D* p = finalNodes[i];
 		vector<vector<double>> temp = p->gradient(grad, mid[proxy.nLayer - 2], w, output, pg);
 		if(i == 0){
 			partial = move(temp);
@@ -151,7 +153,8 @@ std::vector<double> CNN::gradient(
 				const vector<double>& output = mid[i][oidx];
 				const vector<double>& pg = partial[oidx];
 				++oidx;
-				vector<double> npg = proxy.nodes[i][j]->gradient(grad, input, w, output, pg);
+				NodeBase* p = proxy.nodes[i][j];
+				vector<double> npg = p->gradient(grad, input, w, output, pg);
 				if(j == 0){
 					newPartialGradient[k] = move(npg);
 				} else{

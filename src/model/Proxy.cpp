@@ -246,7 +246,7 @@ std::vector<double> ConvNode1D::gradient(std::vector<double>& grad, const std::v
 		for(size_t j = 0; j < ny; ++j){
 			t += pre[j] * x[j + i];
 		}
-		grad[off + i] = t;
+		grad[off + i] += t;
 	}
 	// dy/dx
 	std::vector<double> res(nx);
@@ -293,7 +293,7 @@ std::vector<double> ReluNode::gradient(std::vector<double>& grad, const std::vec
 		s += f * x[i]; // dy/dw
 		res[i] = f * w[off]; // dy/dx
 	}
-	grad[off] = s / n;
+	grad[off] += s / n;
 	return res;
 }
 
@@ -329,7 +329,7 @@ std::vector<double> SigmoidNode::gradient(std::vector<double>& grad, const std::
 		s += f * x[i]; // dy/dw
 		res[i] = f * w[off]; // dy/dx
     }
-    grad[off] = s / n;
+    grad[off] += s / n;
 	return res;
 }
 
@@ -361,7 +361,8 @@ std::vector<double> PoolMaxNode1D::predict(const std::vector<double>& x, const s
 std::vector<double> PoolMaxNode1D::gradient(std::vector<double>& grad, const std::vector<double>& x,
 	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
 {
-	// if argmax(x[1],...,x[n]) = i , then gradient[i] = 1.0 and 0 for others
+	// no weight -> no change on <grad>
+	// if argmax(x[1],...,x[n]) = i , then dy/dx = 1.0 and 0 for others
 	const size_t step = shape[0];
 	const size_t ny = y.size();
 	vector<double> res(x.size(), 0.0);
@@ -415,6 +416,6 @@ std::vector<std::vector<double>> FCNode1D::gradient(
 			++p;
 		}
 	}
-	grad[p] = f; // the constant offset
+	grad[p] += f; // the constant offset
 	return pg;
 }
