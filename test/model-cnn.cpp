@@ -19,9 +19,11 @@ struct Option{
 	size_t batchSize;
 	double lrate;
 	int niter;
+	int showIter;
 
 	bool parse(int argc, char* argv[]){
-		if(argc <= 8)
+		int optIdx = 8;
+		if(argc <= optIdx)
 			return false;
 		int idx = 1;
 		fnData = argv[idx++];
@@ -34,10 +36,11 @@ struct Option{
 		batchSize = stoul(argv[idx++]);
 		lrate = stod(argv[idx++]);
 		niter = stoi(argv[idx++]);
+		showIter = argc <= optIdx++ ? 1 : stoi(argv[idx++]);
 		return true;
 	}
 	void showUsage(){
-		LOG(INFO) << "Usage: <fn-data> <idx-y> <with-header> <normalize> <shape> <batch-size> <lrate> <n-iter>";
+		LOG(INFO) << "Usage: <fn-data> <idx-y> <with-header> <normalize> <shape> <batch-size> <lrate> <n-iter> [iter-show]";
 	}
 };
 
@@ -52,6 +55,7 @@ int main(int argc, char* argv[]){
 	Option opt;
 	if(!opt.parse(argc, argv)){
 		LOG(ERROR) << "Cannot parse parameters";
+		opt.showUsage();
 		return 1;
 	}
 
@@ -101,8 +105,10 @@ int main(int argc, char* argv[]){
 		p += opt.batchSize;
 		if(p >= dh.size())
 			p = 0;
-		show(trainer.pm->getParameter().weights, dlt, loss);
-		//LOG(INFO) << loss;
+		if(opt.showIter != 0 && iter%opt.showIter == 0)
+			show(trainer.pm->getParameter().weights, dlt, loss);
+		else
+			LOG(INFO) << loss;
 	}
 
 	LOG(INFO) << "finish.";
