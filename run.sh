@@ -38,7 +38,6 @@ function set_dir(){
 
 set_dir
 
-cd ~/Code/FSB/lr-cpp/build
 cd ~/Code/FSB/FAB/build
 
 for i in 1 2 4 8; do for m in $MODE; do echo $i-$m -- $(date);
@@ -53,10 +52,10 @@ done done
 done done
 done
 
-PATH=$PATH:/home/tzhou/Code/FSB/lr-cpp/build/Release/src/main
+PATH=$PATH:/home/tzhou/Code/FSB/FAB/build/Release/src/main
 
 for i in 1 2 4 8; do for m in $MODE; do echo $i-$m -- $(date);
-postprocess $ALG $PARAM  $RESDIR/$m-$i.csv $DATADIR/$ALG-$PARAM-$DSIZE-d.csv -1 $YLIST $DATADIR/$ALG-$PARAM-$DSIZE-p.txt $SCRDIR/$m-$i.txt 0 0
+postprocess $ALG $PARAM  $RESDIR/$m-$i.csv $DATADIR/$ALG-$PARAMNAME-$DSIZE-d.csv -1 $YLIST $DATADIR/$ALG-$PARAMNAME-$DSIZE-p.txt $SCRDIR/$m-$i.txt 0 0
 done done
 
 
