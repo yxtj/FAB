@@ -6,7 +6,7 @@ enum struct LayerType { Input, FC, Conv, PoolMax, PoolMean, PoolMin, ActRelu, Ac
 
 struct NodeBase;
 
-struct Proxy {
+struct CNNProxy {
     void init(const std::string& param);
     int nLayer;
     std::vector<int> nNodeLayer;

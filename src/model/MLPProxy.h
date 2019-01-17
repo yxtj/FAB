@@ -1,10 +1,10 @@
 #pragma once
 #include <vector>
 
-struct ParameterProxyLayer;
-struct ParameterProxyNode;
+struct MLPProxyLayer;
+struct MLPProxyNode;
 
-struct ParameterProxy {
+struct MLPProxy {
 	void init(const std::vector<int>& nNodes);
 	int position(const int layer, const int from, const int to) const;
 	int lengthParameter() const;
@@ -12,8 +12,8 @@ struct ParameterProxy {
 	void bind(const std::vector<double>* w);
 	double get(const int layer, const int from, const int to) const;
 
-	ParameterProxyLayer getLayerProxy(const int l) const;
-	ParameterProxyLayer operator[](const int l) const;
+	MLPProxyLayer getLayerProxy(const int l) const;
+	MLPProxyLayer operator[](const int l) const;
 
 	int nLayer;
 	std::vector<int> nNodeLayer; // (layers) entries, v[i] = # of real nodes (except the constant-offset node)
@@ -26,9 +26,9 @@ private:
 	const std::vector<double>* w;
 };
 
-struct ParameterProxyLayer{
+struct MLPProxyLayer{
 	// given the number of all weight-related nodes
-	ParameterProxyLayer(const int offset, const int nPrev, const int nNext,
+	MLPProxyLayer(const int offset, const int nPrev, const int nNext,
 		const std::vector<double>* w = nullptr)
 		: offset(offset), n(nPrev), m(nNext), w(w)
 	{}
@@ -37,17 +37,17 @@ struct ParameterProxyLayer{
 	void bind(const std::vector<double>* w);
 	double get(const int from, const int to) const;
 
-	ParameterProxyNode getNodeProxyForward(const int i) const;
-	ParameterProxyNode getNodeProxyBackward(const int j) const;
-	ParameterProxyNode operator[](const int l) const; // same as forward
+	MLPProxyNode getNodeProxyForward(const int i) const;
+	MLPProxyNode getNodeProxyBackward(const int j) const;
+	MLPProxyNode operator[](const int l) const; // same as forward
 private:
 	int offset;
 	int n, m;
 	const std::vector<double>* w;
 };
 
-struct ParameterProxyNode{
-	ParameterProxyNode(const int offset, const int step, const std::vector<double>* w = nullptr)
+struct MLPProxyNode{
+	MLPProxyNode(const int offset, const int step, const std::vector<double>* w = nullptr)
 		: offset(offset), step(step), w(w)
 	{}
 	int position(const int to) const;

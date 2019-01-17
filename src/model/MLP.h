@@ -1,13 +1,13 @@
 #pragma once
 #include "Kernel.h"
-#include "ParameterProxy.h"
+#include "MLPProxy.h"
 
 class MLP
 	: public Kernel
 {
 	int nLayer;
 	std::vector<int> nNodeLayer;
-	mutable ParameterProxy proxy; // non-const bind function required
+	mutable MLPProxy proxy; // non-const bind function required
 public:
 	void init(const int xlength, const std::string& param);
 	std::string name() const;

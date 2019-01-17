@@ -3,24 +3,24 @@ set(HEADERS
 	Kernel.h
 	KernelFactory.h
 	Parameter.h
-	ParameterProxy.h
-	Proxy.h
 	Model.h
 	LogisticRegression.h
 	MLP.h
+	MLPProxy.h
 	CNN.h
+	CNNProxy.h
 )
 set(SOURCES
 	mathfunc.cpp
 	Kernel.cpp
 	KernelFactory.cpp
 	Parameter.cpp
-	ParameterProxy.cpp
-	Proxy.cpp
 	Model.cpp
 	LogisticRegression.cpp
 	MLP.cpp
+	MLPProxy.cpp
 	CNN.cpp
+	CNNProxy.cpp
 )
 add_library(model
 	${HEADERS} ${SOURCES})

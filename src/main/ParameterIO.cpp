@@ -1,6 +1,6 @@
 #include "ParameterIO.h"
 #include "util/Util.h"
-#include "model/Proxy.h"
+#include "model/CNNProxy.h"
 #include <stdexcept>
 using namespace std;
 
@@ -104,7 +104,7 @@ std::pair<std::string, std::vector<double>> ParameterIO::loadMLP(std::istream & 
 void ParameterIO::writeCNN(std::ostream & os, const std::vector<double>& w)
 {
 	os << param << "\n";
-	Proxy p;
+	CNNProxy p;
 	p.init(param);
 	vector<int> nWeightOffset = p.weightOffsetLayer;
 	for(size_t l = 1; l < nWeightOffset.size() - 1; ++l){
@@ -123,7 +123,7 @@ std::pair<std::string, std::vector<double>> ParameterIO::loadCNN(std::istream & 
 	string line;
 	getline(is, line);
 	string param = line;
-	Proxy p;
+	CNNProxy p;
 	p.init(param);
 	vector<double> vec;
 	for(size_t i = 0; i < p.nLayer; ++i){

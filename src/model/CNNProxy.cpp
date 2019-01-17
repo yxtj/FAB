@@ -1,4 +1,4 @@
-#include "Proxy.h"
+#include "CNNProxy.h"
 #include "util/Util.h"
 #include "mathfunc.h"
 #include <algorithm>
@@ -8,7 +8,7 @@
 
 using namespace std;
 
-void Proxy::init(const std::string& param){
+void CNNProxy::init(const std::string& param){
     vector<string> strLayer = getStringList(param, "-");
     nLayer = static_cast<int>(strLayer.size());
     // raw string format: R"(...)"
@@ -57,12 +57,12 @@ void Proxy::init(const std::string& param){
     }
 }
   
-int Proxy::lengthParameter() const
+int CNNProxy::lengthParameter() const
 {
 	return weightOffsetLayer[nLayer];
 }
 
-void Proxy::createLayerAct(const size_t i, const int n, const std::string& type){
+void CNNProxy::createLayerAct(const size_t i, const int n, const std::string& type){
 	nNodeLayer[i] = n;
 	if(type == "sigmoid")
 		typeLayer[i] = LayerType::ActSigmoid;
@@ -76,7 +76,7 @@ void Proxy::createLayerAct(const size_t i, const int n, const std::string& type)
 	generateNode(i);
 }
 
-void Proxy::createLayerConv(const size_t i, const int n, const std::vector<int>& shape){
+void CNNProxy::createLayerConv(const size_t i, const int n, const std::vector<int>& shape){
 	nNodeLayer[i] = n;
 	typeLayer[i] = LayerType::Conv;
 	unitNode[i] = shape;
@@ -89,7 +89,7 @@ void Proxy::createLayerConv(const size_t i, const int n, const std::vector<int>&
 	generateNode(i);
 }
 
-void Proxy::createLayerPool(const size_t i, const int n, const std::string& type, const std::vector<int>& shape){
+void CNNProxy::createLayerPool(const size_t i, const int n, const std::string& type, const std::vector<int>& shape){
 	nNodeLayer[i] = n;
 	if(type == "max")
 		typeLayer[i] = LayerType::PoolMax;
@@ -108,7 +108,7 @@ void Proxy::createLayerPool(const size_t i, const int n, const std::string& type
 	generateNode(i);
 }
 
-void Proxy::createLayerFC(const size_t i, const int n){
+void CNNProxy::createLayerFC(const size_t i, const int n){
 	nNodeLayer[i] = n;
 	typeLayer[i] = LayerType::FC;
 	unitNode[i] = shapeLayer[i - 1];
@@ -118,11 +118,11 @@ void Proxy::createLayerFC(const size_t i, const int n){
 	generateNode(i);
 }
 
-std::vector<int> Proxy::getShape(const string& str){
+std::vector<int> CNNProxy::getShape(const string& str){
     return getIntList(str, "*");
 }
 
-int Proxy::getSize(const std::vector<int>& ShapeNode){
+int CNNProxy::getSize(const std::vector<int>& ShapeNode){
     if(ShapeNode.empty())
         return 0;
     int r = 1;
@@ -131,7 +131,7 @@ int Proxy::getSize(const std::vector<int>& ShapeNode){
     return r;
 }
 
-void Proxy::setLayerParameter(const size_t i){
+void CNNProxy::setLayerParameter(const size_t i){
 	if(shapeLayer[i - 1].size() == shapeNode[i].size()){
 		nFeatureLayer[i] = nNodeLayer[i];
 	}else if(shapeLayer[i - 1].size() == shapeNode[i].size() + 1){
@@ -146,7 +146,7 @@ void Proxy::setLayerParameter(const size_t i){
 	ndimLayer[i] = static_cast<int>(shapeLayer[i].size());
 }
 
-void Proxy::generateNode(const size_t i)
+void CNNProxy::generateNode(const size_t i)
 {
 	int offset = weightOffsetLayer[i];
 	vector<NodeBase*>& vec = nodes[i];

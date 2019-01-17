@@ -101,10 +101,10 @@ std::vector<double> MLP::gradient(
 				error[i] = pred[i] - y[i];
 		} else{
 			//error = np.dot(delta, self.w[i + 1].T)
-			ParameterProxyLayer wl = proxy[l + 1];
+			MLPProxyLayer wl = proxy[l + 1];
 			int h = nNodeLayer[l + 2];
 			for(int i = 0; i < m; ++i){
-				ParameterProxyNode wn = wl[i];
+				MLPProxyNode wn = wl[i];
 				for(int j = 0; j < h; ++j)
 					error[i] += delta[j] * wn[j]; // <delta> is left by last iteration
 			}
@@ -117,9 +117,9 @@ std::vector<double> MLP::gradient(
 		}
 		// grad
 		//grad = np.dot(self.output[i].T, delta)
-		ParameterProxyLayer wl = proxy[l];
+		MLPProxyLayer wl = proxy[l];
 		for(int i = 0; i < n+1; ++i){
-			ParameterProxyNode wn = wl[i];
+			MLPProxyNode wn = wl[i];
 			double v = (i != n) ? (*output[l])[i] : 1.0;
 			for(int j = 0; j < m; ++j){
 				int offset = wn.position(j);
@@ -144,16 +144,16 @@ std::vector<double> MLP::activateLayer(
 	//assert(x.size() == n);
 	int m = nNodeLayer[layer + 1];
 	std::vector<double> res(m, 0.0); // # of real nodes in next layer
-	ParameterProxyLayer wl = proxy[layer]; // assume w has already been bound
+	MLPProxyLayer wl = proxy[layer]; // assume w has already been bound
 	// real neuron part
 	for(int i = 0; i < n; ++i){
-		ParameterProxyNode wn = wl[i];
+		MLPProxyNode wn = wl[i];
 		for(int j = 0; j < m; ++j){
 			res[j] += x[i] * wn[j];
 		}
 	}
 	// dummy neuron (constant value 1) part
-	ParameterProxyNode wn = wl[n];
+	MLPProxyNode wn = wl[n];
 	for(int j = 0; j < m; ++j){
 		res[j] += wn[j];
 		// activation function
