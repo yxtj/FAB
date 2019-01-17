@@ -22,7 +22,7 @@ struct Option{
 	int showIter;
 
 	bool parse(int argc, char* argv[]){
-		int optIdx = 8;
+		int optIdx = 9;
 		if(argc <= optIdx)
 			return false;
 		int idx = 1;

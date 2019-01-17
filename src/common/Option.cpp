@@ -36,10 +36,10 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 	//return dummySet(*this, argc, argv);
 
 	int idx = 1;
-	int optIdx = 12;
+	int optIdx = 13;
 	bool flag = false;
 	// parse
-	if(argc <= 12)
+	if(argc < optIdx)
 		return false;
 	try{
 		mode = argv[idx++];
