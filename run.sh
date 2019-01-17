@@ -14,7 +14,7 @@ PARAMNAME=10
 #PARAMNAME=10,15,1
 
 ALG=CNN
-PARAM=100-20,c,5-1,a,relu-1,p,max,2-1,c,5-1,a,relu,1,p,max,2-1
+PARAM=100-20,c,5-1,a,relu-1,p,max,2-1,c,5-1,a,relu-1,p,max,2-1
 PARAMNAME=100,20c5p2,1c5p2,1
 
 YLIST=10
