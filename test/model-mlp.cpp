@@ -26,19 +26,25 @@ struct Option{
 		if(argc <= optIdx)
 			return false;
 		int idx = 1;
-		fnData = argv[idx++];
-		idY = getIntList(argv[idx++]);
-		withHeader = beTrueOption(argv[idx++]);
-		doNormalize = beTrueOption(argv[idx++]);
-		shape = argv[idx++];
-		batchSize = stoul(argv[idx++]);
-		lrate = stod(argv[idx++]);
-		niter = stoi(argv[idx++]);
-		showIter = argc <= optIdx++ ? 1 : stoi(argv[idx++]);
+		try{
+			fnData = argv[idx++];
+			idY = getIntList(argv[idx++]);
+			withHeader = beTrueOption(argv[idx++]);
+			doNormalize = beTrueOption(argv[idx++]);
+			shape = argv[idx++];
+			batchSize = stoul(argv[idx++]);
+			lrate = stod(argv[idx++]);
+			niter = stoi(argv[idx++]);
+			showIter = argc <= optIdx++ ? 1 : stoi(argv[idx++]);
+		} catch(exception& e){
+			LOG(ERROR) << e.what();
+			LOG(ERROR) << "cannot parse " << idx << "-th parameter: " << argv[idx];
+			return false;
+		}
 		return true;
 	}
 	void showUsage(){
-		LOG(INFO) << "Usage: <fn-data> <idx-y> <with-header> <normalize> <shape> <batch-size> <lrate> <n-iter> [iter-show]";
+		LOG(ERROR) << "Usage: <fn-data> <idx-y> <with-header> <normalize> <shape> <batch-size> <lrate> <n-iter> [iter-show]";
 	}
 };
 
@@ -52,7 +58,7 @@ int main(int argc, char* argv[]){
 	initLogger(argc, argv);
 	Option opt;
 	if(!opt.parse(argc, argv)){
-		LOG(ERROR) << "Cannot parse parameters";
+		opt.showUsage();
 		return 1;
 	}
 
