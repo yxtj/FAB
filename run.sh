@@ -31,7 +31,7 @@ function set_dir(){
   export RESDIR=$RESBASEDIR/$PARAMNAME-$DSIZE/$BS-$LR
   export SCRDIR=$SCRBASEDIR/$PARAMNAME-$DSIZE/$BS-$LR
   export LOGDIR=$LOGBASEDIR/$PARAMNAME-$DSIZE/$BS-$LR
-  mkdir -p $RESDIRls
+  mkdir -p $RESDIR
   mkdir -p $SCRDIR
   mkdir -p $LOGDIR
 }
@@ -47,7 +47,7 @@ done done
 for PARAM in 10,1; do echo $PARAM;
 for BS in 10000 1000 100; do for LR in 0.1 0.01; do echo $BS - $LR; set_dir;
 for i in 1 2 4 8; do for m in $MODE; do echo $i-$m -- $(date);
-mpirun -n $((i+1)) src/main/main $m $ALG $PARAM $DATADIR/$ALG-$PARAMNAME-$DSIZE-d.csv $RESDIR/$m-$i.csv -1 $YLIST 0 $LR $BS $ITER $TIME 1000 0.5 200 --v=2 > $LOGDIR/$m-$i;
+mpirun -n $((i+1)) src/main/main $m $ALG $PARAM $DATADIR/$ALG-$PARAMNAME-$DSIZE-d.csv $RESDIR/$m-$i.csv -1 $YLIST 0 $LR $BS $ITER $TIME 1000 0.5 200 --v=1 > $LOGDIR/$m-$i;
 done done
 done done
 done
