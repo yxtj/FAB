@@ -115,10 +115,6 @@ void Worker::syncInit()
 void Worker::syncProcess()
 {
 	while(!exitTrain){
-		if(allowTrain.load() == false){
-			sleep();
-			continue;
-		}
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		bfDelta = trainer.batchDelta(dataPointer, localBatchSize, true);
@@ -151,10 +147,10 @@ void Worker::asyncInit()
 void Worker::asyncProcess()
 {
 	while(!exitTrain){
-		if(allowTrain.load() == false){
-			sleep();
-			continue;
-		}
+		//if(allowTrain.load() == false){
+		//	sleep();
+		//	continue;
+		//}
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		bfDelta = trainer.batchDelta(dataPointer, localBatchSize, true);
@@ -181,16 +177,16 @@ void Worker::asyncProcess()
 
 void Worker::fsbInit()
 {
-	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterFsb));
+	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameter));
 }
 
 void Worker::fsbProcess()
 {
 	while(!exitTrain){
-		if(allowTrain == false){
-			sleep();
-			continue;
-		}
+		//if(allowTrain == false){
+		//	sleep();
+		//	continue;
+		//}
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		size_t cnt;
@@ -207,6 +203,7 @@ void Worker::fsbProcess()
 		}
 		VLOG_EVERY_N(ln, 2) << "  wait for new parameter";
 		waitParameter();
+		resumeTrain();
 		if(exitTrain==true){
 			break;
 		}
@@ -410,21 +407,6 @@ void Worker::handleParameter(const std::string & data, const RPCInfo & info)
 	bufferParameter(p);
 	suParam.notify();
 	//sendReply(info);
-	++stat.n_par_recv;
-}
-
-void Worker::handleParameterFsb(const std::string & data, const RPCInfo & info)
-{
-	Timer tmr;
-	auto weights = deserialize<vector<double>>(data);
-	stat.t_data_deserial += tmr.elapseSd();
-	Parameter p;
-	p.set(move(weights));
-	bufferParameter(p);
-	suParam.notify();
-	//sendReply(info);
-	// continue training
-	resumeTrain();
 	++stat.n_par_recv;
 }
 
