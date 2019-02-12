@@ -15,6 +15,11 @@ void Runner::sleep() {
 	this_thread::sleep_for(d);
 }
 
+void Runner::sleep(double seconds) {
+	static auto d = chrono::duration<double>(seconds);
+	this_thread::sleep_for(d);
+}
+
 void Runner::startMsgLoop(const std::string& name){
 	running = true;
 //	tmsg = thread(bind(&Runner::msgLoop, this, name));

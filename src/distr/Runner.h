@@ -37,6 +37,7 @@ public:
 // helpers:
 protected:
 	void sleep();
+	void sleep(double seconds);
 	void msgLoop(const std::string& name = "");
 
 	void finishStat();

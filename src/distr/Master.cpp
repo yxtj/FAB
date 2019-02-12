@@ -42,8 +42,10 @@ void Master::init(const Option* opt, const size_t lid)
 		asyncInit();
 	} else if(opt->mode == "fsb"){
 		fsbInit();
+		ie.init(nWorker, { "fixed", "2.0" });
 	} else if(opt->mode == "fab"){
 		fabInit();
+		ie.init(nWorker, { "fixed", "2.0" });
 	}
 }
 
@@ -161,7 +163,8 @@ void Master::asyncProcess()
 void Master::fsbInit()
 {
 	factorDelta = 1.0 / nWorker;
-	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDelta));
+	clearAccumulatedDelta();
+	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaFsb));
 }
 
 void Master::fsbProcess()
@@ -174,7 +177,9 @@ void Master::fsbProcess()
 			tl = t;
 		}
 		VLOG_EVERY_N(ln, 1)<<"Start iteration: "<<iter;
-		waitDeltaFromAny();
+		//waitDeltaFromAny();
+		double interval = ie.interval();
+		sleep(interval);
 		VLOG_EVERY_N(ln, 2) << "  Broadcast pause signal";
 		broadcastSignalPause();
 		VLOG_EVERY_N(ln, 2) << "  Waiting for all deltas";
@@ -183,7 +188,8 @@ void Master::fsbProcess()
 		VLOG_EVERY_N(ln, 2) << "  Broadcast new parameters";
 		broadcastParameter();
 		//waitParameterConfirmed();
-		VLOG_EVERY_N(ln, 2) << "  Broadcast continue signal";
+		ie.update(bf_delta, interval, tmrTrain.elapseSd());
+		//VLOG_EVERY_N(ln, 2) << "  Broadcast continue signal";
 		//broadcastSignalContinue();
 		archiveProgress();
 		++iter;
@@ -355,6 +361,17 @@ void Master::gatherDelta()
 	suDeltaAll.wait();
 }
 
+void Master::clearAccumulatedDelta()
+{
+	bf_delta.assign(model.paramWidth(), 0.0);
+}
+
+void Master::accumulateDelta(const std::vector<double>& delta)
+{
+	for (size_t i = 0; i < delta.size(); ++i)
+		bf_delta[i] += delta[i];
+}
+
 void Master::handleReply(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
@@ -415,6 +432,20 @@ void Master::handleDeltaAsync(const std::string & data, const RPCInfo & info)
 	++stat.n_dlt_recv;
 	// directly send new parameter
 	sendParameter(s);
+}
+
+void Master::handleDeltaFsb(const std::string & data, const RPCInfo & info)
+{
+	Timer tmr;
+	auto delta = deserialize<vector<double>>(data);
+	stat.t_data_deserial += tmr.elapseSd();
+	int s = wm.nid2lid(info.source);
+	accumulateDelta(delta);
+	applyDelta(delta, s);
+	rph.input(typeDDeltaAll, s);
+	//rph.input(typeDDeltaAny, s);
+	//sendReply(info);
+	++stat.n_dlt_recv;
 }
 
 void Master::handleDeltaFab(const std::string & data, const RPCInfo & info)

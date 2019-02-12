@@ -1,6 +1,7 @@
 #pragma once
 #include "Runner.h"
 #include "IDMapper.h"
+#include "IntervalEstimator.h"
 #include "driver/tools/SyncUnit.h"
 #include "util/Timer.h"
 #include <vector>
@@ -8,7 +9,7 @@
 
 class Master : public Runner{
 	Parameter param;
-	std::vector<std::vector<double>>  bf_delta;
+	std::vector<double>  bf_delta;
 
 public:
 	Master();
@@ -49,6 +50,8 @@ public:
 	void waitDeltaFromAny(); // dont reset suDeltaAny
 	void waitDeltaFromAll(); // reset suDeltaAll
 	void gatherDelta();
+	void clearAccumulatedDelta();
+	void accumulateDelta(const std::vector<double>& delta);
 
 // handler
 public:
@@ -57,6 +60,7 @@ public:
 	void handleXLength(const std::string& data, const RPCInfo& info);
 	void handleDelta(const std::string& data, const RPCInfo& info);
 	void handleDeltaAsync(const std::string& data, const RPCInfo& info);
+	void handleDeltaFsb(const std::string& data, const RPCInfo& info);
 	void handleDeltaFab(const std::string& data, const RPCInfo& info);
 	void handleDeltaTail(const std::string& data, const RPCInfo& info);
 
@@ -65,6 +69,7 @@ private:
 	double factorDelta;
 	size_t nx; // length of x
 	int ln; // log-every-n times
+	IntervalEstimator ie; // for flexible parallel modes
 
 	size_t iter; // current iteration being executate now (not complete)
 	size_t nUpdate; // used for Async case
