@@ -30,6 +30,7 @@ private:
 	void sendXLength();
 	void sendClosed();
 
+	void accumulateDelta(const std::vector<double>& delta);
 	void sendDelta(std::vector<double>& delta);
 	void bufferParameter(Parameter& p);
 	void applyBufferParameter(); // using the buffer
@@ -53,7 +54,6 @@ public:
 
 private:
 	size_t dataPointer;
-	size_t iter;
 	size_t localBatchSize;
 	int ln; // log-every-n times
 

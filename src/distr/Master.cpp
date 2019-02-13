@@ -42,10 +42,10 @@ void Master::init(const Option* opt, const size_t lid)
 		asyncInit();
 	} else if(opt->mode == "fsb"){
 		fsbInit();
-		ie.init(nWorker, { "fixed", "2.0" });
+		// TODO: add specific option for interval estimator
+		ie.init(nWorker, { "fixed", to_string(opt->arvTime) });
 	} else if(opt->mode == "fab"){
 		fabInit();
-		ie.init(nWorker, { "fixed", "2.0" });
 	}
 }
 
@@ -60,6 +60,7 @@ void Master::run()
 	broadcastWorkerList();
 	LOG(INFO)<<"Waiting x-length to initialize parameters";
 	initializeParameter();
+	clearAccumulatedDelta();
 	LOG(INFO) << "Got x-length = " << nx;
 	if(!opt->fnOutput.empty()){
 		foutput.open(opt->fnOutput);
@@ -163,7 +164,6 @@ void Master::asyncProcess()
 void Master::fsbInit()
 {
 	factorDelta = 1.0 / nWorker;
-	clearAccumulatedDelta();
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaFsb));
 }
 
@@ -177,18 +177,16 @@ void Master::fsbProcess()
 			tl = t;
 		}
 		VLOG_EVERY_N(ln, 1)<<"Start iteration: "<<iter;
-		//waitDeltaFromAny();
 		double interval = ie.interval();
 		sleep(interval);
 		VLOG_EVERY_N(ln, 2) << "  Broadcast pause signal";
 		broadcastSignalPause();
 		VLOG_EVERY_N(ln, 2) << "  Waiting for all deltas";
 		waitDeltaFromAll();
-		suDeltaAny.reset();
 		VLOG_EVERY_N(ln, 2) << "  Broadcast new parameters";
 		broadcastParameter();
 		//waitParameterConfirmed();
-		ie.update(bf_delta, interval, tmrTrain.elapseSd());
+		ie.update(bfDelta, interval, tmrTrain.elapseSd());
 		//VLOG_EVERY_N(ln, 2) << "  Broadcast continue signal";
 		//broadcastSignalContinue();
 		archiveProgress();
@@ -363,13 +361,13 @@ void Master::gatherDelta()
 
 void Master::clearAccumulatedDelta()
 {
-	bf_delta.assign(model.paramWidth(), 0.0);
+	bfDelta.assign(model.paramWidth(), 0.0);
 }
 
 void Master::accumulateDelta(const std::vector<double>& delta)
 {
 	for (size_t i = 0; i < delta.size(); ++i)
-		bf_delta[i] += delta[i];
+		bfDelta[i] += delta[i];
 }
 
 void Master::handleReply(const std::string & data, const RPCInfo & info)

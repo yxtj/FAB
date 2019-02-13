@@ -18,6 +18,7 @@ public:
 	const Option* opt;
 	size_t nWorker;
 	size_t localID; // local logic id
+	size_t iter;
 	std::string logName;
 	Model model;
 	GD trainer;

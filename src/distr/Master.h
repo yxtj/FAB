@@ -8,9 +8,6 @@
 #include <fstream>
 
 class Master : public Runner{
-	Parameter param;
-	std::vector<double>  bf_delta;
-
 public:
 	Master();
 	virtual void init(const Option* opt, const size_t lid);
@@ -65,13 +62,16 @@ public:
 	void handleDeltaTail(const std::string& data, const RPCInfo& info);
 
 private:
+	Parameter param;
+	std::vector<double>  bfDelta;
+
 	IDMapper wm; // worker id mapper
 	double factorDelta;
 	size_t nx; // length of x
 	int ln; // log-every-n times
 	IntervalEstimator ie; // for flexible parallel modes
 
-	size_t iter; // current iteration being executate now (not complete)
+	//size_t iter; // [defined in Runner] current iteration being executate now (not complete)
 	size_t nUpdate; // used for Async case
 	Timer tmrTrain;
 
