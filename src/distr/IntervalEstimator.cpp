@@ -1,5 +1,6 @@
 #include "IntervalEstimator.h"
 #include "math/norm.h"
+#include <stdexcept>
 
 using namespace std;
 
