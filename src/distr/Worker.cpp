@@ -192,18 +192,12 @@ void Worker::fsbProcess()
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		size_t cnt = 0;
-		bfDelta.clear();
+		bfDelta.assign(n, 0.0);
 		while (exitTrain == false && allowTrain) {
 			vector<double> tmp;
 			size_t c;
 			// try to use localBatchSize data-points, the actual usage is returned via cnt
 			tie(c, tmp) = trainer.batchDelta(allowTrain, dataPointer, localBatchSize, true);
-			if (bfDelta.empty()) {
-				bfDelta = move(tmp);
-			}
-			else {
-				accumulateDelta(tmp);
-			}
 			accumulateDelta(tmp);
 			updatePointer(c);
 			cnt += c;
