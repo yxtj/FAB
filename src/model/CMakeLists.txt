@@ -1,5 +1,4 @@
 set(HEADERS
-	mathfunc.h
 	Kernel.h
 	KernelFactory.h
 	Parameter.h
@@ -11,7 +10,6 @@ set(HEADERS
 	CNNProxy.h
 )
 set(SOURCES
-	mathfunc.cpp
 	Kernel.cpp
 	KernelFactory.cpp
 	Parameter.cpp
@@ -24,4 +22,4 @@ set(SOURCES
 )
 add_library(model
 	${HEADERS} ${SOURCES})
-target_link_libraries(model data util)
+target_link_libraries(model math data util)
