@@ -43,7 +43,7 @@ void Master::init(const Option* opt, const size_t lid)
 	} else if(opt->mode == "fsb"){
 		fsbInit();
 		// TODO: add specific option for interval estimator
-		ie.init(nWorker, { "fixed", to_string(opt->arvTime) });
+		ie.init(nWorker, { "fixed", to_string(opt->arvTime/opt->batchSize) });
 	} else if(opt->mode == "fab"){
 		fabInit();
 	}
