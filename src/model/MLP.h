@@ -1,6 +1,6 @@
 #pragma once
 #include "Kernel.h"
-#include "MLPProxy.h"
+#include "impl/MLPProxy.h"
 
 class MLP
 	: public Kernel

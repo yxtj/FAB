@@ -1,4 +1,5 @@
 #include "CNN.h"
+#include "impl/NodeImpl.h"
 #include "util/Util.h"
 #include <cmath>
 #include <stdexcept>
@@ -27,9 +28,9 @@ void CNN::init(const int xlength, const std::string & param)
 		throw invalid_argument("The dataset does not match the input layer of the network");
 	// check FC layer
 	for(size_t i = 0; i < proxy.nLayer; ++i){
-		if(i != proxy.nLayer - 1 && proxy.typeLayer[i] == LayerType::FC){
+		if(i != proxy.nLayer - 1 && proxy.typeLayer[i] == NodeType::FC){
 			throw invalid_argument("Only the last layer can be a FC layer.");
-		} else if(i == proxy.nLayer - 1 && proxy.typeLayer[i] != LayerType::FC){
+		} else if(i == proxy.nLayer - 1 && proxy.typeLayer[i] != NodeType::FC){
 			throw invalid_argument("The last layer must be a FC layer.");
 		}
 	}

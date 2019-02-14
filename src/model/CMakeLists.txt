@@ -1,3 +1,17 @@
+set(IMPL_HEADERS
+	impl/NodeBase.h
+	impl/NodeImpl.h
+	impl/MLPProxy.h
+	impl/CNNProxy.h
+	impl/RNNProxy.h
+)
+set(IMPL_SOURCES
+	impl/NodeBase.cpp
+	impl/NodeImpl.cpp
+	impl/MLPProxy.cpp
+	impl/CNNProxy.cpp
+	impl/RNNProxy.cpp
+)
 set(HEADERS
 	Kernel.h
 	KernelFactory.h
@@ -5,9 +19,9 @@ set(HEADERS
 	Model.h
 	LogisticRegression.h
 	MLP.h
-	MLPProxy.h
 	CNN.h
-	CNNProxy.h
+	TopicModel.h
+	RNN.h
 )
 set(SOURCES
 	Kernel.cpp
@@ -16,10 +30,10 @@ set(SOURCES
 	Model.cpp
 	LogisticRegression.cpp
 	MLP.cpp
-	MLPProxy.cpp
 	CNN.cpp
-	CNNProxy.cpp
+	TopicModel.cpp
+	RNN.cpp
 )
 add_library(model
-	${HEADERS} ${SOURCES})
+	${IMPL_HEADERS} ${IMPL_SOURCES} ${HEADERS} ${SOURCES})
 target_link_libraries(model math data util)

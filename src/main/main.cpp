@@ -39,10 +39,10 @@ int main(int argc, char* argv[]){
 			<< "\nTerminating condition:\n  Max-iteration: " << opt.tcIter << "\tMax-time: " << opt.tcTime;
 	}
 #ifndef NDEBUG
-	/*if(net->id()==0){
+	if(net->id()==0){
 		DLOG(DEBUG)<<"pause.";
 		DLOG(DEBUG)<<cin.get();
-	}*/
+	}
 #endif
 	if(net->id()==0){
 		Master m;

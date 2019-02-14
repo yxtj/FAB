@@ -1,14 +1,14 @@
 #pragma once
 #include "Kernel.h"
-#include "impl/CNNProxy.h"
+#include "impl/RNNProxy.h"
 
-class CNN
+class RNN
 	: public Kernel
 {
 	int nLayer;
 	std::vector<int> nNodeLayer;
 	int nWeight;
-	mutable CNNProxy proxy; // non-const bind function required
+	mutable RNNProxy proxy;
 public:
 	void init(const int xlength, const std::string& param);
 	std::string name() const;

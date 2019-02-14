@@ -1,14 +1,12 @@
 #pragma once
 #include "Kernel.h"
-#include "impl/CNNProxy.h"
 
-class CNN
+class TopicModel
 	: public Kernel
 {
 	int nLayer;
 	std::vector<int> nNodeLayer;
 	int nWeight;
-	mutable CNNProxy proxy; // non-const bind function required
 public:
 	void init(const int xlength, const std::string& param);
 	std::string name() const;
@@ -22,5 +20,5 @@ public:
 	std::vector<double> gradient(
 		const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y) const;
 private:
-	
+
 };

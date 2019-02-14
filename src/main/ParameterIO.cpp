@@ -1,6 +1,6 @@
 #include "ParameterIO.h"
 #include "util/Util.h"
-#include "model/CNNProxy.h"
+#include "model/impl/CNNProxy.h"
 #include <stdexcept>
 using namespace std;
 
