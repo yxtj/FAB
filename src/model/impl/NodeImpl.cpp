@@ -79,7 +79,8 @@ std::vector<double> ConvNode1D::gradient(std::vector<double>& grad, const std::v
 RecuNode::RecuNode(const size_t offset, const std::vector<int>& shape)
 	: NodeBase(offset, shape), n(shape[0]), k(shape[1])
 {
-	last.assign(n, 0.0);
+	last_pred.assign(n, 0.0);
+	last_grad.assign(n, 0.0);
 }
 
 std::vector<double> RecuNode::predict(const std::vector<double>& x, const std::vector<double>& w)
@@ -94,11 +95,12 @@ std::vector<double> RecuNode::predict(const std::vector<double>& x, const std::v
 		}
 		double b = 0.0;
 		for(int j = 0; j < k; ++j){ // U*y
-			b += last[j] * w[p++];
+			b += last_pred[j] * w[p++];
 		}
 		res[i] = a + b; // + w[p++];
 	}
-	last = res; // store current output for next input
+	// store current output for next call
+	last_pred = res;
 	return res;
 }
 
@@ -119,10 +121,12 @@ std::vector<double> RecuNode::gradient(std::vector<double>& grad, const std::vec
 			++p;
 		}
 		for(int j = 0; j < k; ++j){ // U*y
-			grad[p++] += f * y[j]; // dy/dw
+			grad[p++] += f * last_grad[j]; // dy/dw
 		}
 		//grad[p++] = 1.0; // dy/dw
 	}
+	// store current output for next call
+	last_grad = y;
 	return res;
 }
 

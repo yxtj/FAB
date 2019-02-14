@@ -37,7 +37,7 @@ struct RecuNode
 	: public NodeBase
 {
 	const int n, k;
-	std::vector<double> last;
+	std::vector<double> last_pred, last_grad; // store the output of last usage (k-dim)
 	RecuNode(const size_t offset, const std::vector<int>& shape); // shape = {n,k}
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
 	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
