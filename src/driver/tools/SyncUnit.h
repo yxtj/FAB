@@ -31,21 +31,12 @@ struct SyncUnit{
 	// return whether the state is ready.
 	//   true -> waken up by notification
 	//   false -> waken up by timeout
-	bool wait_for(const double& dur);
+	bool wait_for(const double dur);
 
-	template<class rep, class period>
-	bool wait_for(const std::chrono::duration<rep,period>& dur) {
-		if(ready)	return true;
-		std::unique_lock<std::mutex> ul(m);
-		if(ready)	return true;
-		return cv.wait_for(ul, dur, [&]() {return ready; });
-	}
 	// wake up all waiters
 	void notify();
 
-	void reset(){
-		ready=false;
-	}
+	void reset();
 private:
 	std::mutex m;
 	std::condition_variable cv;

@@ -13,11 +13,20 @@ void SyncUnit::wait() {
 	cv.wait(ul, [&]() {return ready; });
 }
 
-bool SyncUnit::wait_for(const double& dur) {
-	return wait_for(std::chrono::duration<double>(dur));
+bool SyncUnit::wait_for(const double dur) {
+	std::unique_lock<std::mutex> ul(m);
+	return cv.wait_for(ul, std::chrono::duration<double>(dur), [&]() {return ready; });
 }
 
 void SyncUnit::notify() {
-	ready = true;
+	{
+		std::unique_lock<std::mutex> ul(m);
+		ready = true;
+	}
 	cv.notify_all();
+}
+
+void SyncUnit::reset() {
+	std::unique_lock<std::mutex> ul(m);
+	ready = false;
 }
