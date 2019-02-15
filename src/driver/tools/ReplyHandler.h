@@ -1,11 +1,4 @@
 #pragma once
-/*
- * ReplyHandler.h
- *
- *  Created on: Dec 20, 2015
- *      Author: tzhou
- */
-
 #ifndef DRIVER_TOOLS_REPLYHANDLER_H_
 #define DRIVER_TOOLS_REPLYHANDLER_H_
 
@@ -43,6 +36,8 @@ public:
 		//return whether condition is satisfied after receiving source.
 		//should be able to reset itself after last satisfaction
 		virtual bool update(const int source){return false;}
+		//virtual bool ready() const { return false; }
+		virtual bool ready() const { return false; }
 		virtual void reset(){}
 		virtual ~Condition(){}
 	};
@@ -70,6 +65,8 @@ public:
 	void addType(const int type, Condition* cond,
 			std::function<void()> fn, const bool spwanThread=false);
 	void removeType(const int type);
+	//bool stateType(const int type);
+	int stateType(const int type);
 
 	void activateType(const int type){
 		cont.at(type).activated=true;
