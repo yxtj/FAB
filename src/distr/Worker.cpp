@@ -75,7 +75,6 @@ void Worker::run()
 	DLOG(INFO) << "got init parameter";
 	model.init(opt->algorighm, trainer.pd->xlength(), opt->algParam);
 	applyBufferParameter();
-	resumeTrain();
 
 	DLOG(INFO) << "start training with mode: " << opt->mode << ", local batch size: " << localBatchSize;
 	iter = 1;
@@ -177,7 +176,7 @@ void Worker::asyncProcess()
 
 void Worker::fsbInit()
 {
-	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameter));
+	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterFsb));
 }
 
 void Worker::fsbProcess()
@@ -211,8 +210,7 @@ void Worker::fsbProcess()
 			break;
 		}
 		VLOG_EVERY_N(ln, 2) << "  wait for new parameter";
-		waitParameter();
-		resumeTrain();
+		waitParameter(); // resumeTrain() by handleParameterFsb()
 		if(exitTrain==true){
 			break;
 		}
@@ -422,6 +420,21 @@ void Worker::handleParameter(const std::string & data, const RPCInfo & info)
 	bufferParameter(p);
 	suParam.notify();
 	//sendReply(info);
+	++stat.n_par_recv;
+}
+
+void Worker::handleParameterFsb(const std::string & data, const RPCInfo & info)
+{
+	Timer tmr;
+	auto weights = deserialize<vector<double>>(data);
+	stat.t_data_deserial += tmr.elapseSd();
+	Parameter p;
+	p.set(move(weights));
+	bufferParameter(p);
+	suParam.notify();
+	//sendReply(info);
+	// resume training
+	resumeTrain();
 	++stat.n_par_recv;
 }
 
