@@ -13,16 +13,15 @@ Worker::Worker() : Runner() {
 	dataPointer = 0;
 	iter = 0;
 	localBatchSize = 1;
+	bfDeltaDpCount = 0;
 
 	hasNewParam = false;
 	allowTrain = true;
 	exitTrain = false;
 
-	trainer.bindModel(&model);
-
 	suOnline.reset();
 	suParam.reset();
-	suXlength.reset();
+	suDatasetInfo.reset();
 }
 
 void Worker::init(const Option* opt, const size_t lid)
@@ -68,14 +67,14 @@ void Worker::run()
 	sendOnline();
 	DLOG(INFO) << "waiting worker list";
 	waitWorkerList();
-	DLOG(INFO) << "send x length";
-	sendXLength();
+	DLOG(INFO) << "send dataset info";
+	sendDatasetInfo();
 	DLOG(INFO) << "waiting init parameter";
 	waitParameter();
 	DLOG(INFO) << "got init parameter";
 	model.init(opt->algorighm, trainer.pd->xlength(), opt->algParam);
+	trainer.bindModel(&model);
 	applyBufferParameter();
-	resumeTrain();
 
 	DLOG(INFO) << "start training with mode: " << opt->mode << ", local batch size: " << localBatchSize;
 	iter = 1;
@@ -122,7 +121,7 @@ void Worker::syncProcess()
 		stat.t_dlt_calc+= tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
-		sendDelta(bfDelta);
+		sendDelta(bfDelta, localBatchSize);
 		if(exitTrain==true){
 			break;
 		}
@@ -158,7 +157,7 @@ void Worker::asyncProcess()
 		stat.t_dlt_calc += tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
-		sendDelta(bfDelta);
+		sendDelta(bfDelta, localBatchSize);
 		if(exitTrain==true){
 			break;
 		}
@@ -177,7 +176,7 @@ void Worker::asyncProcess()
 
 void Worker::fsbInit()
 {
-	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameter));
+	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterFsb));
 }
 
 void Worker::fsbProcess()
@@ -191,28 +190,33 @@ void Worker::fsbProcess()
 		//}
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
-		size_t cnt = 0;
+		size_t left = trainer.pd->size();
 		bfDelta.assign(n, 0.0);
-		while (exitTrain == false && allowTrain) {
+		while (exitTrain == false && allowTrain && left != 0) {
 			vector<double> tmp;
 			size_t c;
-			// try to use localBatchSize data-points, the actual usage is returned via cnt
-			tie(c, tmp) = trainer.batchDelta(allowTrain, dataPointer, localBatchSize, true);
+			tie(c, tmp) = trainer.batchDelta(allowTrain, dataPointer, left, false);
 			accumulateDelta(tmp);
 			updatePointer(c);
-			cnt += c;
+			left -= c;
 		}
+		// wait until allowTrain is set to false
+		while(allowTrain == true)
+			sleep();
+		size_t used = trainer.pd->size() - left;
+		const double factor = 1.0 / used;
+		for(size_t i = 0; i < n; ++i)
+			bfDelta[i] *= factor;
 		stat.t_dlt_calc += tmr.elapseSd();
-		VLOG_EVERY_N(ln, 2) << "  calculate delta with " << cnt << " data points";
+		VLOG_EVERY_N(ln, 2) << "  calculate delta with " << used << " data points";
 		VLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
-		sendDelta(bfDelta);
+		sendDelta(bfDelta, used);
 		if(exitTrain==true){
 			break;
 		}
 		VLOG_EVERY_N(ln, 2) << "  wait for new parameter";
-		waitParameter();
-		resumeTrain();
+		waitParameter(); // resumeTrain() by handleParameterFsb()
 		if(exitTrain==true){
 			break;
 		}
@@ -240,8 +244,8 @@ void Worker::fabProcess()
 		//	continue;
 		//}
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";// << ". msg waiting: " << driver.queSize();
-		size_t left = localBatchSize;
 		Timer tmr;
+		size_t left = localBatchSize;
 		bfDelta.assign(n, 0.0);
 		while(!exitTrain && left != 0){
 			tmr.restart();
@@ -265,7 +269,7 @@ void Worker::fabProcess()
 		for(size_t i = 0; i < n; ++i)
 			bfDelta[i] *= factor;
 		VLOG_EVERY_N(ln, 2) << "  send delta";
-		sendDelta(bfDelta);
+		sendDelta(bfDelta, localBatchSize);
 		// TODO: wait reply of delta for small batch size, to prevent the master from becoming a bottleneck
 		// do not wait parameter, because it is loaded in each handleParameterFab
 		// OR: use staleness tolerance logic in sendDelta
@@ -295,10 +299,12 @@ void Worker::waitWorkerList()
 	suOnline.wait();
 }
 
-void Worker::sendXLength()
+void Worker::sendDatasetInfo()
 {
-	net->send(masterNID, MType::CXLength, trainer.pd->xlength());
-	suXlength.wait();
+	tuple<size_t, size_t, size_t> t{
+		trainer.pd->xlength(), trainer.pd->ylength(), trainer.pd->size() };
+	net->send(masterNID, MType::CDataset, t);
+	suDatasetInfo.wait();
 }
 
 void Worker::sendClosed()
@@ -319,7 +325,7 @@ void Worker::registerHandlers()
 
 	//addRPHAnySU(MType::CWorkers, suOnline);
 	//addRPHAnySU(MType::DParameter, suParam);
-	addRPHAnySU(MType::CXLength, suXlength);
+	addRPHAnySU(MType::CDataset, suDatasetInfo);
 }
 
 void Worker::accumulateDelta(const std::vector<double>& delta)
@@ -328,12 +334,12 @@ void Worker::accumulateDelta(const std::vector<double>& delta)
 		bfDelta[i] += delta[i];
 }
 
-void Worker::sendDelta(std::vector<double>& delta)
+void Worker::sendDelta(std::vector<double>& delta, const size_t cnt)
 {
 	// TODO: add staleness tolerance logic here
 	DVLOG(3) << "send delta: " << delta;
 	//DVLOG_EVERY_N(ln, 1) << "n-send: " << iter << " un-cmt msg: " << net->pending_pkgs() << " cmt msg: " << net->stat_send_pkg;
-	net->send(masterNID, MType::DDelta, delta);
+	net->send(masterNID, MType::DDelta, make_pair(move(cnt), move(delta)));
 	++stat.n_dlt_send;
 }
 
@@ -422,6 +428,21 @@ void Worker::handleParameter(const std::string & data, const RPCInfo & info)
 	bufferParameter(p);
 	suParam.notify();
 	//sendReply(info);
+	++stat.n_par_recv;
+}
+
+void Worker::handleParameterFsb(const std::string & data, const RPCInfo & info)
+{
+	Timer tmr;
+	auto weights = deserialize<vector<double>>(data);
+	stat.t_data_deserial += tmr.elapseSd();
+	Parameter p;
+	p.set(move(weights));
+	bufferParameter(p);
+	suParam.notify();
+	//sendReply(info);
+	// resume training
+	resumeTrain();
 	++stat.n_par_recv;
 }
 

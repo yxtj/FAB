@@ -8,7 +8,7 @@ struct MType {
 	static constexpr int COnline = 1;
 	static constexpr int CRegister = 2;
 	static constexpr int CWorkers = 3;
-	static constexpr int CXLength = 4;
+	static constexpr int CDataset = 4;
 	static constexpr int CTerminate = 7;
 	static constexpr int CClosed = 8;
 	static constexpr int CAlive = 9;

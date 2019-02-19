@@ -11,6 +11,8 @@ Master::Master() : Runner() {
 	trainer.bindModel(&model);
 	factorDelta = 1.0;
 	nx = 0;
+	ny = 0;
+	nPoint = 0;
 	iter = 0;
 	nUpdate = 0;
 	lastArchIter = 0;
@@ -18,7 +20,7 @@ Master::Master() : Runner() {
 
 	suOnline.reset();
 	suWorker.reset();
-	suXLength.reset();
+	suDatasetInfo.reset();
 	suParam.reset();
 	suDeltaAny.reset();
 	suDeltaAll.reset();
@@ -31,19 +33,21 @@ void Master::init(const Option* opt, const size_t lid)
 {
 	this->opt = opt;
 	nWorker = opt->nw;
+	nPointWorker.assign(nWorker, 0);
 	trainer.setRate(opt->lrate);
 	localID = lid;
 	ln = opt->logIter;
 	logName = "M";
 	setLogThreadName(logName);
+
 	if(opt->mode == "sync"){
 		syncInit();
 	} else if(opt->mode == "async"){
 		asyncInit();
 	} else if(opt->mode == "fsb"){
 		fsbInit();
-		// TODO: add specific option for interval estimator
-		ie.init(nWorker, { "fixed", to_string(opt->arvTime/opt->batchSize) });
+		ie =IntervalEstimatorFactory::generate(opt->intervalParam, nWorker, nPoint);
+		LOG_IF(ie == nullptr, FATAL) << "Fail to initialize interval estimator with parameter: " << opt->intervalParam;
 	} else if(opt->mode == "fab"){
 		fabInit();
 	}
@@ -58,10 +62,10 @@ void Master::run()
 	suOnline.wait();
 	LOG(INFO) << "Send worker list";
 	broadcastWorkerList();
-	LOG(INFO)<<"Waiting x-length to initialize parameters";
+	LOG(INFO)<<"Waiting dataset info to initialize parameters";
 	initializeParameter();
 	clearAccumulatedDelta();
-	LOG(INFO) << "Got x-length = " << nx;
+	LOG(INFO) << "Got x-length: " << nx << ", y-length: " << ny << ", data points: " << nPoint;
 	if(!opt->fnOutput.empty()){
 		foutput.open(opt->fnOutput);
 		LOG_IF(foutput.fail(), FATAL) << "Cannot write to file: " << opt->fnOutput;
@@ -91,6 +95,7 @@ void Master::run()
 	broadcastSignalTerminate();
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaTail));
 	foutput.close();
+	delete ie;
 	DLOG(INFO) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
 	finishStat();
 	showStat();
@@ -177,16 +182,19 @@ void Master::fsbProcess()
 			tl = t;
 		}
 		VLOG_EVERY_N(ln, 1)<<"Start iteration: "<<iter;
-		double interval = ie.interval();
+		double interval = ie->interval();
 		sleep(interval);
 		VLOG_EVERY_N(ln, 2) << "  Broadcast pause signal";
+		Timer tsync;
 		broadcastSignalPause();
 		VLOG_EVERY_N(ln, 2) << "  Waiting for all deltas";
 		waitDeltaFromAll();
+		applyDelta(bfDelta, -1);
 		VLOG_EVERY_N(ln, 2) << "  Broadcast new parameters";
 		broadcastParameter();
 		//waitParameterConfirmed();
-		ie.update(bfDelta, interval, tmrTrain.elapseSd());
+		ie->update(bfDelta, interval, bfDeltaDpCount, tsync.elapseSd(), tmrTrain.elapseSd());
+		clearAccumulatedDelta();
 		//VLOG_EVERY_N(ln, 2) << "  Broadcast continue signal";
 		//broadcastSignalContinue();
 		archiveProgress();
@@ -232,13 +240,13 @@ void Master::registerHandlers()
 {
 	regDSPProcess(MType::CReply, localCBBinder(&Master::handleReply));
 	regDSPProcess(MType::COnline, localCBBinder(&Master::handleOnline));
-	regDSPProcess(MType::CXLength, localCBBinder(&Master::handleXLength));
+	regDSPProcess(MType::CDataset, localCBBinder(&Master::handleDataset));
 	// regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDelta)); // for sync and fsb
 	// regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaAsync)); // for async
 
 	addRPHEachSU(MType::COnline, suOnline);
 	addRPHEachSU(MType::CWorkers, suWorker);
-	addRPHEachSU(MType::CXLength, suXLength);
+	addRPHEachSU(MType::CDataset, suDatasetInfo);
 	addRPHEachSU(MType::DParameter, suParam);
 	addRPHEachSU(MType::CTrainPause, suTPause);
 	addRPHEachSU(MType::CTrainContinue, suTContinue);
@@ -267,8 +275,8 @@ bool Master::terminateCheck()
 
 void Master::initializeParameter()
 {
-	suXLength.wait();
-	suXLength.reset();
+	suDatasetInfo.wait();
+	suDatasetInfo.reset();
 	model.init(opt->algorighm, nx, opt->algParam, 0.01);
 }
 
@@ -362,12 +370,14 @@ void Master::gatherDelta()
 void Master::clearAccumulatedDelta()
 {
 	bfDelta.assign(model.paramWidth(), 0.0);
+	bfDeltaDpCount = 0;
 }
 
-void Master::accumulateDelta(const std::vector<double>& delta)
+void Master::accumulateDelta(const std::vector<double>& delta, const size_t cnt)
 {
 	for (size_t i = 0; i < delta.size(); ++i)
 		bfDelta[i] += delta[i];
+	bfDeltaDpCount += cnt;
 }
 
 void Master::handleReply(const std::string & data, const RPCInfo & info)
@@ -389,27 +399,38 @@ void Master::handleOnline(const std::string & data, const RPCInfo & info)
 	sendReply(info);
 }
 
-void Master::handleXLength(const std::string& data, const RPCInfo& info){
+void Master::handleDataset(const std::string& data, const RPCInfo& info){
 	Timer tmr;
-	size_t d = deserialize<size_t>(data);
+	int tnx, tny, tnp;
+	tie(tnx, tny, tnp) = deserialize<tuple<size_t, size_t, size_t>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int source = wm.nid2lid(info.source);
+	bool flag = false;
 	if(nx == 0){
-		nx = d;
-	} else if(nx != d){
-		LOG(FATAL)<<"dataset on "<<source<<" does not match with others";
+		nx = tnx;
+	} else if(nx != tnx){
+		flag = true;
 	}
-	rph.input(MType::CXLength, source);
+	if(ny == 0){
+		ny = tny;
+	} else if(ny != tny){
+		flag = true;
+	}
+	LOG_IF(flag, FATAL) << "dataset on " << source << " does not match with others."
+		<< " X-match: " << (nx == tnx) << ", Y-match: " << (ny == tny);
+	nPointWorker[source] = tnp;
+	nPoint += tnp;
+	rph.input(MType::CDataset, source);
 	sendReply(info);
 }
 
 void Master::handleDelta(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
-	auto delta = deserialize<vector<double>>(data);
+	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	applyDelta(delta, s);
+	applyDelta(deltaMsg.second, s);
 	rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
 	//sendReply(info);
@@ -419,10 +440,10 @@ void Master::handleDelta(const std::string & data, const RPCInfo & info)
 void Master::handleDeltaAsync(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
-	auto delta = deserialize<vector<double>>(data);
+	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	applyDelta(delta, s);
+	applyDelta(deltaMsg.second, s);
 	++nUpdate;
 	rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
@@ -435,11 +456,11 @@ void Master::handleDeltaAsync(const std::string & data, const RPCInfo & info)
 void Master::handleDeltaFsb(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
-	auto delta = deserialize<vector<double>>(data);
+	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	accumulateDelta(delta);
-	applyDelta(delta, s);
+	accumulateDelta(deltaMsg.second, deltaMsg.first);
+	//applyDelta(deltaMsg.second, s); // called at the main process
 	rph.input(typeDDeltaAll, s);
 	//rph.input(typeDDeltaAny, s);
 	//sendReply(info);
@@ -449,10 +470,10 @@ void Master::handleDeltaFsb(const std::string & data, const RPCInfo & info)
 void Master::handleDeltaFab(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
-	auto delta = deserialize<vector<double>>(data);
+	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	applyDelta(delta, s);
+	applyDelta(deltaMsg.second, s);
 	++nUpdate;
 	//static vector<int> cnt(nWorker, 0);
 	//++cnt[s];
@@ -468,9 +489,9 @@ void Master::handleDeltaFab(const std::string & data, const RPCInfo & info)
 void Master::handleDeltaTail(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
-	auto delta = deserialize<vector<double>>(data);
+	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	applyDelta(delta, s);
+	applyDelta(deltaMsg.second, s);
 	++stat.n_dlt_recv;
 }

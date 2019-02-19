@@ -27,11 +27,11 @@ private:
 	void updatePointer(const size_t used);
 	void sendOnline();
 	void waitWorkerList();
-	void sendXLength();
+	void sendDatasetInfo();
 	void sendClosed();
 
 	void accumulateDelta(const std::vector<double>& delta);
-	void sendDelta(std::vector<double>& delta);
+	void sendDelta(std::vector<double>& delta, const size_t cnt);
 	void bufferParameter(Parameter& p);
 	void applyBufferParameter(); // using the buffer
 	void waitParameter();
@@ -46,6 +46,7 @@ public:
 	void handleReply(const std::string& data, const RPCInfo& info);
 	void handleWorkerList(const std::string& data, const RPCInfo& info);
 	void handleParameter(const std::string& data, const RPCInfo& info);
+	void handleParameterFsb(const std::string& data, const RPCInfo& info);
 	void handleParameterFab(const std::string& data, const RPCInfo& info);
 	void handlePause(const std::string& data, const RPCInfo& info);
 	void handleContinue(const std::string& data, const RPCInfo& info);
@@ -60,7 +61,7 @@ private:
 	int masterNID; // network id of master
 	IDMapper wm; // worker mapper
 	SyncUnit suOnline;
-	SyncUnit suXlength;
+	SyncUnit suDatasetInfo;
 	
 	bool hasNewParam;
 	std::mutex mParam;
@@ -69,6 +70,7 @@ private:
 	//std::mutex mModel; // whether the model is in use
 
 	std::vector<double> bfDelta;
+	size_t bfDeltaDpCount; // the number of data points used for current bfDelta
 
 	//std::mutex mTrain;
 	std::atomic<bool> allowTrain;
