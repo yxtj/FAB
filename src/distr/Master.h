@@ -48,13 +48,13 @@ public:
 	void waitDeltaFromAll(); // reset suDeltaAll
 	void gatherDelta();
 	void clearAccumulatedDelta();
-	void accumulateDelta(const std::vector<double>& delta);
+	void accumulateDelta(const std::vector<double>& delta, const size_t cnt);
 
 // handler
 public:
 	void handleReply(const std::string& data, const RPCInfo& info);
 	void handleOnline(const std::string& data, const RPCInfo& info);
-	void handleXLength(const std::string& data, const RPCInfo& info);
+	void handleDataset(const std::string& data, const RPCInfo& info);
 	void handleDelta(const std::string& data, const RPCInfo& info);
 	void handleDeltaAsync(const std::string& data, const RPCInfo& info);
 	void handleDeltaFsb(const std::string& data, const RPCInfo& info);
@@ -64,12 +64,17 @@ public:
 private:
 	Parameter param;
 	std::vector<double>  bfDelta;
+	size_t bfDeltaDpCount; // the number of data points used for current bfDelta
 
 	IDMapper wm; // worker id mapper
 	double factorDelta;
-	size_t nx; // length of x
+	size_t nx, ny; // length of x and y
+	std::vector<size_t> nPointWorker; // number of data-points on each worker
+	size_t nPoint;
+
+	IntervalEstimator* ie; // for flexible parallel modes
+
 	int ln; // log-every-n times
-	IntervalEstimator ie; // for flexible parallel modes
 
 	//size_t iter; // [defined in Runner] current iteration being executate now (not complete)
 	size_t nUpdate; // used for Async case
@@ -81,7 +86,7 @@ private:
 	SyncUnit suOnline;
 	SyncUnit suWorker;
 	SyncUnit suAllClosed;
-	SyncUnit suXLength;
+	SyncUnit suDatasetInfo;
 	int typeDDeltaAny, typeDDeltaAll;
 	SyncUnit suDeltaAny, suDeltaAll;
 	SyncUnit suParam; // reply of parameter broadcast

@@ -13,6 +13,8 @@ struct Option{
 
 	std::string mode;
 	bool fabWait; // force fab wait for its gradient reply before continue
+	std::vector<std::string> intervalParam; // parameters for the flexible coordinator
+
 	std::string algorighm;
 	std::string algParam;
 

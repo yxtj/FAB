@@ -60,12 +60,11 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		tcTime = stod(argv[idx++]); // maximum training time
 		//tcDiff = stod(argv[idx++]); // minimum improvement cross iterations
 
-		if(argc > optIdx++)
-			arvIter = stoiKMG(argv[idx++]);
-		if(argc > optIdx++)
-			arvTime = stod(argv[idx++]);
-		if(argc > optIdx++)
-			logIter = stoiKMG(argv[idx++]);
+		arvIter = argc > optIdx++ ? stoiKMG(argv[idx++]) : 1000;
+		arvTime = argc > optIdx++ ? stod(argv[idx++]) : 0.5;
+		logIter = argc > optIdx++ ? stoiKMG(argv[idx++]) : 1000;
+		string itvparam = argc > optIdx++ ? argv[idx++] : "interval:0.01";
+		intervalParam = getStringList(itvparam, ":");
 	} catch(exception& e){
 		cerr << "Cannot parse the " << idx << "-th parameter: " << argv[idx] << endl;
 		cerr << "Error message: " << e.what() << endl;
@@ -87,12 +86,13 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 
 void Option::showUsage() const {
 	cout << "usage: <mode> <alg> <param> <data-file> <output-file> <id-skip> <id-y> <normalize>"
-		" <lrate> <batch-size> <term-iter> <term-time> [arv-iter=1000] [arv-time=0.5] [log-iter=1000]" << endl;
+		" <lrate> <batch-size> <term-iter> <term-time> [arv-iter=1000] [arv-time=0.5] [log-iter=1000] [flex-param=interval:0.01]" << endl;
 	//cout << "usage: <algorithm> <mode> <data-file> <output-file> <id-skip> <id-y> <nw> <batch-size> <term-iter> <term-time>" << endl;
 	cout << "  <mode>: sync, async, fsb, fab"
 		<< "  <alg>: algorithm name. Support: lr, mlp, cnn.\n"
 		<< "  <param>: parameter of the algorithm, usually the shape of the algorithm.\n"
 		<< "  <id-skip>: a list separated with space or comma."
+		<< "  [flex-param]: supports: interval:x (x is in seconds), portion:x (x in 0~1)"
 		<< endl;
 }
 
