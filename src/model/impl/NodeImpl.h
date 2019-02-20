@@ -3,7 +3,7 @@
 
 // exactly repeat the intput
 // n => n
-// shape: y_{n} = x_{n}
+// vector: y_{n} = x_{n}
 // individual: y[i] = x[i]
 struct InputNode
 	: public NodeBase
@@ -14,9 +14,23 @@ struct InputNode
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
 };
 
+// do weighted summation
+// n => 1
+// vector: y_{1} = x_{n} * W_{n} + b
+// individual: y = sum_{j:0~n} ( x[i] * W[i] ) + W[n]
+struct WeightedSumNode
+	: public NodeBase
+{
+	const int n;
+	WeightedSumNode(const size_t offset, const std::vector<int>& shape); // shape = {n}
+	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
+	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
+		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+};
+
 // convolution only, no activation
 // n => n-k+1
-// shape: y_{n-k+1} = conv(x_{n} , W_{k})
+// vector: y_{n-k+1} = conv(x_{n} , W_{k}) + b_{1}
 // individual: y[i] = sum_{j:0~k} (x[i+j] * W[j]) + b[i]
 struct ConvNode1D
 	: public NodeBase
@@ -29,23 +43,23 @@ struct ConvNode1D
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
 };
 
-// recurrent only, no activation
+// recurrent node. use history state remembering last output
 // n => k
-// shape: y_{k*1} = W_{k*n} * x_{n*1} + U_{k*k} * y_{k*1} + b_{k*1}
+// vector: y_{k*1} = W_{k*n} * x_{n*1} + U_{k*k} * y_{k*1} + b_{k*1}
 // individual: y[i] = sum_{j:0~n} (W[i,j]*x[j]) + sum_{j:0~k} (U[i,j]*y[j]) + b[i]
-struct RecuNode
+struct RecurrentNode
 	: public NodeBase
 {
 	const int n, k;
-	std::vector<double> last_pred, last_grad; // store the output of last usage (k-dim)
-	RecuNode(const size_t offset, const std::vector<int>& shape); // shape = {n,k}
+	std::vector<double> last_pred, last_grad; // store the last output (k-dim) for both predict and gradient
+	RecurrentNode(const size_t offset, const std::vector<int>& shape); // shape = {n,k}
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
 	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
 };
 
 // n => n
-// shape: y_{n} = relu(x_{n})
+// vector: y_{n} = relu(x_{n})
 // individual: y[i] = relu(x[i])
 struct ReluNode
 	: public NodeBase
@@ -57,7 +71,7 @@ struct ReluNode
 };
 
 // n => n
-// shape: y_{n} = sigmoid(x_{n})
+// vector: y_{n} = sigmoid(x_{n})
 // individual: y[i] = sigmoid(x[i])
 struct SigmoidNode
 	: public NodeBase
@@ -68,8 +82,20 @@ struct SigmoidNode
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
 };
 
+// n => n
+// vector: y_{n} = tanh(x_{n})
+// individual: y[i] = tanh(x[i])
+struct TanhNode
+	: public NodeBase
+{
+	TanhNode(const size_t offset, const std::vector<int>& shape); // shape = {1}
+	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
+	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
+		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+};
+
 // n => n/k ; more precisely ceil(n/k)
-// shape: y_{n/k} = max(x_{n})
+// vector: y_{n/k} = max(x_{n})
 // individual: y[i] = max_{j:0~k} ( x[i*k+j] )
 struct PoolMaxNode1D
 	: public NodeBase
@@ -82,7 +108,7 @@ struct PoolMaxNode1D
 
 // merge all features into one value, activate with sigmoid
 // k*n => 1
-// shape: y_{1*1} = sum ( W_{k*n} * x_{k*n} )
+// vector: y_{1*1} = sum ( W_{k*n} * x_{k*n} )
 // individual: y = max_{i:0~k,j:0~n} ( W[i,j]*x[i,j] )
 struct FCNode1D
 	: public NodeBase
