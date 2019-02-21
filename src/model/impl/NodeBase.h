@@ -2,10 +2,20 @@
 #include <string>
 #include <vector>
 
+enum struct NodeTypeGeneral {
+	Input, Sum,
+	Conv, Recr,
+	Pool, Act, 
+	FC
+};
+
 enum struct NodeType {
-	Input, FC, Conv, Recu,
-	PoolMax, PoolMean, PoolMin,
-	ActRelu, ActSigmoid, ActTanh
+	Input, WeightedSum,
+	Conv1D,
+	RecrFully, //RecrLSTM, RecrGate
+	PoolMax1D, PoolMin1D,
+	ActRelu, ActSigmoid, ActTanh,
+	FC
 };
 
 struct NodeBase {
@@ -17,6 +27,8 @@ struct NodeBase {
 	NodeBase(const size_t offset, const std::vector<int>& shape);
 	size_t nweight() const;
 
+	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
+
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w) = 0;
 	// input: x, w, y, product of previous partial gradients.
 	// pre-condition: predict(x,w) == y && y.size() == pre.size()
@@ -27,3 +39,5 @@ struct NodeBase {
 	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre) = 0;
 };
+
+NodeBase* generateNode(NodeType type, const size_t offset, const std::vector<int>& shape);
