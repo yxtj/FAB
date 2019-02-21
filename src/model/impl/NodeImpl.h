@@ -23,6 +23,7 @@ struct WeightedSumNode
 {
 	const int n;
 	WeightedSumNode(const size_t offset, const std::vector<int>& shape); // shape = {n}
+	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
 	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
@@ -38,6 +39,7 @@ struct ConvNode1D
 	// y_{n-k+1}
 	const int k;
 	ConvNode1D(const size_t offset, const std::vector<int>& shape); // shape = {k}
+	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
 	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
@@ -53,6 +55,7 @@ struct RecurrentNode
 	const int n, k;
 	std::vector<double> last_pred, last_grad; // store the last output (k-dim) for both predict and gradient
 	RecurrentNode(const size_t offset, const std::vector<int>& shape); // shape = {n,k}
+	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
 	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
@@ -94,26 +97,45 @@ struct TanhNode
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
 };
 
+// get the max value
 // n => n/k ; more precisely ceil(n/k)
 // vector: y_{n/k} = max(x_{n})
 // individual: y[i] = max_{j:0~k} ( x[i*k+j] )
 struct PoolMaxNode1D
 	: public NodeBase
 {
+	const size_t k;
 	PoolMaxNode1D(const size_t offset, const std::vector<int>& shape); // shape = {k}
+	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
 	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
 };
 
-// merge all features into one value, activate with sigmoid
+// get the min value
+// n => n/k ; more precisely ceil(n/k)
+// vector: y_{n/k} = min(x_{n})
+// individual: y[i] = min_{j:0~k} ( x[i*k+j] )
+struct PoolMinNode1D
+	: public NodeBase
+{
+	const size_t k;
+	PoolMinNode1D(const size_t offset, const std::vector<int>& shape); // shape = {k}
+	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
+	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
+	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
+		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+};
+
+// merge all <k> features (n-dimension) into one value, activate with sigmoid
 // k*n => 1
 // vector: y_{1*1} = sum ( W_{k*n} * x_{k*n} )
 // individual: y = max_{i:0~k,j:0~n} ( W[i,j]*x[i,j] )
-struct FCNode1D
+struct FCNode
 	: public NodeBase
 {
-	FCNode1D(const size_t offset, const std::vector<int>& shape); // shape = {k,n}
+	FCNode(const size_t offset, const std::vector<int>& shape); // shape = {k,n}
+	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
 	// dummy
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w) {
 		return {};
@@ -128,3 +150,4 @@ struct FCNode1D
 	std::vector<std::vector<double>> gradient(std::vector<double>& grad, const std::vector<std::vector<double>>& x,
 		const std::vector<double>& w, const double& y, const double& pre);
 };
+

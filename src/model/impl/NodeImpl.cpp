@@ -36,6 +36,11 @@ WeightedSumNode::WeightedSumNode(const size_t offset, const std::vector<int>& sh
 	nw += 1; // the constant offset
 }
 
+std::vector<int> WeightedSumNode::outShape(const std::vector<int>& inShape) const
+{
+	return { 1 };
+}
+
 std::vector<double> WeightedSumNode::predict(const std::vector<double>& x, const std::vector<double>& w)
 {
 	assert(x.size() == n);
@@ -70,6 +75,11 @@ ConvNode1D::ConvNode1D(const size_t offset, const std::vector<int>& shape)
 	assert(shape.size() == 1);
 	assert(k > 0);
 	nw += 1; // the constant offset
+}
+
+std::vector<int> ConvNode1D::outShape(const std::vector<int>& inShape) const
+{
+	return { inShape[0] - k + 1 };
 }
 
 std::vector<double> ConvNode1D::predict(const std::vector<double>& x, const std::vector<double>& w)
@@ -125,6 +135,11 @@ RecurrentNode::RecurrentNode(const size_t offset, const std::vector<int>& shape)
 	last_pred.assign(n, 0.0);
 	last_grad.assign(n, 0.0);
 	nw = (n + k + 1)*k;
+}
+
+std::vector<int> RecurrentNode::outShape(const std::vector<int>& inShape) const
+{
+	return { k };
 }
 
 std::vector<double> RecurrentNode::predict(const std::vector<double>& x, const std::vector<double>& w)
@@ -276,23 +291,27 @@ std::vector<double> TanhNode::gradient(std::vector<double>& grad, const std::vec
 // ---- Pooling Node: 1D max ----
 
 PoolMaxNode1D::PoolMaxNode1D(const size_t offset, const std::vector<int>& shape)
-	: NodeBase(offset, shape)
+	: NodeBase(offset, shape), k(shape[0])
 {
 	nw = 0;
 	assert(shape.size() == 1);
 }
 
+std::vector<int> PoolMaxNode1D::outShape(const std::vector<int>& inShape) const
+{
+	int n = (inShape[0] + k - 1) / k;
+	return { n };
+}
+
 std::vector<double> PoolMaxNode1D::predict(const std::vector<double>& x, const std::vector<double>& w)
 {
-	const size_t step = shape[0];
-	const size_t n = (x.size() + step - 1) / step;
+	const size_t n = (x.size() + k - 1) / k;
 	vector<double> res(n);
 	for (size_t i = 0; i < n; ++i) {
-		double v = x[i*step];
-		size_t limit = min((i + 1)*step, x.size());
+		double v = x[i*k];
+		size_t limit = min((i + 1)*k, x.size());
 		for (size_t j = i * step + 1; j < limit; ++j)
 			v = max(v, x[j]);
-		// TODO: store the max index for gradient
 		res[i] = v;
 	}
 	return res;
@@ -303,12 +322,11 @@ std::vector<double> PoolMaxNode1D::gradient(std::vector<double>& grad, const std
 {
 	// no weight -> no change on <grad>
 	// if argmax(x[1],...,x[n]) = i , then dy/dx = 1.0 and 0 for others
-	const size_t step = shape[0];
 	const size_t ny = y.size();
 	vector<double> res(x.size(), 0.0);
 	for (size_t i = 0; i < ny; ++i) {
-		size_t limit = min((i + 1)*step, x.size());
-		for (size_t j = i * step; j < limit; ++j) {
+		size_t limit = min((i + 1)*k, x.size());
+		for (size_t j = i * k; j < limit; ++j) {
 			if (x[j] == y[i])
 				res[j] = pre[i];
 		}
@@ -316,15 +334,65 @@ std::vector<double> PoolMaxNode1D::gradient(std::vector<double>& grad, const std
 	return res;
 }
 
-// ---- Fully-Connected Node: 1D ----
+// ---- Pooling Node: 1D min ----
 
-FCNode1D::FCNode1D(const size_t offset, const std::vector<int>& shape)
+PoolMinNode1D::PoolMinNode1D(const size_t offset, const std::vector<int>& shape)
+	: NodeBase(offset, shape), k(shape[0])
+{
+	nw = 0;
+	assert(shape.size() == 1);
+}
+
+std::vector<int> PoolMinNode1D::outShape(const std::vector<int>& inShape) const
+{
+	return std::vector<int>();
+}
+
+std::vector<double> PoolMinNode1D::predict(const std::vector<double>& x, const std::vector<double>& w)
+{
+	const size_t n = (x.size() + k - 1) / k;
+	vector<double> res(n);
+	for(size_t i = 0; i < n; ++i) {
+		double v = x[i*k];
+		size_t limit = min((i + 1)*k, x.size());
+		for(size_t j = i * k + 1; j < limit; ++j)
+			v = min(v, x[j]);
+		res[i] = v;
+	}
+	return res;
+}
+
+std::vector<double> PoolMinNode1D::gradient(std::vector<double>& grad, const std::vector<double>& x,
+	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+{
+	// no weight -> no change on <grad>
+	// if argmin(x[1],...,x[n]) = i , then dy/dx = 1.0 and 0 for others
+	const size_t ny = y.size();
+	vector<double> res(x.size(), 0.0);
+	for(size_t i = 0; i < ny; ++i) {
+		size_t limit = min((i + 1)*k, x.size());
+		for(size_t j = i * k; j < limit; ++j) {
+			if(x[j] == y[i])
+				res[j] = pre[i];
+		}
+	}
+	return res;
+}
+
+// ---- Fully-Connected Node ----
+
+FCNode::FCNode(const size_t offset, const std::vector<int>& shape)
 	: NodeBase(offset, shape)
 {
 	nw += 1;
 }
 
-double FCNode1D::predict(const std::vector<std::vector<double>>& x, const std::vector<double>& w)
+std::vector<int> FCNode::outShape(const std::vector<int>& inShape) const
+{
+	return { 1 };
+}
+
+double FCNode::predict(const std::vector<std::vector<double>>& x, const std::vector<double>& w)
 {
 	const size_t n1 = x.size();
 	const size_t n2 = x.front().size();
@@ -337,7 +405,7 @@ double FCNode1D::predict(const std::vector<std::vector<double>>& x, const std::v
 	return sigmoid(res + w[p]);
 }
 
-std::vector<std::vector<double>> FCNode1D::gradient(
+std::vector<std::vector<double>> FCNode::gradient(
 	std::vector<double>& grad, const std::vector<std::vector<double>>& x,
 	const std::vector<double>& w, const double& y, const double& pre)
 {
