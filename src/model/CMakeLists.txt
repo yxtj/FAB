@@ -1,6 +1,7 @@
 set(IMPL_HEADERS
 	impl/NodeBase.h
 	impl/NodeImpl.h
+	impl/VectorNetwork.h
 	impl/MLPProxy.h
 	impl/CNNProxy.h
 	impl/RNNProxy.h
@@ -8,6 +9,7 @@ set(IMPL_HEADERS
 set(IMPL_SOURCES
 	impl/NodeBase.cpp
 	impl/NodeImpl.cpp
+	impl/VectorNetwork.cpp
 	impl/MLPProxy.cpp
 	impl/CNNProxy.cpp
 	impl/RNNProxy.cpp
