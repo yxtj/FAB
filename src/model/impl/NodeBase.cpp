@@ -1,5 +1,6 @@
 #include "NodeBase.h"
 #include "NodeImpl.h"
+#include "math/activation_func.h"
 
 using namespace std;
 
@@ -25,6 +26,55 @@ size_t NodeBase::nweight() const
 std::vector<int> NodeBase::outShape(const std::vector<int>& inShape) const
 {
 	return inShape;
+}
+
+// ---- Fully-Connected Node ----
+
+FCNode::FCNode(const size_t offset, const std::vector<int>& shape)
+	: NodeBase(offset, shape)
+{
+	nw += 1;
+}
+
+std::vector<int> FCNode::outShape(const std::vector<int>& inShape) const
+{
+	return { 1 };
+}
+
+double FCNode::predict(const std::vector<std::vector<double>>& x, const std::vector<double>& w)
+{
+	const size_t n1 = x.size();
+	const size_t n2 = x.front().size();
+	double res = 0.0;
+	size_t p = off;
+	for(size_t i = 0; i < n1; ++i) {
+		for(size_t j = 0; j < n2; ++j)
+			res += x[i][j] * w[p++];
+	}
+	return sigmoid(res + w[p]);
+}
+
+std::vector<std::vector<double>> FCNode::gradient(
+	std::vector<double>& grad, const std::vector<std::vector<double>>& x,
+	const std::vector<double>& w, const double& y, const double& pre)
+{
+	const size_t n1 = x.size();
+	const size_t n2 = x.front().size();
+	//assert(y.size() == 1 && pre.size() == 1);
+	//const double f = pre[0] * y[0];
+	const double d = sigmoid_derivative(0.0, y);
+	const double f = pre * d;
+	std::vector<std::vector<double>> pg(n1, vector<double>(n2));
+	size_t p = off;
+	for(size_t i = 0; i < n1; ++i) {
+		for(size_t j = 0; j < n2; ++j) {
+			grad[p] = x[i][j] * f; // pre * dy/dw
+			pg[i][j] = w[p] * f; // pre * dy/dx
+			++p;
+		}
+	}
+	grad[p] += f; // the constant offset
+	return pg;
 }
 
 NodeBase* generateNode(NodeType type, const size_t offset, const std::vector<int>& shape){

@@ -127,27 +127,3 @@ struct PoolMinNode1D
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
 };
 
-// merge all <k> features (n-dimension) into one value, activate with sigmoid
-// k*n => 1
-// vector: y_{1*1} = sum ( W_{k*n} * x_{k*n} )
-// individual: y = max_{i:0~k,j:0~n} ( W[i,j]*x[i,j] )
-struct FCNode
-	: public NodeBase
-{
-	FCNode(const size_t offset, const std::vector<int>& shape); // shape = {k,n}
-	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
-	// dummy
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w) {
-		return {};
-	}
-	// dummmy
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre) {
-		return {};
-	}
-	// intput are k 1D vectors. output is a scalar.
-	double predict(const std::vector<std::vector<double>>& x, const std::vector<double>& w);
-	std::vector<std::vector<double>> gradient(std::vector<double>& grad, const std::vector<std::vector<double>>& x,
-		const std::vector<double>& w, const double& y, const double& pre);
-};
-
