@@ -310,7 +310,7 @@ std::vector<double> PoolMaxNode1D::predict(const std::vector<double>& x, const s
 	for (size_t i = 0; i < n; ++i) {
 		double v = x[i*k];
 		size_t limit = min((i + 1)*k, x.size());
-		for (size_t j = i * step + 1; j < limit; ++j)
+		for (size_t j = i * k + 1; j < limit; ++j)
 			v = max(v, x[j]);
 		res[i] = v;
 	}
