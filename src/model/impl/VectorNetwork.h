@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <tuple>
+#include <functional>
 
 struct VectorNetwork {
 	using feature_t = std::vector<double>;
@@ -26,25 +27,31 @@ struct VectorNetwork {
 	std::vector<int> weightOffsetLayer; // weight offset of the the first node at layer i
 
 	std::vector<std::vector<NodeBase*>> nodes;
-
+private:
+	// function of the gradient of loss function. calculate gradient for each p entry
+	// First Arg: predicted value. Second Arg: expected value
+	std::function<feature_t(const feature_t& p, const feature_t& y)> fgl;
 public:
 	void init(const std::string& param); // calls parse and build
 	// parse the parameter string into structure info
+	// require: layers separated with "," or "-". Detailed parameters separated with ":"
 	std::vector<std::tuple<int, NodeTypeGeneral, std::string>> parse(const std::string& param);
 	// use the input structure info to build up the network
 	void build(const std::vector<std::tuple<int, NodeTypeGeneral, std::string>>& structure);
+
+	void bindGradLossFunc(std::function<feature_t(const feature_t& p, const feature_t& y)> glFun);
 	int lengthParameter() const;
 
 	std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w) const;
 	std::vector<double> gradient(
-		const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& dL_dy);
+		const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y);
 
 	~VectorNetwork();
 
 private:
-	std::vector<int> getShape(const std::string& str);
-	int getSize(const std::vector<int>& shape);
-	int getSize(const std::string& str);
+	static std::vector<int> getShape(const std::string& str);
+	static int getSize(const std::vector<int>& shape);
+	static int getSize(const std::string& str);
 
 	void createLayerInput(const size_t i, const std::vector<int>& shape);
 	void createLayerAct(const size_t i, const std::string& type);

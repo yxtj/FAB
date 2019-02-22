@@ -1,6 +1,6 @@
 #include "ParameterIO.h"
 #include "util/Util.h"
-#include "model/impl/CNNProxy.h"
+#include "model/impl/VectorNetwork.h"
 #include <stdexcept>
 using namespace std;
 
@@ -30,8 +30,8 @@ void ParameterIO::write(std::ostream & os, const std::vector<double>& w)
 		return writeLR(os, w);
 	} else if(name == "mlp"){
 		return writeMLP(os, w);
-	} else if(name == "cnn"){
-		return writeCNN(os, w);
+	} else if(name == "cnn" || name == "rnn"){
+		return writeNN(os, w);
 	}
 }
 
@@ -41,8 +41,8 @@ std::pair<std::string, std::vector<double>> ParameterIO::load(std::istream & is)
 		return loadLR(is);
 	} else if(name == "mlp"){
 		return loadMLP(is);
-	} else if(name == "cnn"){
-		return loadCNN(is);
+	} else if(name == "cnn" || name == "rnn"){
+		return loadNN(is);
 	}
 	return std::pair<std::string, std::vector<double>>();
 }
@@ -101,10 +101,10 @@ std::pair<std::string, std::vector<double>> ParameterIO::loadMLP(std::istream & 
 
 // -------- CNN --------
 
-void ParameterIO::writeCNN(std::ostream & os, const std::vector<double>& w)
+void ParameterIO::writeNN(std::ostream & os, const std::vector<double>& w)
 {
 	os << param << "\n";
-	CNNProxy p;
+	VectorNetwork p;
 	p.init(param);
 	vector<int> nWeightOffset = p.weightOffsetLayer;
 	for(size_t l = 1; l < nWeightOffset.size() - 1; ++l){
@@ -118,12 +118,12 @@ void ParameterIO::writeCNN(std::ostream & os, const std::vector<double>& w)
 	os.flush();
 }
 
-std::pair<std::string, std::vector<double>> ParameterIO::loadCNN(std::istream & is)
+std::pair<std::string, std::vector<double>> ParameterIO::loadNN(std::istream & is)
 {
 	string line;
 	getline(is, line);
 	string param = line;
-	CNNProxy p;
+	VectorNetwork p;
 	p.init(param);
 	vector<double> vec;
 	for(size_t i = 0; i < p.nLayer; ++i){

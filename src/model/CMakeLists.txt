@@ -3,16 +3,12 @@ set(IMPL_HEADERS
 	impl/NodeImpl.h
 	impl/VectorNetwork.h
 	impl/MLPProxy.h
-	impl/CNNProxy.h
-	impl/RNNProxy.h
 )
 set(IMPL_SOURCES
 	impl/NodeBase.cpp
 	impl/NodeImpl.cpp
 	impl/VectorNetwork.cpp
 	impl/MLPProxy.cpp
-	impl/CNNProxy.cpp
-	impl/RNNProxy.cpp
 )
 set(HEADERS
 	Kernel.h

@@ -13,17 +13,34 @@ void VectorNetwork::init(const std::string& param){
 std::vector<std::tuple<int, NodeTypeGeneral, std::string>> VectorNetwork::parse(const std::string & param)
 {
 	// raw string format: R"(...)"
-	string srShape = R"((\d+(?:[\*x]\d+)*))"; // v1[*v2[*v3[*v4]]]
+	string srShape = R"((\d+(?:[\*x]\d+)*))"; // v1[*v2[*v3[*v4]]], "*" can also be "x"
 	regex ri(srShape); // input layer
 	regex ra(R"((sig(?:moid)?|relu|tanh))"); // activation layer, i.e.: relu
-	regex rc(R"((\d+)c:?)" + srShape); // convolutional layer, i.e.: 4c4, 3c:5*2
-	regex rr(R"((\d+)r:?)" + srShape); // recurrent layer, i.e.: 4r10, 6r:4*4
+	regex rc(R"((\d+):?c:?)" + srShape); // convolutional layer, i.e.: 3c3, 4:c4*5, 4:c:4*5x3
+	regex rr(R"((\d+):?r:?)" + srShape); // recurrent layer, i.e.: 4r10, 6r:4*4
 	regex rp(R"((max|min):?)" + srShape); // pooling layer, i.e.: max3*3, max:4
-	regex rf(R"((\d+)f?)"); // fully-connected layer, i.e.: 4f
+	regex rf(R"((\d+):?f?)"); // fully-connected layer, i.e.: 4f
 
 	std::vector<std::tuple<int, NodeTypeGeneral, std::string>> res;
 	vector<string> strParam = getStringList(param, ",-");
-	
+	for(string& str : strParam){
+		smatch m;
+		if(regex_match(str, m, ri)){
+			res.emplace_back(1, NodeTypeGeneral::Input, m[1]);
+		} else if(regex_match(str, m, ra)){
+			res.emplace_back(1, NodeTypeGeneral::Act, m[1]);
+		} else if(regex_match(str, m, rc)){
+			res.emplace_back(stoi(m[1]), NodeTypeGeneral::Conv, m[2]);
+		} else if(regex_match(str, m, rr)){
+			res.emplace_back(stoi(m[1]), NodeTypeGeneral::Recr, m[2]);
+		} else if(regex_match(str, m, rp)){
+			res.emplace_back(1, NodeTypeGeneral::Pool, m[1]);
+		} else if(regex_match(str, m, rf)){
+			res.emplace_back(stoi(m[1]), NodeTypeGeneral::Act, "");
+		} else{
+			throw invalid_argument("unsupport network layer: " + str);
+		}
+	}
 
 	return res;
 }
@@ -46,40 +63,46 @@ void VectorNetwork::build(const std::vector<std::tuple<int, NodeTypeGeneral, std
 	regex rShape(srShape);
 	// create layers
 	for(size_t i = 0; i < structure.size(); ++i){
-		auto& t = structure[i];
+		const auto& t = structure[i];
+		const int n = get<0>(t);
+		const string& parm = get<2>(t);
 		smatch m;
 		switch(get<1>(t))
 		{
 		case NodeTypeGeneral::Input:
-			if(regex_match(get<2>(t), m, rShape))
+			if(regex_match(parm, m, rShape))
 				createLayerInput(i, getShape(m[1]));
 			break;
 		case NodeTypeGeneral::Act:
-			createLayerAct(i, get<2>(t));
+			createLayerAct(i, parm);
 			break;
 		case NodeTypeGeneral::Sum:
-			if(regex_match(get<2>(t), m, rShape))
-				createLayerSum(i, get<0>(t));
+			if(regex_match(parm, m, rShape))
+				createLayerSum(i, n);
 		case NodeTypeGeneral::Conv:
-			if(regex_match(get<2>(t), m, rShape))
-				createLayerConv(i, get<0>(t), getShape(m[1]));
+			if(regex_match(parm, m, rShape))
+				createLayerConv(i, n, getShape(m[1]));
 			break;
 		case NodeTypeGeneral::Recr:
-			if(regex_match(get<2>(t), m, rShape))
-				createLayerRecr(i, get<0>(t), getShape(m[1]));
+			if(regex_match(parm, m, rShape))
+				createLayerRecr(i, n, getShape(m[1]));
 			break;
 		case NodeTypeGeneral::Pool:
-			if(regex_match(get<2>(t), m, regex("(max|min)[,:]?"+srShape)))
+			if(regex_match(parm, m, regex("(max|min)[,:]?"+srShape)))
 				createLayerPool(i, m[1], getIntList(m[1], "*x"));
 			break;
 		case NodeTypeGeneral::FC:
-			createLayerFC(i, get<0>(t));
+			createLayerFC(i, n);
 			break;
 		default:
 			break;
 		}
-		
 	}
+}
+
+void VectorNetwork::bindGradLossFunc(std::function<feature_t(const feature_t&p, const feature_t&y)> glFun)
+{
+	fgl = glFun;
 }
 
 int VectorNetwork::lengthParameter() const
@@ -98,7 +121,7 @@ VectorNetwork::~VectorNetwork()
 std::vector<double> VectorNetwork::predict(
 	const std::vector<double>& x, const std::vector<double>& w) const
 {
-	vector<vector<double>> input;
+	vector<vector<double>> input; // k features of n-dimension
 	vector<vector<double>> output;
 	input.push_back(x);
 	// apart from the last FC layer, all nodes work on a single feature
@@ -122,8 +145,9 @@ std::vector<double> VectorNetwork::predict(
 	}
 	return res;
 }
+
 std::vector<double> VectorNetwork::gradient(
-	const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& dL_dy)
+	const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y)
 {
 	// forward
 	vector<vector<vector<double>>> mid; // layer -> feature -> value
@@ -141,30 +165,37 @@ std::vector<double> VectorNetwork::gradient(
 		}
 		mid.push_back(move(output));
 	}
-	vector<vector<double>> output;
 	vector<FCNode*> finalNodes;
-	for(int j = 0; j < nNodeLayer.back(); ++j){
-		FCNode* p = dynamic_cast<FCNode*>(nodes.back()[j]);
-		finalNodes.push_back(p);
-		output.push_back({ p->predict(mid[nLayer - 2], w) });
+	{
+		const vector<vector<double>>& input = mid[nLayer - 2];
+		vector<double> output;
+		for(int j = 0; j < nNodeLayer.back(); ++j){
+			FCNode* p = dynamic_cast<FCNode*>(nodes.back()[j]);
+			finalNodes.push_back(p);
+			output.push_back(p->predict(input, w));
+		}
+		mid.push_back({ move(output) });
 	}
-	mid.push_back(output);
-	// back propagate
-	// BP (last layer)
+	// Back Propagate
 	vector<double> grad(w.size());
 	vector<vector<double>> partial; // partial gradient
-	//assert(y.size() == mid.back().size());
-	for(size_t i = 0; i < y.size(); ++i){ // last FC layer
-		double output = mid.back()[i][0];
-		double pg = output - y[i];
-		FCNode* p = finalNodes[i];
-		vector<vector<double>> temp = p->gradient(grad, mid[nLayer - 2], w, output, pg);
-		if(i == 0){
-			partial = move(temp);
-		} else{
-			for(size_t a = 0; a < temp.size(); ++a)
-				for(size_t b = 0; b < temp[a].size(); ++b)
-					partial[a][b] += temp[a][b];
+	size_t n = mid.back().size();
+	//assert(mid.back().size() ==1 && y.size() == mid.back()[0].size());
+	// BP (last layer)
+	{
+		const vector<double>& output = mid.back().front();
+		vector<double> pg = fgl(output, y);
+		for(size_t i = 0; i < y.size(); ++i){ // last FC layer
+			FCNode* p = finalNodes[i];
+			vector<vector<double>> temp = p->gradient(grad, mid[nLayer - 2], w, output[i], pg[i]);
+			if(i == 0){
+				partial = move(temp);
+			} else{
+				// partial += temp;
+				for(size_t a = 0; a < temp.size(); ++a)
+					for(size_t b = 0; b < temp[a].size(); ++b)
+						partial[a][b] += temp[a][b];
+			}
 		}
 	}
 	// BP (0 to n-1 layer)
@@ -174,6 +205,7 @@ std::vector<double> VectorNetwork::gradient(
 		for(int j = 0; j < nNodeLayer[i]; ++j){ // node
 			for(int k = 0; k < numFeatureLayer[i - 1]; ++k){ // feature (input)
 				const vector<double>& input = mid[i - 1][k];
+				//oidx == j * numFeatureLayer[i - 1] + k;
 				const vector<double>& output = mid[i][oidx];
 				const vector<double>& pg = partial[oidx];
 				++oidx;
