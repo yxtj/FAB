@@ -68,22 +68,24 @@ int main(int argc, char* argv[]){
 	Model m;
 	if(!opt.fnData.empty()){
 		dh.load(opt.fnData, ",", {}, opt.idY, opt.withHeader, true);
-		m.init("cnn", dh.xlength(), opt.shape, 0.01);
+		m.init("rnn", dh.xlength(), opt.shape, 0.01);
 	} else{
-		// pattern: have sequence 0.3, 0.9, 0.6
-		dh.add({ 0.0, 0.2, 0.8, 0.3, 0.9, 0.6, 0.4, 0.9 }, { 1 });
-		dh.add({ 0.3, 0.9, 0.3, 0.6, 0.3, 0.9, 0.6, 0.6 }, { 1 });
-		dh.add({ 0.3, 0.9, 0.6, 0.3, 0.9, 0.6, 0.6, 0.1 }, { 1 });
-		dh.add({ 0.2, 0.9, 0.6, 0.3, 0.9, 0.6, 0.6, 0.1 }, { 0.9 });
-		dh.add({ 0.3, 0.9, 0.3, 0.6, 0.4, 0.9, 0.5, 0.6 }, { 0.8 });
+		// pattern: the summation of entries for 3 sequential input are: 0.3, 0.6, 0.9
+		dh.add({ 0.0, 0.3 }, { 0 });
+		dh.add({ 0.3, 0.3 }, { 0 });
+		dh.add({ 0.3, 0.6 }, { 1 });
+		dh.add({ 0.2, 0.1 }, { 0 });
+		dh.add({ 0.1, 0.5 }, { 0 });
+		dh.add({ 0.6, 0.3 }, { 1 });
+		dh.add({ 0.1, 0.2 }, { 0 }); // 3
+		dh.add({ 0.0, 0.3 }, { 0 }); // 3
+		dh.add({ 0.3, 0.3 }, { 0 }); // 6
+		dh.add({ 0.5, 0.4 }, { 1 }); // 9
+		dh.add({ 0.3, 0.3 }, { 0 }); // 6
+		dh.add({ 0.3, 0.3 }, { 0 }); // 6
+		dh.add({ 0.5, 0.4 }, { 0 }); // 9
 
-
-		dh.add({ 0.3, 0.1, 0.9, 0.5, 0.3, 0.6, 0.6, 0.1 }, { 0 });
-		dh.add({ 0.7, 0.9, 0.3, 0.3, 0.3, 0.5, 0.6, 0.1 }, { 0 });
-		dh.add({ 0.2, 0.3, 0.6, 0.9, 0.9, 0.2, 0.6, 0.1 }, { 0.1 });
-		dh.add({ 0.3, 0.7, 0.3, 0.6, 0.4, 0.9, 0.5, 0.6 }, { 0.2 });
-
-		m.init("cnn", dh.xlength(), "8-1c3-sig-max:2-1f", 0.01);
+		m.init("rnn", dh.xlength(), "2-1r1-tanh-f", 0.01);
 	}
 	if(opt.doNormalize)
 		dh.normalize(false);
