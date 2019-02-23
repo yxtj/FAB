@@ -15,10 +15,10 @@ std::vector<std::tuple<int, NodeTypeGeneral, std::string>> VectorNetwork::parse(
 	// raw string format: R"(...)"
 	string srShape = R"((\d+(?:[\*x]\d+)*))"; // v1[*v2[*v3[*v4]]], "*" can also be "x"
 	regex ri(srShape); // input layer
-	regex ra(R"((sig(?:moid)?|relu|tanh))"); // activation layer, i.e.: relu
+	regex ra(R"((?:1|1:)?(sig(?:moid)?|relu|tanh))"); // activation layer, i.e.: relu
 	regex rc(R"((\d+):?c:?)" + srShape); // convolutional layer, i.e.: 3c3, 4:c4*5, 4:c:4*5x3
 	regex rr(R"((\d+):?r:?)" + srShape); // recurrent layer, i.e.: 4r10, 6r:4*4
-	regex rp(R"((max|min):?)" + srShape); // pooling layer, i.e.: max3*3, max:4
+	regex rp(R"((?:1|1:)?(max|min):?)" + srShape); // pooling layer, i.e.: max3*3, max:4
 	regex rf(R"((\d+):?f?)"); // fully-connected layer, i.e.: 4f
 
 	std::vector<std::tuple<int, NodeTypeGeneral, std::string>> res;
