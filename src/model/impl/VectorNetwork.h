@@ -58,7 +58,7 @@ private:
 	void createLayerSum(const size_t i, const int n);
 	void createLayerConv(const size_t i, const int n, const std::vector<int>& shape);
 	void createLayerPool(const size_t i, const std::string& type, const std::vector<int>& shape);
-	void createLayerRecr(const size_t i, const int n, const std::vector<int>& oshape);
+	void createLayerRecr(const size_t i, const int n, const std::string& actType, const std::vector<int>& oshape);
 	void createLayerFC(const size_t i, const int n);
 
 	// set all data members and generate all nodes for layer i

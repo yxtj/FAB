@@ -12,7 +12,7 @@ enum struct NodeTypeGeneral {
 enum struct NodeType {
 	Input, WeightedSum,
 	Conv1D,
-	RecrFully, //RecrLSTM, RecrGate
+	RecrSig, RecrTanh, //RecrLSTM, RecrGate
 	PoolMax1D, PoolMin1D,
 	ActRelu, ActSigmoid, ActTanh,
 	FC

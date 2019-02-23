@@ -26,29 +26,35 @@ std::vector<double> InputNode::gradient(std::vector<double>& grad, const std::ve
 }
 
 
-// ---- Weighted Summation Node: 1D ----
+// ---- Weighted Summation Node ----
 
 WeightedSumNode::WeightedSumNode(const size_t offset, const std::vector<int>& shape)
-	: NodeBase(offset, shape), n(shape[0])
+	: NodeBase(offset, shape), n(shape[0]), k(shape[1])
 {
-	assert(shape.size() == 1);
+	assert(shape.size() == 2);
 	assert(n > 0);
-	nw += 1; // the constant offset
+	assert(k > 0);
+	nw += k; // the constant offsets
 }
 
 std::vector<int> WeightedSumNode::outShape(const std::vector<int>& inShape) const
 {
-	return { 1 };
+	return { k };
 }
 
 std::vector<double> WeightedSumNode::predict(const std::vector<double>& x, const std::vector<double>& w)
 {
 	assert(x.size() == n);
-	vector<double> res(1);
-	double v = w[off + n];
-	for(int i = 0; i < n; ++i)
-		v += x[i] * w[off + i];
-	res[0] = v;
+	vector<double> res(k);
+	int idx = off;
+	for(int i = 0; i < k;  ++i){
+		// idx = off + i * n;
+		double v = 0.0;
+		for(int j = 0; j < n; ++j)
+			v += w[idx++] * x[j];
+		v += w[idx++];
+		res[i] = v;
+	}
 	return res;
 }
 
@@ -56,14 +62,19 @@ std::vector<double> WeightedSumNode::gradient(std::vector<double>& grad, const s
 	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
 {
 	assert(x.size() == n);
-	assert(y.size() == 1);
+	assert(y.size() == k);
 	vector<double> res(n);
-	const double factor = pre[0];
-	for(int i = 0; i < n; ++i){
-		grad[off + i] += factor * x[i]; // dy/dw
-		res[i] = factor * w[off + i]; // dy/dx
+	int idx = off;
+	for(int i = 0; i < k; i++){
+		// idx = off + i * n;
+		const double factor = pre[i];
+		for(int j = 0; j < n; ++j){
+			grad[idx] += factor * x[j]; // dy/dw
+			res[j] += factor * w[idx]; // dy/dx
+			++idx;
+		}
+		grad[idx++] += factor * 1; // dy/dw
 	}
-	grad[off + n] += factor * 1; // dy/dw
 	return res;
 }
 
@@ -127,9 +138,9 @@ std::vector<double> ConvNode1D::gradient(std::vector<double>& grad, const std::v
 	return res;
 }
 
-// ---- Recurrent Node ----
+// ---- Recurrent Node Base ----
 
-RecurrentNode::RecurrentNode(const size_t offset, const std::vector<int>& shape)
+RecurrentNodeBase::RecurrentNodeBase(const size_t offset, const std::vector<int>& shape)
 	: NodeBase(offset, shape), n(shape[0]), k(shape[1])
 {
 	last_pred.assign(n, 0.0);
@@ -137,12 +148,12 @@ RecurrentNode::RecurrentNode(const size_t offset, const std::vector<int>& shape)
 	nw = (n + k + 1)*k;
 }
 
-std::vector<int> RecurrentNode::outShape(const std::vector<int>& inShape) const
+std::vector<int> RecurrentNodeBase::outShape(const std::vector<int>& inShape) const
 {
 	return { k };
 }
 
-std::vector<double> RecurrentNode::predict(const std::vector<double>& x, const std::vector<double>& w)
+std::vector<double> RecurrentNodeBase::predictCalcOnly(const std::vector<double>& x, const std::vector<double>& w)
 {
 	std::vector<double> res(k);
 	// element by element (n + k + 1)
@@ -158,12 +169,17 @@ std::vector<double> RecurrentNode::predict(const std::vector<double>& x, const s
 		}
 		res[i] = a + b + w[p++];
 	}
-	// store current output for next call
+	return res;
+}
+
+std::vector<double> RecurrentNodeBase::predict(const std::vector<double>& x, const std::vector<double>& w)
+{
+	auto res = predict(x, w);
 	last_pred = res;
 	return res;
 }
 
-std::vector<double> RecurrentNode::gradient(std::vector<double>& grad, const std::vector<double>& x,
+std::vector<double> RecurrentNodeBase::gradient(std::vector<double>& grad, const std::vector<double>& x,
 	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
 {
 	assert(x.size() == n);
@@ -185,6 +201,54 @@ std::vector<double> RecurrentNode::gradient(std::vector<double>& grad, const std
 	// store current output for next call
 	last_grad = y;
 	return res;
+}
+
+// ---- Recurrent Node Sigmoid ----
+
+RecurrentSigmoidNode::RecurrentSigmoidNode(const size_t offset, const std::vector<int>& shape)
+	: RecurrentNodeBase(offset, shape)
+{}
+
+std::vector<double> RecurrentSigmoidNode::predict(const std::vector<double>& x, const std::vector<double>& w)
+{
+	auto res = predictCalcOnly(x, w);
+	for(auto& v : res)
+		v = sigmoid(v);
+	last_pred = res;
+	return res;
+}
+
+std::vector<double> RecurrentSigmoidNode::gradient(std::vector<double>& grad, const std::vector<double>& x,
+	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+{
+	auto actPre = pre;
+	for(size_t i=0;i<pre.size();++i)
+		actPre[i] *= sigmoid_derivative(0.0, y[i]);
+	return RecurrentNodeBase::gradient(grad, x, w, y, actPre);
+}
+
+// ---- Recurrent Node Tanh ----
+
+RecurrentTanhNode::RecurrentTanhNode(const size_t offset, const std::vector<int>& shape)
+	: RecurrentNodeBase(offset, shape)
+{}
+
+std::vector<double> RecurrentTanhNode::predict(const std::vector<double>& x, const std::vector<double>& w)
+{
+	auto res = predictCalcOnly(x, w);
+	for(auto& v : res)
+		v = tanh(v);
+	last_pred = res;
+	return res;
+}
+
+std::vector<double> RecurrentTanhNode::gradient(std::vector<double>& grad, const std::vector<double>& x,
+	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+{
+	auto actPre = pre;
+	for(size_t i = 0; i < pre.size(); ++i)
+		actPre[i] *= tanh_derivative(0.0, y[i]);
+	return RecurrentNodeBase::gradient(grad, x, w, y, actPre);
 }
 
 // ---- Activation Node: ReLU ----

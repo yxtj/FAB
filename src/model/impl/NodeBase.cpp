@@ -99,8 +99,11 @@ NodeBase* generateNode(NodeType type, const size_t offset, const std::vector<int
 	case NodeType::Conv1D:
 		p = new ConvNode1D(offset, shape);
 		break;
-	case NodeType::RecrFully:
-		p = new RecurrentNode(offset, shape);
+	case NodeType::RecrSig:
+		p = new RecurrentSigmoidNode(offset, shape);
+		break;
+	case NodeType::RecrTanh:
+		p = new RecurrentTanhNode(offset, shape);
 		break;
 	case NodeType::PoolMax1D:
 		p = new PoolMaxNode1D(offset, shape);

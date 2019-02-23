@@ -17,7 +17,7 @@ std::vector<std::tuple<int, NodeTypeGeneral, std::string>> VectorNetwork::parse(
 	regex ri(srShape); // input layer
 	regex ra(R"((?:1|1:)?(sig(?:moid)?|relu|tanh))"); // activation layer, i.e.: relu
 	regex rc(R"((\d+):?c:?)" + srShape); // convolutional layer, i.e.: 3c3, 4:c4*5, 4:c:4*5x3
-	regex rr(R"((\d+):?r:?)" + srShape); // recurrent layer, i.e.: 4r10, 6r:4*4
+	regex rr(R"((\d+):?r:?([st]):?)" + srShape); // recurrent layer, i.e.: 4rs10, 6r:t:4*4
 	regex rp(R"((?:1|1:)?(max|min):?)" + srShape); // pooling layer, i.e.: max3*3, max:4
 	regex rf(R"((\d+):?f?)"); // fully-connected layer, i.e.: 4f
 
@@ -28,11 +28,14 @@ std::vector<std::tuple<int, NodeTypeGeneral, std::string>> VectorNetwork::parse(
 		if(regex_match(str, m, ri)){
 			res.emplace_back(1, NodeTypeGeneral::Input, m[1]);
 		} else if(regex_match(str, m, ra)){
+			string act = m[1];
+			if(act == "sig")
+				act = "sigmoid";
 			res.emplace_back(1, NodeTypeGeneral::Act, m[1]);
 		} else if(regex_match(str, m, rc)){
 			res.emplace_back(stoi(m[1]), NodeTypeGeneral::Conv, m[2]);
 		} else if(regex_match(str, m, rr)){
-			res.emplace_back(stoi(m[1]), NodeTypeGeneral::Recr, m[2]);
+			res.emplace_back(stoi(m[1]), NodeTypeGeneral::Recr, m[2].str() + ":" + m[3].str());
 		} else if(regex_match(str, m, rp)){
 			res.emplace_back(1, NodeTypeGeneral::Pool, m[1]);
 		} else if(regex_match(str, m, rf)){
@@ -84,8 +87,8 @@ void VectorNetwork::build(const std::vector<std::tuple<int, NodeTypeGeneral, std
 				createLayerConv(i, n, getShape(m[1]));
 			break;
 		case NodeTypeGeneral::Recr:
-			if(regex_match(parm, m, rShape))
-				createLayerRecr(i, n, getShape(m[1]));
+			if(regex_match(parm, m, regex("([st]):"+srShape)))
+				createLayerRecr(i, n, m[1], getShape(m[2]));
 			break;
 		case NodeTypeGeneral::Pool:
 			if(regex_match(parm, m, regex("(max|min)[,:]?"+srShape)))
@@ -271,9 +274,14 @@ void VectorNetwork::createLayerConv(const size_t i, const int n, const std::vect
 		coreCreateLayer(i, NodeType::Conv1D, n, shape);
 }
 
-void VectorNetwork::createLayerRecr(const size_t i, const int n, const std::vector<int>& oshape){
-	coreCreateLayer(i, NodeType::RecrFully, n,
-		{ lenFeatureLayer[i - 1], getSize(oshape) });
+void VectorNetwork::createLayerRecr(const size_t i, const int n, const std::string& actType, const std::vector<int>& oshape){
+	vector<int> shapeParam = { lenFeatureLayer[i - 1], getSize(oshape) };
+	if(actType == "s"){
+		coreCreateLayer(i, NodeType::RecrSig, n, shapeParam);
+	} else if(actType == "t"){
+		coreCreateLayer(i, NodeType::RecrTanh, n, shapeParam);
+	} else{
+	}
 }
 
 void VectorNetwork::createLayerPool(const size_t i, const std::string& type, const std::vector<int>& shape){

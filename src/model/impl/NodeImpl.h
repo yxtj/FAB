@@ -15,14 +15,14 @@ struct InputNode
 };
 
 // do weighted summation
-// n => 1
-// vector: y_{1} = x_{n} * W_{n} + b
-// individual: y = sum_{j:0~n} ( x[i] * W[i] ) + W[n]
+// n => k
+// vector: y_{k*1} = W_{k*n} * x_{n*1} + b_{k*1}
+// individual: y[i] = sum_{j:0~n} ( W[i,j] * x[j] ) + b[i]
 struct WeightedSumNode
 	: public NodeBase
 {
-	const int n;
-	WeightedSumNode(const size_t offset, const std::vector<int>& shape); // shape = {n}
+	const int n, k;
+	WeightedSumNode(const size_t offset, const std::vector<int>& shape); // shape = {n,k}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
 	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
@@ -45,17 +45,43 @@ struct ConvNode1D
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
 };
 
-// recurrent node. use history state remembering last output
+// recurrent node base (no activation). use history state remembering last output
 // n => k
-// vector: y_{k*1} = W_{k*n} * x_{n*1} + U_{k*k} * y_{k*1} + b_{k*1}
-// individual: y[i] = sum_{j:0~n} (W[i,j]*x[j]) + sum_{j:0~k} (U[i,j]*y[j]) + b[i]
-struct RecurrentNode
+// vector: y_{k*1} = act( W_{k*n} * x_{n*1} + U_{k*k} * y_{k*1} + b_{k*1} )
+// individual: y[i] = act( sum_{j:0~n} (W[i,j]*x[j]) + sum_{j:0~k} (U[i,j]*y[j]) + b[i] )
+struct RecurrentNodeBase
 	: public NodeBase
 {
 	const int n, k;
 	std::vector<double> last_pred, last_grad; // store the last output (k-dim) for both predict and gradient
-	RecurrentNode(const size_t offset, const std::vector<int>& shape); // shape = {n,k}
+	RecurrentNodeBase(const size_t offset, const std::vector<int>& shape); // shape = {n,k}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
+	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
+	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
+		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+
+	std::vector<double> predictCalcOnly(const std::vector<double>& x, const std::vector<double>& w);
+};
+
+// recurrent node using sigmoid activation
+// n => k
+// y = sigmoid( W * x + U * y + b )
+struct RecurrentSigmoidNode
+	: public RecurrentNodeBase
+{
+	RecurrentSigmoidNode(const size_t offset, const std::vector<int>& shape); // shape = {n,k}
+	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
+	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
+		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+};
+
+// recurrent node using tanh activation
+// n => k
+// y = tanh( W * x + U * y + b )
+struct RecurrentTanhNode
+	: public RecurrentNodeBase
+{
+	RecurrentTanhNode(const size_t offset, const std::vector<int>& shape); // shape = {n,k}
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
 	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
