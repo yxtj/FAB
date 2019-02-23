@@ -21,7 +21,7 @@ public:
 	std::vector<double> gradient(
 		const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y) const;
 private:
-	// make param into general format for network
+	// make the cnn param into the general format for network
 	// i.e. 5c4p3 -> 5:c:4,sigmoid,max:3
 	// i.e. 5c4r,min3 -> 5:c:4,relu,min:3
 	std::string preprocessParam(const std::string& param);

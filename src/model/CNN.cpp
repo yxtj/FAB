@@ -1,6 +1,7 @@
 #include "CNN.h"
 #include "util/Util.h"
 #include <stdexcept>
+#include <regex>
 using namespace std;
 
 // -------- CNN --------
@@ -84,6 +85,30 @@ std::vector<double> CNN::gradient(
 
 std::string CNN::preprocessParam(const std::string & param)
 {
-	// TODO
-	return param;
+	string sr("(\\d+(?*[\\*x]\\d+)*)");
+	// 3c5p4 -> 3:c:5,sig,max:4
+	regex runit("(\\d+)c" + sr + "([srt])?p" + sr);
+
+	string res;
+	auto first = param.begin();
+	auto last = param.end();
+	std::smatch sm;
+	while(regex_search(first, last, sm, runit)) {
+		first = sm[0].second; // the last matched position
+		//cout << sm[0] << " - " << sm[1] << " - " << sm[2] << " - " << sm[3] << " - " << sm[4] << "\n";
+		string act;
+		if(!sm[3].matched || sm[3] == "s"){
+			act = "sigmoid";
+		} else if(sm[3] == "r"){
+			act = "relu";
+		} else if(sm[3] == "t"){
+			act = "tanh";
+		} else{
+			act = sm[3].str();
+		}
+		res += sm.prefix().str() + sm[1].str() + ":c:" + sm[2].str() + "-" + act + "-max:" + sm[4].str();
+	}
+	res += string(first, last);
+
+	return res;
 }
