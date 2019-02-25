@@ -1,5 +1,6 @@
 #include "RNN.h"
 #include "util/Util.h"
+#include <regex>
 #include <stdexcept>
 using namespace std;
 
@@ -15,7 +16,7 @@ void RNN::init(const int xlength, const std::string & param)
 	//     shape of fully-connected node: none
 	try{
 		string pm = preprocessParam(param);
-		net.init(param);
+		net.init(pm);
 		net.bindGradLossFunc(&RNN::gradLoss);
 	} catch(exception& e){
 		throw invalid_argument(string("Unable to create network: ") + e.what());
@@ -84,6 +85,9 @@ std::vector<double> RNN::gradient(
 
 std::string RNN::preprocessParam(const std::string & param)
 {
-	// TODO
-	return param;
+	string srShape = R"((\d+(?:[\*x]\d+)*))"; // v1[*v2[*v3[*v4]]], "*" can also be "x"
+	regex rr(R"((\d+):?r:?)" + srShape); // recurrent layer, 4r5 -> 4rs5
+	// add default activation type for recurrent layer
+	string res = regex_replace(param, rr, "$1:r:s:$2");
+	return res;
 }

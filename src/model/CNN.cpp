@@ -85,9 +85,9 @@ std::vector<double> CNN::gradient(
 
 std::string CNN::preprocessParam(const std::string & param)
 {
-	string sr("(\\d+(?*[\\*x]\\d+)*)");
+	string srShape = R"((\d+(?:[\*x]\d+)*))"; // v1[*v2[*v3[*v4]]], "*" can also be "x"
 	// 3c5p4 -> 3:c:5,sig,max:4
-	regex runit("(\\d+)c" + sr + "([srt])?p" + sr);
+	regex runit("(\\d+)c" + srShape + "([srt])?p" + srShape);
 
 	string res;
 	auto first = param.begin();

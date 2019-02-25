@@ -17,16 +17,18 @@ std::vector<std::tuple<int, NodeTypeGeneral, std::string>> VectorNetwork::parse(
 	regex ri(srShape); // input layer
 	regex ra(R"((?:1|1:)?(sig(?:moid)?|relu|tanh))"); // activation layer, i.e.: relu
 	regex rc(R"((\d+):?c:?)" + srShape); // convolutional layer, i.e.: 3c3, 4:c4*5, 4:c:4*5x3
-	regex rr(R"((\d+):?r:?([st]):?)" + srShape); // recurrent layer, i.e.: 4rs10, 6r:t:4*4
+	regex rr(R"((\d+):?r:?([st])?:?)" + srShape); // recurrent layer, i.e.: 4rs10, 6r:t:4*4
 	regex rp(R"((?:1|1:)?(max|min):?)" + srShape); // pooling layer, i.e.: max3*3, max:4
 	regex rf(R"((\d+):?f?)"); // fully-connected layer, i.e.: 4f
 
 	std::vector<std::tuple<int, NodeTypeGeneral, std::string>> res;
 	vector<string> strParam = getStringList(param, ",-");
+	bool hasInput = false;
 	for(string& str : strParam){
 		smatch m;
-		if(regex_match(str, m, ri)){
+		if(!hasInput && regex_match(str, m, ri)){
 			res.emplace_back(1, NodeTypeGeneral::Input, m[1]);
+			hasInput = true;
 		} else if(regex_match(str, m, ra)){
 			string act = m[1];
 			if(act == "sig")
@@ -35,11 +37,14 @@ std::vector<std::tuple<int, NodeTypeGeneral, std::string>> VectorNetwork::parse(
 		} else if(regex_match(str, m, rc)){
 			res.emplace_back(stoi(m[1]), NodeTypeGeneral::Conv, m[2]);
 		} else if(regex_match(str, m, rr)){
-			res.emplace_back(stoi(m[1]), NodeTypeGeneral::Recr, m[2].str() + ":" + m[3].str());
+			string act = m[2];
+			if(!m[2].matched)
+				act = "s";
+			res.emplace_back(stoi(m[1]), NodeTypeGeneral::Recr, act + ":" + m[3].str());
 		} else if(regex_match(str, m, rp)){
-			res.emplace_back(1, NodeTypeGeneral::Pool, m[1]);
+			res.emplace_back(1, NodeTypeGeneral::Pool, m[1].str() + ":" + m[2].str());
 		} else if(regex_match(str, m, rf)){
-			res.emplace_back(stoi(m[1]), NodeTypeGeneral::Act, "");
+			res.emplace_back(stoi(m[1]), NodeTypeGeneral::FC, "");
 		} else{
 			throw invalid_argument("unsupport network layer: " + str);
 		}
@@ -55,8 +60,9 @@ void VectorNetwork::build(const std::vector<std::tuple<int, NodeTypeGeneral, std
 	nNodeLayer.resize(nLayer);
 	typeLayer.resize(nLayer);
 	shapeNode.resize(nLayer);
-	shapeNode.resize(nLayer);
 	numFeatureLayer.resize(nLayer);
+	lenFeatureLayer.resize(nLayer);
+	shpFeatureLayer.resize(nLayer);
 	nWeightNode.resize(nLayer);
 	weightOffsetLayer.resize(nLayer + 1);
 	nodes.resize(nLayer);
@@ -92,7 +98,7 @@ void VectorNetwork::build(const std::vector<std::tuple<int, NodeTypeGeneral, std
 			break;
 		case NodeTypeGeneral::Pool:
 			if(regex_match(parm, m, regex("(max|min)[,:]?"+srShape)))
-				createLayerPool(i, m[1], getIntList(m[1], "*x"));
+				createLayerPool(i, m[1], getIntList(m[2], "*x"));
 			break;
 		case NodeTypeGeneral::FC:
 			createLayerFC(i, n);
@@ -307,8 +313,13 @@ void VectorNetwork::coreCreateLayer(const size_t i,
 	typeLayer[i] = type;
 	shapeNode[i] = shape;
 	createNodesForLayer(i); // set nWeightNode, weightOffsetLayer and nodes
-	numFeatureLayer[i] = numFeatureLayer[i - 1] * n;
-	shpFeatureLayer[i] = nodes[i][0]->outShape(shpFeatureLayer[i - 1]);
+	if(i == 0){
+		numFeatureLayer[i] = n;
+		shpFeatureLayer[i] = shape;
+	} else{
+		numFeatureLayer[i] = numFeatureLayer[i - 1] * n;
+		shpFeatureLayer[i] = nodes[i][0]->outShape(shpFeatureLayer[i - 1]);
+	}
 	lenFeatureLayer[i] = getSize(shpFeatureLayer[i]);
 }
 

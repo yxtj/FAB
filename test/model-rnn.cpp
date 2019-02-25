@@ -46,7 +46,7 @@ struct Option{
 		return true;
 	}
 	void showUsage(){
-		LOG(ERROR) << "Usage: <fn-data> <idx-y> <with-header> <normalize> <shape> <batch-size> <lrate> <n-iter> [iter-show]";
+		LOG(ERROR) << "Usage: <fn-data> <idx-y> <with-header> <normalize> <shape> <batch-size> <lrate> <n-iter> [iter-show=1]";
 	}
 };
 
@@ -85,7 +85,7 @@ int main(int argc, char* argv[]){
 		dh.add({ 0.3, 0.3 }, { 0 }); // 6
 		dh.add({ 0.5, 0.4 }, { 0 }); // 9
 
-		m.init("rnn", dh.xlength(), "2-1r1-tanh-f", 0.01);
+		m.init("rnn", dh.xlength(), "2-1r1-1", 0.01);
 	}
 	if(opt.doNormalize)
 		dh.normalize(false);
