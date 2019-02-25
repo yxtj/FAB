@@ -1,6 +1,7 @@
 #include "Option.h"
 #include <vector>
 #include <iostream>
+#include <algorithm>
 #include "util/Util.h"
 
 using namespace std;

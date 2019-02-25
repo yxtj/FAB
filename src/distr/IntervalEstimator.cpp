@@ -1,10 +1,11 @@
 #include "IntervalEstimator.h"
 #include "math/norm.h"
 #include <utility>
+#include <algorithm>
 
 using namespace std;
 
-template <typename T>
+/*template <typename T>
 static T max(const T& a, const T& b){
 	return a < b ? b : a;
 }
@@ -12,7 +13,7 @@ template <typename T>
 static T min(const T& a, const T& b){
 	return a < b ? a : b;
 }
-
+*/
 // ---- base interval estimator ----
 
 void IntervalEstimator::init(const std::vector<std::string>& param, const size_t nWorker, const size_t nPoint)
