@@ -15,6 +15,7 @@ Master::Master() : Runner() {
 	nPoint = 0;
 	iter = 0;
 	nUpdate = 0;
+	ie = nullptr;
 	lastArchIter = 0;
 	tmrArch.restart();
 
