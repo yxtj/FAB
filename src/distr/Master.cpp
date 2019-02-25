@@ -215,7 +215,7 @@ void Master::fabProcess()
 	while(!terminateCheck()){
 		if(newIter){
 			VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;// << ", msg waiting: " << driver.queSize() << ", update: " << nUpdate;
-			DVLOG_EVERY_N(ln / 10, 1) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
+			//DVLOG_EVERY_N(ln / 10, 1) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
 			newIter = false;
 			if(VLOG_IS_ON(2) && iter % 100 == 0){
 				double t = tmrTrain.elapseSd();
