@@ -9,10 +9,11 @@ import os
 import pandas
 import numpy as np
 import matplotlib.pyplot as plt
+import re
 
-os.chdir('E:/Code/FSB/score/')
-#os.chdir('E:/Code/FSB/score/10-100k/1000-0.1')
-#os.chdir('E:/Code/FSB/score/10,15,1-100k/1000-0.1')
+os.chdir('E:/Code/FSB/score/rnn')
+#os.chdir('E:/Code/FSB/score/lr/10-100k/1000-0.1')
+#os.chdir('E:/Code/FSB/score/mlp/10,15,1-100k/1000-0.1')
 
 USE_HEADER=True;
 
@@ -43,7 +44,6 @@ rng=[1, 2, 4, 8]
 #drawGroup('async', rng)
 #drawGroup('fab', rng)
 
-
 def drawCmp(mode1, mode2, nw, n=200):
     plt.figure();
     d1=pandas.read_csv(mode1+'-'+str(nw)+'.txt',skiprows=0, header=None);
@@ -53,44 +53,58 @@ def drawCmp(mode1, mode2, nw, n=200):
     plt.plot(d2[:n][0], d2[:n][1])
     plt.legend([mode1, mode2])
     plt.show()
-    
-    
+
 #drawCmp('async','fsb',8)
-#drawCmp('sync','fsb',1)
-#drawCmp('sync','fsb',2)
-#drawCmp('sync','fsb',4)
-#drawCmp('sync','fsb',8,300)
-#drawCmp('async','fab',1)
-#drawCmp('async','fab',2)
-#drawCmp('async','fab',2,20)
+#drawCmp('sync','fab',8,300)
+
+
+def plotUnit(legendList, fn, name, lineMarker, color, n):
+    d=pandas.read_csv(fn, skiprows=0, header=None)
+    line = plt.plot(d[:n][0], d[:n][1], lineMarker, color=color)
+    if(legendList is not None):
+        legendList.append(name)
+    return line[0].get_color()
+
+def renameLegend(lgd):
+    for i in range(len(lgd)):
+        s=lgd[i]
+        s=s.replace('async','tap').replace('sync','bsp')
+        s=s.replace('fsb','fsp').replace('fab','fap')
+        lgd[i]=s
+    return lgd
 
 def drawList(prefix, mList, n=200):
     plt.figure();
     for m in mList:
-        d=pandas.read_csv(prefix+m+'.txt',skiprows=0, header=None)
-        plt.plot(d[:n][0], d[:n][1])
+        plotUnit(None, prefix+m+'.txt', m, '-', None, n)
     #plt.hold(True)
-    plt.legend(mList)
+    plt.legend(renameLegend(mList))
     plt.show()
 
 #drawList('../10000-0.01/',['fab-1','fab-2','fab-4','fab-8'],10)
 #drawList('10000-0.1/',['sync-4','fsb-4','async-4','fab-4'])
 
-def drawListCmp(prefix, mList1, mList2, n=200):
+def drawListCmp(prefix, mList1, mList2, mList3=None, n=200):
     assert(len(mList1) == len(mList2))
+    assert(mList3 is None or len(mList3) == 0 or len(mList3) == len(mList1))
+    if mList3 is None or len(mList3) == 0:
+        mList3=None
     plt.figure()
     l=len(mList1)
     lgd=[]
     for i in range(l):
-        d1=pandas.read_csv(prefix+mList1[i]+'.txt',skiprows=0, header=None)
-        d2=pandas.read_csv(prefix+mList2[i]+'.txt',skiprows=0, header=None)
-        plt.plot(d1[:n][0], d1[:n][1])
-        plt.plot(d2[:n][0], d2[:n][1], '--')
-        lgd.append(mList1[i])
-        lgd.append(mList2[i])
+        c=plotUnit(lgd, prefix+mList1[i]+'.txt', mList1[i], '-', None, n)
+        c=plotUnit(lgd, prefix+mList2[i]+'.txt', mList2[i], '--', c, n)
+        if(mList3):
+            plotUnit(lgd, prefix+mList3[i]+'.txt', mList3[i], '-.', c, n)
     #plt.hold(True)
-    plt.legend(lgd)
-    plt.savefig(prefix.replace('-100k/','-').replace('/','')+'.png')
+    plt.legend(renameLegend(lgd))
+    plt.xlabel('time (s)')
+    plt.ylabel('loss')
+    gfn=re.sub('^../','',prefix)
+    gfn=re.sub('/$','',gfn)
+    gfn=gfn.replace('-100k/','/').replace('/','-')
+    plt.savefig(gfn+'.png')
     plt.show()
 
 #drawListCmp('../10000-0.1/',['async-1','async-2','async-4'],['fab-1','fab-2','fab-4'])
