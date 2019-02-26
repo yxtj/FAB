@@ -17,14 +17,14 @@ public:
 
 private:
 	callback_t localCBBinder(void (Master::*fp)(const std::string&, const RPCInfo&));
-	void syncInit();
-	void syncProcess();
-	void asyncInit();
-	void asyncProcess();
-	void fsbInit();
-	void fsbProcess();
-	void fabInit();
-	void fabProcess();
+	void bspInit();
+	void bspProcess();
+	void tapInit();
+	void tapProcess();
+	void fspInit();
+	void fspProcess();
+	void aapInit();
+	void aapProcess();
 
 // local logic
 private:
@@ -56,9 +56,9 @@ public:
 	void handleOnline(const std::string& data, const RPCInfo& info);
 	void handleDataset(const std::string& data, const RPCInfo& info);
 	void handleDelta(const std::string& data, const RPCInfo& info);
-	void handleDeltaAsync(const std::string& data, const RPCInfo& info);
-	void handleDeltaFsb(const std::string& data, const RPCInfo& info);
-	void handleDeltaFab(const std::string& data, const RPCInfo& info);
+	void handleDeltaTap(const std::string& data, const RPCInfo& info);
+	void handleDeltaFsp(const std::string& data, const RPCInfo& info);
+	void handleDeltaAap(const std::string& data, const RPCInfo& info);
 	void handleDeltaTail(const std::string& data, const RPCInfo& info);
 
 private:
