@@ -22,7 +22,7 @@ void CNN::init(const int xlength, const std::string & param)
 		throw invalid_argument(string("Unable to create network: ") + e.what());
     }
 	// check input layer size
-	if(xlength != net.lenFeatureLayer[0])
+	if(xlength != net.lenFeatureLayer[0] || net.typeLayer[0] != NodeType::Input)
 		throw invalid_argument("The dataset does not match the input layer of the network");
 	// check FC layer
 	for(size_t i = 0; i < net.nLayer; ++i){
@@ -86,16 +86,19 @@ std::vector<double> CNN::gradient(
 std::string CNN::preprocessParam(const std::string & param)
 {
 	string srShape = R"((\d+(?:[\*x]\d+)*))"; // v1[*v2[*v3[*v4]]], "*" can also be "x"
-	// 3c5p4 -> 3:c:5,sig,max:4
-	regex runit("(\\d+)c" + srShape + "([srt])?p" + srShape);
-
+	string sep = "[,-]?";
+	// 3c5p4 -> 3:c:5-sig-max:4
+	regex runit_c("(\\d+):?c:?" + srShape + sep + "([srt])?");
+	regex runit_p(sep + "p" + srShape); // the sep is important (3c5p3p2)
 	string res;
-	auto first = param.begin();
-	auto last = param.end();
+
+	string buf = param;
+	auto first = buf.cbegin();
+	auto last = buf.cend();
 	std::smatch sm;
-	while(regex_search(first, last, sm, runit)) {
+	// 3c5 ->3:c:5-sig
+	while(regex_search(first, last, sm, runit_c)) {
 		first = sm[0].second; // the last matched position
-		//cout << sm[0] << " - " << sm[1] << " - " << sm[2] << " - " << sm[3] << " - " << sm[4] << "\n";
 		string act;
 		if(!sm[3].matched || sm[3] == "s"){
 			act = "sigmoid";
@@ -106,7 +109,17 @@ std::string CNN::preprocessParam(const std::string & param)
 		} else{
 			act = sm[3].str();
 		}
-		res += sm.prefix().str() + sm[1].str() + ":c:" + sm[2].str() + "-" + act + "-max:" + sm[4].str();
+		res += sm.prefix().str() + sm[1].str() + ":c:" + sm[2].str() + "-" + act;
+	}
+	res += string(first, last);
+	// p4 -> max:4
+	buf = res;
+	res.clear();
+	first = buf.cbegin();
+	last = buf.cend();
+	while(regex_search(first, last, sm, runit_p)) {
+		first = sm[0].second; // the last matched position
+		res += sm.prefix().str() + "-max:" + sm[1].str();
 	}
 	res += string(first, last);
 

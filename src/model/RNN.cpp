@@ -22,7 +22,7 @@ void RNN::init(const int xlength, const std::string & param)
 		throw invalid_argument(string("Unable to create network: ") + e.what());
 	}
 	// check input layer size
-	if(xlength != net.lenFeatureLayer[0])
+	if(xlength != net.lenFeatureLayer[0] || net.typeLayer[0] != NodeType::Input)
 		throw invalid_argument("The dataset does not match the input layer of the network");
 	// check FC layer
 	for(size_t i = 0; i < net.nLayer; ++i){
