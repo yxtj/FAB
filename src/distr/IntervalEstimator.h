@@ -33,15 +33,16 @@ protected: // helper functions
 		const double timeSync, const double timeStart);
 
 protected: // state
-	size_t nw;
-	size_t np;
+	size_t nw; // number of workers
+	size_t np; // number of points
 };
 
 struct IntervalEstimatorFactory{
-	// Support: "interval" -> fixed time interval
-	//          "portion" -> fixed portion of data points
-	//          "improve" -> fixed improvement amount
-	//          "balance" -> maximize the progress by balancing computing time and synchronization time
+	// param[0] is the name of strategy
+	// Support: "interval" -> fixed time interval (param: second)
+	//          "portion" -> fixed portion of data points (param: portion)
+	//          "improve" -> fixed improvement amount (param: avg-improve, max-wait-time)
+	//          "balance" -> maximize the progress by balancing computing time and synchronization time (param: num-of-window)
 	static IntervalEstimator* generate(const std::vector<std::string>& param,
 		const size_t nWorker, const size_t nPoint);
 };

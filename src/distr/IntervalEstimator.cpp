@@ -129,10 +129,10 @@ private:
 struct IntervalEstimatorBalance: public IntervalEstimator{
 	virtual void init(const std::vector<std::string>& param, const size_t nWorker, const size_t nPoint){
 		IntervalEstimator::init(param, nWorker, nPoint);
-		nw = param.size() > 1 ? stoi(param[1]) : 2;
-		oldBuff.assign(nw, pair<double, double>(0, 0.01));
+		nwdw = param.size() > 1 ? stoi(param[1]) : 2;
+		oldBuff.assign(nwdw, pair<double, double>(0, 0.01));
 		oldImproveSum = 0;
-		oldIntervalSum = nw * 0.01;
+		oldIntervalSum = nwdw * 0.01;
 		p = 0;
 		estSyncTime = 0.01;
 		state = 0.01;
@@ -140,9 +140,9 @@ struct IntervalEstimatorBalance: public IntervalEstimator{
 	virtual void update(const double improve, const double interval, const size_t points,
 		const double timeSync, const double timeStart){
 		double newRatio = improve / (interval+timeSync);
-		double oldRatio = oldImproveSum / (oldIntervalSum + estSyncTime*nw);
+		double oldRatio = oldImproveSum / (oldIntervalSum + estSyncTime*nwdw);
 		estSyncTime = (estSyncTime + timeSync) / 2;
-		double t = oldIntervalSum / nw;
+		double t = oldIntervalSum / nwdw;
 		if(newRatio > oldRatio){
 			state += t;
 		} else{
@@ -161,10 +161,10 @@ private:
 		oldBuff[p].first = improve;
 		oldBuff[p].second += interval;
 		++p;
-		if(p >= nw)
+		if(p >= nwdw)
 			p = 0;
 	}
-	int nw; // number of window
+	int nwdw; // number of window
 
 	double oldImproveSum, oldIntervalSum;
 	vector<pair<double, double>> oldBuff;

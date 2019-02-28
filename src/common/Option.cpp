@@ -39,8 +39,8 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		arvIter = argc > optIdx++ ? stoiKMG(argv[idx++]) : 1000;
 		arvTime = argc > optIdx++ ? stod(argv[idx++]) : 0.5;
 		logIter = argc > optIdx++ ? stoiKMG(argv[idx++]) : 1000;
-		string itvparam = argc > optIdx++ ? argv[idx++] : "interval:0.01";
-		intervalParam = getStringList(itvparam, ":");
+		string itvparam = argc > optIdx++ ? argv[idx++] : "portion:0.05";
+		intervalParam = getStringList(itvparam, ":,; ");
 	} catch(exception& e){
 		cerr << "Cannot parse the " << idx << "-th parameter: " << argv[idx] << endl;
 		cerr << "Error message: " << e.what() << endl;
@@ -62,13 +62,14 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 
 void Option::showUsage() const {
 	cout << "usage: <mode> <alg> <param> <data-file> <output-file> <id-skip> <id-y> <normalize>"
-		" <lrate> <batch-size> <term-iter> <term-time> [arv-iter=1000] [arv-time=0.5] [log-iter=1000] [flex-param=interval:0.01]" << endl;
+		" <lrate> <batch-size> <term-iter> <term-time> [arv-iter=1000] [arv-time=0.5] [log-iter=1000] [flex-param=portion:0.05]" << endl;
 	//cout << "usage: <algorithm> <mode> <data-file> <output-file> <id-skip> <id-y> <nw> <batch-size> <term-iter> <term-time>" << endl;
 	cout << "  <mode>: bsp, fsp, tap, aap\n"
 		<< "  <alg>: algorithm name. Support: lr, mlp, cnn, rnn, tm.\n"
 		<< "  <param>: parameter of the algorithm, usually the shape of the algorithm.\n"
 		<< "  <id-skip>: a list separated with space or comma.\n"
-		<< "  [flex-param]: supports: interval:x (x is in seconds), portion:x (x in 0~1)"
+		<< "  [flex-param]: supports: interval:x (x is in seconds), portion:x (x in 0~1), "
+		"improve:x,t (x: avg. imporovement, t: max waiting time), balance:w (num. of windows)"
 		<< endl;
 }
 
