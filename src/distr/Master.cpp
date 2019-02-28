@@ -41,16 +41,16 @@ void Master::init(const Option* opt, const size_t lid)
 	logName = "M";
 	setLogThreadName(logName);
 
-	if(opt->mode == "sync"){
-		syncInit();
-	} else if(opt->mode == "async"){
-		asyncInit();
-	} else if(opt->mode == "fsb"){
-		fsbInit();
+	if(opt->mode == "bsp"){
+		bspInit();
+	} else if(opt->mode == "tap"){
+		tapInit();
+	} else if(opt->mode == "fsp"){
+		fspInit();
 		ie =IntervalEstimatorFactory::generate(opt->intervalParam, nWorker, nPoint);
 		LOG_IF(ie == nullptr, FATAL) << "Fail to initialize interval estimator with parameter: " << opt->intervalParam;
-	} else if(opt->mode == "fab"){
-		fabInit();
+	} else if(opt->mode == "aap"){
+		aapInit();
 	}
 }
 
@@ -80,14 +80,14 @@ void Master::run()
 	LOG(INFO)<<"Start traning with mode: "<<opt->mode;
 	//tmrTrain.restart();
 	iter = 1;
-	if(opt->mode == "sync"){
-		syncProcess();
-	} else if(opt->mode == "async"){
-		asyncProcess();
-	} else if(opt->mode == "fsb"){
-		fsbProcess();
-	} else if(opt->mode == "fab"){
-		fabProcess();
+	if(opt->mode == "bsp"){
+		bspProcess();
+	} else if(opt->mode == "tap"){
+		tapProcess();
+	} else if(opt->mode == "fsp"){
+		fspProcess();
+	} else if(opt->mode == "aap"){
+		aapProcess();
 	}
 	double t = tmrTrain.elapseSd();
 	LOG(INFO) << "Finish training. Time cost: " << t << ". Iterations: " << iter
@@ -110,13 +110,13 @@ Master::callback_t Master::localCBBinder(
 	return bind(fp, this, placeholders::_1, placeholders::_2);
 }
 
-void Master::syncInit()
+void Master::bspInit()
 {
 	factorDelta = 1.0 / nWorker;
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDelta));
 }
 
-void Master::syncProcess()
+void Master::bspProcess()
 {
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
@@ -135,13 +135,13 @@ void Master::syncProcess()
 	}
 }
 
-void Master::asyncInit()
+void Master::tapInit()
 {
 	factorDelta = 1.0;
-	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaAsync));
+	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaTap));
 }
 
-void Master::asyncProcess()
+void Master::tapProcess()
 {
 	bool newIter = true;
 	double tl = tmrTrain.elapseSd();
@@ -167,13 +167,13 @@ void Master::asyncProcess()
 	}
 }
 
-void Master::fsbInit()
+void Master::fspInit()
 {
 	factorDelta = 1.0 / nWorker;
-	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaFsb));
+	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaFsp));
 }
 
-void Master::fsbProcess()
+void Master::fspProcess()
 {
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
@@ -203,13 +203,13 @@ void Master::fsbProcess()
 	}
 }
 
-void Master::fabInit()
+void Master::aapInit()
 {
 	factorDelta = 1.0;
-	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaFab));
+	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaAap));
 }
 
-void Master::fabProcess()
+void Master::aapProcess()
 {
 	bool newIter = true;
 	double tl = tmrTrain.elapseSd();
@@ -242,8 +242,8 @@ void Master::registerHandlers()
 	regDSPProcess(MType::CReply, localCBBinder(&Master::handleReply));
 	regDSPProcess(MType::COnline, localCBBinder(&Master::handleOnline));
 	regDSPProcess(MType::CDataset, localCBBinder(&Master::handleDataset));
-	// regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDelta)); // for sync and fsb
-	// regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaAsync)); // for async
+	// regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDelta)); // for bsp and fsp
+	// regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaTap)); // for tap
 
 	addRPHEachSU(MType::COnline, suOnline);
 	addRPHEachSU(MType::CWorkers, suWorker);
@@ -438,7 +438,7 @@ void Master::handleDelta(const std::string & data, const RPCInfo & info)
 	++stat.n_dlt_recv;
 }
 
-void Master::handleDeltaAsync(const std::string & data, const RPCInfo & info)
+void Master::handleDeltaTap(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
 	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
@@ -454,7 +454,7 @@ void Master::handleDeltaAsync(const std::string & data, const RPCInfo & info)
 	sendParameter(s);
 }
 
-void Master::handleDeltaFsb(const std::string & data, const RPCInfo & info)
+void Master::handleDeltaFsp(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
 	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
@@ -468,7 +468,7 @@ void Master::handleDeltaFsb(const std::string & data, const RPCInfo & info)
 	++stat.n_dlt_recv;
 }
 
-void Master::handleDeltaFab(const std::string & data, const RPCInfo & info)
+void Master::handleDeltaAap(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
 	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
@@ -481,7 +481,7 @@ void Master::handleDeltaFab(const std::string & data, const RPCInfo & info)
 	//VLOG_EVERY_N(ln/10, 1) << "Update: " << nUpdate << " rsp: " << cnt << " r-pkg: " << net->stat_recv_pkg;
 	rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
-	if(opt->fabWait)
+	if(opt->aapWait)
 		sendReply(info);
 	++stat.n_dlt_recv;
 	// broadcast new parameter in main thread

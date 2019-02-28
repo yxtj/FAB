@@ -34,14 +34,14 @@ void Worker::init(const Option* opt, const size_t lid)
 	logName = "W"+to_string(localID);
 	setLogThreadName(logName);
 
-	if(opt->mode == "sync"){
-		syncInit();
-	} else if(opt->mode == "async"){
-		asyncInit();
-	} else if(opt->mode == "fsb"){
-		fsbInit();
-	} else if(opt->mode == "fab"){
-		fabInit();
+	if(opt->mode == "bsp"){
+		bspInit();
+	} else if(opt->mode == "tap"){
+		tapInit();
+	} else if(opt->mode == "fsp"){
+		fspInit();
+	} else if(opt->mode == "aap"){
+		aapInit();
 	}
 }
 
@@ -83,14 +83,14 @@ void Worker::run()
 	//} catch(exception& e){
 	//	LOG(FATAL) << e.what();
 	//}
-	if(opt->mode == "sync"){
-		syncProcess();
-	} else if(opt->mode == "async"){
-		asyncProcess();
-	} else if(opt->mode == "fsb"){
-		fsbProcess();
-	} else if(opt->mode == "fab"){
-		fabProcess();
+	if(opt->mode == "bsp"){
+		bspProcess();
+	} else if(opt->mode == "tap"){
+		tapProcess();
+	} else if(opt->mode == "fsp"){
+		fspProcess();
+	} else if(opt->mode == "aap"){
+		aapProcess();
 	}
 
 	DLOG(INFO) << "finish training";
@@ -106,12 +106,12 @@ Worker::callback_t Worker::localCBBinder(
 	return bind(fp, this, placeholders::_1, placeholders::_2);
 }
 
-void Worker::syncInit()
+void Worker::bspInit()
 {
 	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameter));
 }
 
-void Worker::syncProcess()
+void Worker::bspProcess()
 {
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
@@ -138,12 +138,12 @@ void Worker::syncProcess()
 	}
 }
 
-void Worker::asyncInit()
+void Worker::tapInit()
 {
 	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameter));
 }
 
-void Worker::asyncProcess()
+void Worker::tapProcess()
 {
 	while(!exitTrain){
 		//if(allowTrain.load() == false){
@@ -174,12 +174,12 @@ void Worker::asyncProcess()
 	}
 }
 
-void Worker::fsbInit()
+void Worker::fspInit()
 {
-	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterFsb));
+	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterFsp));
 }
 
-void Worker::fsbProcess()
+void Worker::fspProcess()
 {
 	localBatchSize = trainer.pd->size();
 	const size_t n = model.paramWidth();
@@ -228,12 +228,12 @@ void Worker::fsbProcess()
 	}
 }
 
-void Worker::fabInit()
+void Worker::aapInit()
 {
-	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterFab));
+	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterAap));
 }
 
-void Worker::fabProcess()
+void Worker::aapProcess()
 {
 	// require different handleParameter -> handleParameterFab
 	const size_t n = model.paramWidth();
@@ -273,7 +273,7 @@ void Worker::fabProcess()
 		// TODO: wait reply of delta for small batch size, to prevent the master from becoming a bottleneck
 		// do not wait parameter, because it is loaded in each handleParameterFab
 		// OR: use staleness tolerance logic in sendDelta
-		if(opt->fabWait)
+		if(opt->aapWait)
 			waitParameter();
 		stat.t_par_wait += tmr.elapseSd();
 		++iter;
@@ -431,7 +431,7 @@ void Worker::handleParameter(const std::string & data, const RPCInfo & info)
 	++stat.n_par_recv;
 }
 
-void Worker::handleParameterFsb(const std::string & data, const RPCInfo & info)
+void Worker::handleParameterFsp(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
 	auto weights = deserialize<vector<double>>(data);
@@ -446,7 +446,7 @@ void Worker::handleParameterFsb(const std::string & data, const RPCInfo & info)
 	++stat.n_par_recv;
 }
 
-void Worker::handleParameterFab(const std::string & data, const RPCInfo & info)
+void Worker::handleParameterAap(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
 	auto weights = deserialize<vector<double>>(data);
