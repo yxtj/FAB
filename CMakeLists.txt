@@ -49,15 +49,15 @@ message(STATUS "mpi-libs ${MPI_CXX_LIBRARIES}")
 #  message(FATAL_ERROR "Required lzo header file not found.")
 #endif()
 
-if ("$ENV{OPROFILE}")
-  message(STATUS "Enabling OProfile")
-endif()
+#if ("$ENV{OPROFILE}")
+#  message(STATUS "Enabling OProfile")
+#endif()
 
-if( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-	set( ARCH_BITS 64 )
-else()
-	set( ARCH_BITS 32 )
-endif()
+#if( CMAKE_SIZEOF_VOID_P EQUAL 8 )
+#	set( ARCH_BITS 64 )
+#else()
+#	set( ARCH_BITS 32 )
+#endif()
 
 # -------- thread --------
 
@@ -77,24 +77,24 @@ message(STATUS "Binary dir: ${PROJECT_BINARY_DIR}")
 #include_directories( ${CMAKE_CURRENT_SOURCE_DIR}
 #                     ${PROTOBUF_INCLUDE_DIRS}
 #                     ${MPI_CXX_INCLUDE_PATH}
- #                  )
+#                   )
 
 include_directories(SYSTEM)
 
 #set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-message("current dir: ${CMAKE_CURRENT_SOURCE_DIR}")
+message(STATUS "Current dir: ${CMAKE_CURRENT_SOURCE_DIR}")
+
+get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+message(STATUS "Include dir: ${INCLUDE_DIRECTORIES}")
+foreach(dir ${dirs})
+  message(STATUS "dir='${dir}'")
+endforeach()
 
 set(CXX_DEFAULT "${CMAKE_CXX_FLAGS}")
 set(CXX_DEFINE "-DELPP_THREAD_SAFE -DELPP_STL_LOGGING")
 #set(CXX_WARN "-Wall -Wno-unused-function -Wno-unused-variable -Wno-unused-result")
-set(CMAKE_CXX_FLAGS "${CXX_DEFAULT} ${CXX_WARN} ${CXX_DEFINE}")
-
-get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
-message(STATUS ${INCLUDE_DIRECTORIES})
-foreach(dir ${dirs})
-  message(STATUS "dir='${dir}'")
-endforeach()
+set(CMAKE_CXX_FLAGS "${CXX_DEFAULT} ${CXX_WARN} ${CXX_DEFINE} ${CMAKE_THREAD_LIBS_INIT}")
 
 add_subdirectory(src)
 
