@@ -2,6 +2,7 @@
 #include "math/norm.h"
 #include <utility>
 #include <algorithm>
+#include <cmath>
 
 using namespace std;
 
