@@ -15,7 +15,8 @@ Master::Master() : Runner() {
 	nPoint = 0;
 	iter = 0;
 	nUpdate = 0;
-	ie = nullptr;
+	pie = nullptr;
+	prs = nullptr;
 	lastArchIter = 0;
 	tmrArch.restart();
 
@@ -47,10 +48,12 @@ void Master::init(const Option* opt, const size_t lid)
 		tapInit();
 	} else if(opt->mode == "fsp"){
 		fspInit();
-		ie =IntervalEstimatorFactory::generate(opt->intervalParam, nWorker, nPoint);
-		LOG_IF(ie == nullptr, FATAL) << "Fail to initialize interval estimator with parameter: " << opt->intervalParam;
+		pie =IntervalEstimatorFactory::generate(opt->intervalParam, nWorker, nPoint);
+		LOG_IF(pie == nullptr, FATAL) << "Fail to initialize interval estimator with parameter: " << opt->intervalParam;
 	} else if(opt->mode == "aap"){
 		aapInit();
+		prs = ReceiverSelectorFactory::generate(opt->mcastParam, nWorker);
+		LOG_IF(prs == nullptr, FATAL) << "Fail to initialize receiver selector with parameter: " << opt->mcastParam;
 	}
 }
 
@@ -96,7 +99,8 @@ void Master::run()
 	broadcastSignalTerminate();
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaTail));
 	foutput.close();
-	delete ie;
+	delete pie;
+	delete prs;
 	DLOG(INFO) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
 	finishStat();
 	showStat();
@@ -183,7 +187,7 @@ void Master::fspProcess()
 			tl = t;
 		}
 		VLOG_EVERY_N(ln, 1)<<"Start iteration: "<<iter;
-		double interval = ie->interval();
+		double interval = pie->interval();
 		sleep(interval);
 		VLOG_EVERY_N(ln, 2) << "  Broadcast pause signal";
 		Timer tsync;
@@ -194,7 +198,7 @@ void Master::fspProcess()
 		VLOG_EVERY_N(ln, 2) << "  Broadcast new parameters";
 		broadcastParameter();
 		//waitParameterConfirmed();
-		ie->update(bfDelta, interval, bfDeltaDpCount, tsync.elapseSd(), tmrTrain.elapseSd());
+		pie->update(bfDelta, interval, bfDeltaDpCount, tsync.elapseSd(), tmrTrain.elapseSd());
 		clearAccumulatedDelta();
 		//VLOG_EVERY_N(ln, 2) << "  Broadcast continue signal";
 		//broadcastSignalContinue();
@@ -227,7 +231,7 @@ void Master::aapProcess()
 		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " update: " << nUpdate;
 		waitDeltaFromAny();
 		suDeltaAny.reset();
-		broadcastParameter();
+		multicastParameter(lastDeltaSource);
 		size_t p = nUpdate / nWorker + 1;
 		if(iter != p){
 			archiveProgress();
@@ -290,9 +294,20 @@ void Master::sendParameter(const int target)
 
 void Master::broadcastParameter()
 {
-	DVLOG(3) << "broad parameter: " << model.getParameter().weights;
-	net->broadcast(MType::DParameter, model.getParameter().weights);
+	const auto& m = model.getParameter().weights;
+	DVLOG(3) << "broadcast parameter: " << m;
+	net->broadcast(MType::DParameter, m);
 	stat.n_par_send += nWorker;
+}
+
+void Master::multicastParameter(const int source)
+{
+	const auto& m = model.getParameter().weights;
+	vector<int> targets = prs->getTargets(source);
+	DVLOG(3) << "multicast parameter: " << m << " to " << targets;
+	for(int d : targets)
+		net->send(wm.lid2nid(d), MType::DParameter, m);
+	stat.n_par_send += targets.size();
 }
 
 void Master::waitParameterConfirmed()
@@ -479,8 +494,9 @@ void Master::handleDeltaAap(const std::string & data, const RPCInfo & info)
 	//static vector<int> cnt(nWorker, 0);
 	//++cnt[s];
 	//VLOG_EVERY_N(ln/10, 1) << "Update: " << nUpdate << " rsp: " << cnt << " r-pkg: " << net->stat_recv_pkg;
-	rph.input(typeDDeltaAll, s);
+	//rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
+	lastDeltaSource = s;
 	if(opt->aapWait)
 		sendReply(info);
 	++stat.n_dlt_recv;

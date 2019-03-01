@@ -1,6 +1,7 @@
 set(HEADERS
 	IDMapper.h
 	IntervalEstimator.h
+	ReceiverSelector.h
 	Runner.h
 	Master.h
 	Worker.h
@@ -8,6 +9,7 @@ set(HEADERS
 set(SOURCES
 	IDMapper.cpp
 	IntervalEstimator.cpp
+	ReceiverSelector.cpp
 	Runner.cpp
 	Master.cpp
 	Worker.cpp

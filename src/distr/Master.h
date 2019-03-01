@@ -2,6 +2,7 @@
 #include "Runner.h"
 #include "IDMapper.h"
 #include "IntervalEstimator.h"
+#include "ReceiverSelector.h"
 #include "driver/tools/SyncUnit.h"
 #include "util/Timer.h"
 #include <vector>
@@ -34,6 +35,7 @@ private:
 	void initializeParameter();
 	void sendParameter(const int target);
 	void broadcastParameter();
+	void multicastParameter(const int source);
 	void waitParameterConfirmed();
 	bool needArchive();
 	void archiveProgress(const bool force = false);
@@ -72,7 +74,9 @@ private:
 	std::vector<size_t> nPointWorker; // number of data-points on each worker
 	size_t nPoint;
 
-	IntervalEstimator* ie; // for flexible parallel modes
+	IntervalEstimator* pie; // for flexible parallel modes
+	ReceiverSelector* prs;
+	int lastDeltaSource;
 
 	int ln; // log-every-n times
 
