@@ -41,13 +41,13 @@ set_dir
 cd ~/Code/FSB/FAB/build
 
 for i in 1 2 4 8; do for m in $MODE; do echo $i-$m -- $(date);
-mpirun -n $((i+1)) src/main/main $m $ALG $PARAM $DATADIR/$ALG-$PARAM-$DSIZE-d.csv $RESDIR/$m-$i.csv -1 $YLIST 0 $lr $bs $ITER $TIME 1000 0.5 200 portion:0.05 --v=1 > $LOGDIR/$m-$i;
+mpirun -n $((i+1)) src/main/main $m $ALG $PARAM $DATADIR/$ALG-$PARAM-$DSIZE-d.csv $RESDIR/$m-$i.csv -1 $YLIST 0 $lr $bs $ITER $TIME 1000 0.5 200 portion:0.05 all --v=1 > $LOGDIR/$m-$i;
 done done
 
 for PARAM in 10,1; do echo $PARAM;
 for bs in 10000 1000 100; do for lr in 0.1 0.01; do echo $bs - $lr; set_dir;
 for i in 1 2 4 8; do for m in $MODE; do echo $i-$m -- $(date);
-mpirun -n $((i+1)) src/main/main $m $ALG $PARAM $DATADIR/$ALG-$PARAM-$DSIZE-d.csv $RESDIR/$m-$i.csv -1 $YLIST 0 $lr $bs $ITER $TIME 1000 0.5 200 portion:0.05 --v=1 > $LOGDIR/$m-$i;
+mpirun -n $((i+1)) src/main/main $m $ALG $PARAM $DATADIR/$ALG-$PARAM-$DSIZE-d.csv $RESDIR/$m-$i.csv -1 $YLIST 0 $lr $bs $ITER $TIME 1000 0.5 200 portion:0.05 all --v=1 > $LOGDIR/$m-$i;
 done done
 done done
 done
@@ -62,7 +62,7 @@ done done
 # calculate and evaluation (in background)
 PARAM=10,4r3,1;bs=3000;lr=0.1;
 for i in 1 2 4 8; do for m in $MODE; do echo $i-$m -- $(date); set_dir
-mpirun -n $((i+1)) src/main/main $m $ALG $PARAM $DATADIR/$ALG-$PARAM-$DSIZE-d.csv $RESDIR/$m-$i.csv -1 $YLIST 0 $lr $bs $ITER $TIME 1000 0.5 200 portion:0.05 --v=1 > $LOGDIR/$m-$i;
+mpirun -n $((i+1)) src/main/main $m $ALG $PARAM $DATADIR/$ALG-$PARAM-$DSIZE-d.csv $RESDIR/$m-$i.csv -1 $YLIST 0 $lr $bs $ITER $TIME 1000 0.5 200 portion:0.05 all --v=1 > $LOGDIR/$m-$i;
 echo "  postprocess";
 ./Release/src/main/postprocess $ALG $PARAM  $RESDIR/$m-$i.csv $DATADIR/$ALG-$PARAM-$DSIZE-d.csv -1 $YLIST $DATADIR/$ALG-$PARAM-$DSIZE-p.txt $SCRDIR/$m-$i.txt 0 0 &
 done done

@@ -84,7 +84,13 @@ def drawList(prefix, mList, n=200):
 #drawList('../10000-0.01/',['fab-1','fab-2','fab-4','fab-8'],10)
 #drawList('10000-0.1/',['sync-4','fsb-4','async-4','fab-4'])
 
-def drawListCmp(prefix, mList1, mList2, mList3=None, n=200):
+def genFLpre(pre, l):
+    return [pre+str(i) for i in l]
+
+def genFLpost(l, post):
+    return [str(i)+post for i in l]
+
+def drawListCmp(prefix, mList1, mList2, mList3=None, n=200, save=False):
     assert(len(mList1) == len(mList2))
     assert(mList3 is None or len(mList3) == 0 or len(mList3) == len(mList1))
     if mList3 is None or len(mList3) == 0:
@@ -101,14 +107,17 @@ def drawListCmp(prefix, mList1, mList2, mList3=None, n=200):
     plt.legend(renameLegend(lgd))
     plt.xlabel('time (s)')
     plt.ylabel('loss')
-    gfn=re.sub('^../','',prefix)
-    gfn=re.sub('/$','',gfn)
-    gfn=gfn.replace('-100k/','/').replace('/','-')
-    plt.savefig(gfn+'.png')
+    if save:
+        gfn=re.sub('^../','',prefix)
+        gfn=re.sub('/$','',gfn)
+        gfn=gfn.replace('-100k/','/').replace('/','-')
+        plt.savefig(gfn+'.png')
     plt.show()
 
 #drawListCmp('../10000-0.1/',['async-1','async-2','async-4'],['fab-1','fab-2','fab-4'])
 #drawListCmp('10,15,1-100k/1000-0.1/',['async-1','async-2','async-4', 'async-8'],['fab-1','fab-2','fab-4','fab-8'])
+#bsl=[100,250,500,750,1000]
+#drawListCmp('',genFLpre(bsl_all,'-0.1/tap-4'), genFLpre(bsl_all,'-0.1/aap-4'),None,4)
 
 # returnn time and score, each file holds a ROW
 def getRecord(prefix, mList, asMatrix=False):

@@ -57,7 +57,7 @@ struct ReceiverSelectorRandom: public ReceiverSelector{
 	}
 	virtual std::vector<int> getTargets(const int sourceId) {
 		vector<int> res(k);
-		vector<bool> used(k, false);
+		vector<bool> used(nw, false);
 		for(int i = 0; i < k; ++i){
 			int v = dist(gen);
 			while(used[v])
