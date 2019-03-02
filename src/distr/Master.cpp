@@ -124,6 +124,7 @@ void Master::bspProcess()
 {
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
+		Timer tmr;
 		if(VLOG_IS_ON(2) && iter % 100 == 0){
 			double t = tmrTrain.elapseSd();
 			VLOG(2) << "  Average iteration time of recent 100 iterations: " << (t - tl) / 100;
@@ -131,6 +132,7 @@ void Master::bspProcess()
 		}
 		VLOG_EVERY_N(ln, 1)<<"Start iteration: "<<iter;
 		waitDeltaFromAll();
+		stat.t_dlt_wait += tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  Broadcast new parameters";
 		broadcastParameter();
 		archiveProgress();
@@ -150,6 +152,7 @@ void Master::tapProcess()
 	bool newIter = true;
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
+		Timer tmr;
 		if(newIter){
 			VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;
 			newIter = false;
@@ -162,6 +165,7 @@ void Master::tapProcess()
 		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " update: " << nUpdate;
 		waitDeltaFromAny();
 		suDeltaAny.reset();
+		stat.t_dlt_wait += tmr.elapseSd();
 		size_t p = nUpdate / nWorker + 1;
 		if(iter != p){
 			archiveProgress();
@@ -181,6 +185,7 @@ void Master::fspProcess()
 {
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
+		Timer tmr;
 		if(VLOG_IS_ON(2) && iter % 100 == 0){
 			double t = tmrTrain.elapseSd();
 			VLOG(2) << "  Average iteration time of recent 100 iterations: " << (t - tl) / 100;
@@ -194,8 +199,11 @@ void Master::fspProcess()
 		broadcastSignalPause();
 		VLOG_EVERY_N(ln, 2) << "  Waiting for all deltas";
 		waitDeltaFromAll();
+		stat.t_dlt_wait += tmr.elapseSd();
+		tmr.restart();
 		applyDelta(bfDelta, -1);
 		VLOG_EVERY_N(ln, 2) << "  Broadcast new parameters";
+		stat.t_dlt_calc += tmr.elapseSd();
 		broadcastParameter();
 		//waitParameterConfirmed();
 		pie->update(bfDelta, interval, bfDeltaDpCount, tsync.elapseSd(), tmrTrain.elapseSd());
@@ -218,6 +226,7 @@ void Master::aapProcess()
 	bool newIter = true;
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
+		Timer tmr;
 		if(newIter){
 			VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;// << ", msg waiting: " << driver.queSize() << ", update: " << nUpdate;
 			//DVLOG_EVERY_N(ln / 10, 1) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
@@ -231,6 +240,7 @@ void Master::aapProcess()
 		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " update: " << nUpdate;
 		waitDeltaFromAny();
 		suDeltaAny.reset();
+		stat.t_dlt_wait += tmr.elapseSd();
 		multicastParameter(lastDeltaSource);
 		size_t p = nUpdate / nWorker + 1;
 		if(iter != p){
@@ -267,9 +277,11 @@ void Master::bindDataset(const DataHolder* pdh)
 
 void Master::applyDelta(std::vector<double>& delta, const int source)
 {
+	Timer tmr;
 	DVLOG(3) << "apply delta from " << source << " : " << delta
 		<< "\nonto: " << model.getParameter().weights;
 	model.accumulateParameter(delta, factorDelta);
+	stat.t_par_calc += tmr.elapseSd();
 }
 
 bool Master::terminateCheck()
@@ -391,9 +403,11 @@ void Master::clearAccumulatedDelta()
 
 void Master::accumulateDelta(const std::vector<double>& delta, const size_t cnt)
 {
+	Timer tmr;
 	for (size_t i = 0; i < delta.size(); ++i)
 		bfDelta[i] += delta[i];
 	bfDeltaDpCount += cnt;
+	stat.t_dlt_calc += tmr.elapseSd();
 }
 
 void Master::handleReply(const std::string & data, const RPCInfo & info)
