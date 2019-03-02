@@ -6,7 +6,7 @@ using namespace std;
 
 void ReceiverSelector::init(const std::vector<std::string>& param, const size_t nWorker)
 {
-	nw = nWorker;
+	nw = static_cast<int>(nWorker);
 }
 
 // ---- broadcast ----
@@ -53,7 +53,7 @@ struct ReceiverSelectorRandom: public ReceiverSelector{
 		k = stoi(param[1]);
 		auto seed = param.size() > 2 ? stoul(param[2]) : (unsigned long)1;
 		gen.seed(seed);
-		dist = uniform_int_distribution<int>(0, nWorker);
+		dist = uniform_int_distribution<int>(0, nw - 1);
 	}
 	virtual std::vector<int> getTargets(const int sourceId) {
 		vector<int> res(k);
