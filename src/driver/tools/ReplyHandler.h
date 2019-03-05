@@ -43,14 +43,15 @@ public:
 	};
 
 	enum ConditionType{
-		ANY_ONE, EACH_ONE, GENERAL
+		ANY_ONE, EACH_ONE, N_TIMES, GENERAL
 	};
 
 	// create an ANY_ONE condition: one reply from any source
 	static Condition* condFactory(const ConditionType ct);
-	// create an EACH_ONE condition: at least a reply for each source from 0 to num-1
+	// create an EACH_ONE condition: at least one reply for each source from 0 to num-1
+	//     or an N_TIMES condition: n replies from any source in total
 	static Condition* condFactory(
-			const ConditionType ct, const int numSource);
+			const ConditionType ct, const int n);
 	// create a GENERAL condition: given specific number of replies for each source
 	static Condition* condFactory(
 			const ConditionType ct, const std::vector<int>& expected);

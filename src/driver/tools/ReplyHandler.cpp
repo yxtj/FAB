@@ -58,6 +58,23 @@ private:
 	uint64_t expected;
 	atomic<uint64_t> state;
 };
+struct ConditionNTimes :public ReplyHandler::Condition{
+	ConditionNTimes(const int n) : n(n), state(0) {
+		
+	}
+	bool update(const int source){
+		return state.fetch_add(1) == n;
+	}
+	bool ready() const{
+		return state == n;
+	}
+	void reset(){
+		state = 0;
+	}
+private:
+	int n;
+	atomic<int> state;
+};
 struct ConditionGeneral :public ReplyHandler::Condition{
 	ConditionGeneral(const vector<int>& expect) :
 		expected(expect), state(expected){}
@@ -92,13 +109,15 @@ ReplyHandler::Condition* ReplyHandler::condFactory(const ConditionType ct)
 	return new Condition();
 }
 ReplyHandler::Condition* ReplyHandler::condFactory(
-	const ConditionType ct, const int numSource)
+	const ConditionType ct, const int n)
 {
 	if(ct == EACH_ONE){
-		//if(numSource <= 64)
-		//	return new ConditionEachOne64(numSource);
-		//else
-			return new ConditionEachOne(numSource);
+		if(n <= 64)
+			return new ConditionEachOne64(n);
+		else
+			return new ConditionEachOne(n);
+	} else if(ct == N_TIMES){
+		return new ConditionNTimes(n);
 	}
 	return new Condition();
 }
