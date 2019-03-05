@@ -53,6 +53,16 @@ public:
 		stat_send_time += tmr.elapseSd();
 	}
 
+	template <class T>
+	void multicast(std::vector<int> dsts, int tag, const T& msg) {
+		Timer tmr;
+		std::string s = serialize(msg);
+		stat_time_serial += tmr.elapseSd();
+		for(int dst : dsts)
+			send(new Task(dst, tag, s));
+		stat_send_time += tmr.elapseSd();
+	}
+
 	void flush();
 
 	int id() const;
@@ -90,7 +100,6 @@ private:
 	// Enqueue the given request to pending buffer for transmission.
 	void send(Task *req);
 	void broadcast(Task *req);
-
 
 	bool checkReceiveQueue(std::string& data, TaskBase& info);
 

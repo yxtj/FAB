@@ -132,7 +132,7 @@ void Master::bspProcess()
 		Timer tmr;
 		if(VLOG_IS_ON(2) && iter % 100 == 0){
 			double t = tmrTrain.elapseSd();
-			VLOG(2) << "  Average iteration time of recent 100 iterations: " << (t - tl) / 100;
+			VLOG(2) << "  Time of recent 100 iterations: " << (t - tl);
 			tl = t;
 		}
 		VLOG_EVERY_N(ln, 1)<<"Start iteration: "<<iter;
@@ -163,7 +163,7 @@ void Master::tapProcess()
 			newIter = false;
 			if(VLOG_IS_ON(2) && iter % 100 == 0){
 				double t = tmrTrain.elapseSd();
-				VLOG(2) << "  Average iteration time of recent 100 iterations: " << (t - tl) / 100;
+				VLOG(2) << "  Time of recent 100 iterations: " << (t - tl);
 				tl = t;
 			}
 		}
@@ -193,7 +193,7 @@ void Master::sspProcess()
 		Timer tmr;
 		if(VLOG_IS_ON(2) && iter % 100 == 0){
 			double t = tmrTrain.elapseSd();
-			VLOG(2) << "  Average iteration time of recent 100 iterations: " << (t - tl) / 100;
+			VLOG(2) << "  Time of recent 100 iterations: " << (t - tl);
 			tl = t;
 		}
 		VLOG_EVERY_N(ln, 1)<<"Start iteration: "<<iter;
@@ -221,7 +221,7 @@ void Master::fspProcess()
 		Timer tmr;
 		if(VLOG_IS_ON(2) && iter % 100 == 0){
 			double t = tmrTrain.elapseSd();
-			VLOG(2) << "  Average iteration time of recent 100 iterations: " << (t - tl) / 100;
+			VLOG(2) << "  Time of recent 100 iterations: " << (t - tl);
 			tl = t;
 		}
 		VLOG_EVERY_N(ln, 1)<<"Start iteration: "<<iter;
@@ -327,7 +327,7 @@ bool Master::terminateCheck()
 void Master::initializeParameter()
 {
 	suDatasetInfo.wait_n_reset();
-	model.init(opt->algorighm, nx, opt->algParam, 0.01);
+	model.init(opt->algorighm, static_cast<int>(nx), opt->algParam, 0.01);
 }
 
 void Master::sendParameter(const int target)
@@ -350,8 +350,9 @@ void Master::multicastParameter(const int source)
 	const auto& m = model.getParameter().weights;
 	vector<int> targets = prs->getTargets(source);
 	DVLOG(3) << "multicast parameter: " << m << " to " << targets;
-	for(int d : targets)
-		net->send(wm.lid2nid(d), MType::DParameter, m);
+	for(int& v : targets)
+		v=wm.lid2nid(v);
+	net->multicast(targets, MType::DParameter, m);
 	stat.n_par_send += targets.size();
 }
 
@@ -460,7 +461,7 @@ void Master::handleOnline(const std::string & data, const RPCInfo & info)
 
 void Master::handleDataset(const std::string& data, const RPCInfo& info){
 	Timer tmr;
-	int tnx, tny, tnp;
+	size_t tnx, tny, tnp;
 	tie(tnx, tny, tnp) = deserialize<tuple<size_t, size_t, size_t>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int source = wm.nid2lid(info.source);
