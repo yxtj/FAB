@@ -306,9 +306,6 @@ void Worker::aapProcess()
 			bfDelta[i] *= factor;
 		VLOG_EVERY_N(ln, 2) << "  send delta";
 		sendDelta(bfDelta, localBatchSize);
-		// TODO: wait reply of delta for small batch size, to prevent the master from becoming a bottleneck
-		// do not wait parameter, because it is loaded in each handleParameterFab
-		// OR: use staleness tolerance logic in sendDelta
 		if(opt->aapWait)
 			waitParameter();
 		stat.t_par_wait += tmr.elapseSd();

@@ -2,6 +2,7 @@
 #include "network/NetworkThread.h"
 #include "message/MType.h"
 #include "logging/logging.h"
+#include <sstream>
 using namespace std;
 
 Runner::Runner()
@@ -78,21 +79,31 @@ void Runner::finishStat()
 
 void Runner::showStat() const
 {
-	LOG(INFO) << "Statistics:\n"
-		<< "num-net-send: " << stat.n_net_send << "\tbyte-net-send: " << stat.b_net_send
+	ostringstream oss;
+	string head = "[Stat-" + logName + "] ";
+	oss << "Statistics:\n"
+		<< head << "num-net-send: " << stat.n_net_send << "\tbyte-net-send: " << stat.b_net_send
 		<< "\ttime-net-send: " << stat.t_net_send << "\ttime-data-serialize: " << stat.t_data_serial
 		<< "\n"
-		<< "num-net-recv: " << stat.n_net_recv << "\tbyte-net-recv: " << stat.b_net_recv
+		<< head << "num-net-recv: " << stat.n_net_recv << "\tbyte-net-recv: " << stat.b_net_recv
 		<< "\ttime-net-recv: " << stat.t_net_recv << "\ttime-data-deserialize: " << stat.t_data_deserial
 		<< "\n"
-		<< "num-dlt-send: " << stat.n_dlt_send << "\tnum-dlt-recv: " << stat.n_dlt_recv
+		<< head << "num-dlt-send: " << stat.n_dlt_send << "\tnum-dlt-recv: " << stat.n_dlt_recv
 		<< "\ttime-dlt-calc: " << stat.t_dlt_calc << "\ttime-dlt-wait: " << stat.t_dlt_wait
 		<< "\n"
-		<< "num-par-send: " << stat.n_par_send << "\tnum-par-recv: " << stat.n_par_recv
+		<< head << "num-par-send: " << stat.n_par_send << "\tnum-par-recv: " << stat.n_par_recv
 		<< "\ttime-par-calc: " << stat.t_par_calc << "\ttime-par-wait: " << stat.t_par_wait
 		<< "\n"
-		<< "num-iteration: " << stat.n_iter << "\tnum-data-point: " << stat.n_point
-		<< "\ttime-total-work: " << stat.t_smy_work << "\ttime-total-wait: " << stat.t_smy_wait;
+		<< head << "num-iteration: " << stat.n_iter << "\tnum-data-point: " << stat.n_point
+		<< "\ttime-total-work: " << stat.t_smy_work << "\ttime-total-wait: " << stat.t_smy_wait
+		<< "\n";
+	if(logName.find("M") != logName.npos){
+		oss << head << "time-per-merge: " << stat.t_smy_work / stat.n_dlt_recv
+			<< "\ttime-per-delta: " << (stat.t_smy_work + stat.t_data_deserial) / stat.n_dlt_recv;
+	} else{
+		oss << head << "time-per-point: " << stat.t_dlt_calc / stat.n_point;
+	}	
+	LOG(INFO) << oss.str();
 }
 
 void Runner::msgPausePush(){
