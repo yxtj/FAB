@@ -63,7 +63,7 @@ struct ConditionNTimes :public ReplyHandler::Condition{
 		
 	}
 	bool update(const int source){
-		return state.fetch_add(1) == n;
+		return state.fetch_add(1) >= n;
 	}
 	bool ready() const{
 		return state == n;
