@@ -91,6 +91,7 @@ bool Option::preprocessMode(){
 		else
 			sspGap = 1;
 	}
+	mode = t[0];
 	return it != supported.end();
 }
 
