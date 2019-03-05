@@ -18,7 +18,7 @@ public:
 	const Option* opt;
 	size_t nWorker;
 	size_t localID; // local logic id
-	size_t iter;
+	int iter;
 	std::string logName;
 	Model model;
 	GD trainer;
@@ -58,6 +58,8 @@ protected:
 	void addRPHEachSU(const int type, SyncUnit& su);
 	void addRPHAny(const int type, std::function<void()> fun, const bool spawnThread = false);
 	void addRPHAnySU(const int type, SyncUnit& su);
+	void addRPHN(const int type, std::function<void()> fun, const int n, const bool spawnThread = false);
+	void addRPHNSU(const int type, SyncUnit& su);
 
 	void sendReply(const RPCInfo& info);
 

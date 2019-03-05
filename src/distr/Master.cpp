@@ -8,6 +8,7 @@ using namespace std;
 Master::Master() : Runner() {
 	typeDDeltaAny = MType::DDelta;
 	typeDDeltaAll = 128 + MType::DDelta;
+	typeDDeltaN = 192 + MType::DDelta;
 	trainer.bindModel(&model);
 	factorDelta = 1.0;
 	nx = 0;
@@ -46,6 +47,8 @@ void Master::init(const Option* opt, const size_t lid)
 		bspInit();
 	} else if(opt->mode == "tap"){
 		tapInit();
+	} else if(opt->mode == "ssp"){
+		sspInit();
 	} else if(opt->mode == "fsp"){
 		fspInit();
 		pie =IntervalEstimatorFactory::generate(opt->intervalParam, nWorker, nPoint);
@@ -87,6 +90,8 @@ void Master::run()
 		bspProcess();
 	} else if(opt->mode == "tap"){
 		tapProcess();
+	} else if(opt->mode == "ssp"){
+		sspProcess();
 	} else if(opt->mode == "fsp"){
 		fspProcess();
 	} else if(opt->mode == "aap"){
@@ -166,12 +171,40 @@ void Master::tapProcess()
 		waitDeltaFromAny();
 		suDeltaAny.reset();
 		stat.t_dlt_wait += tmr.elapseSd();
-		size_t p = nUpdate / nWorker + 1;
+		int p = static_cast<int>(nUpdate / nWorker + 1);
 		if(iter != p){
 			archiveProgress();
 			iter = p;
 			newIter = true;
 		}
+	}
+}
+
+void Master::sspInit()
+{
+	factorDelta = 1.0 / nWorker;
+	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaSsp));
+}
+
+void Master::sspProcess()
+{
+	double tl = tmrTrain.elapseSd();
+	while(!terminateCheck()){
+		Timer tmr;
+		if(VLOG_IS_ON(2) && iter % 100 == 0){
+			double t = tmrTrain.elapseSd();
+			VLOG(2) << "  Average iteration time of recent 100 iterations: " << (t - tl) / 100;
+			tl = t;
+		}
+		VLOG_EVERY_N(ln, 1)<<"Start iteration: "<<iter;
+		suDeltaN.wait_n_reset();
+		stat.t_dlt_wait += tmr.elapseSd();
+		applyDelta(bfDelta, -1);
+		VLOG_EVERY_N(ln, 2) << "  Broadcast new parameters";
+		broadcastParameter();
+		archiveProgress();
+		//waitParameterConfirmed();
+		++iter;
 	}
 }
 
@@ -242,7 +275,7 @@ void Master::aapProcess()
 		suDeltaAny.reset();
 		stat.t_dlt_wait += tmr.elapseSd();
 		multicastParameter(lastDeltaSource);
-		size_t p = nUpdate / nWorker + 1;
+		int p = static_cast<int>(nUpdate / nWorker + 1);
 		if(iter != p){
 			archiveProgress();
 			iter = p;
@@ -268,6 +301,7 @@ void Master::registerHandlers()
 	addRPHEachSU(MType::CTerminate, suAllClosed);
 	addRPHAnySU(typeDDeltaAny, suDeltaAny);
 	addRPHEachSU(typeDDeltaAll, suDeltaAll);
+	addRPHNSU(typeDDeltaN, suDeltaN);
 }
 
 void Master::bindDataset(const DataHolder* pdh)
@@ -292,8 +326,7 @@ bool Master::terminateCheck()
 
 void Master::initializeParameter()
 {
-	suDatasetInfo.wait();
-	suDatasetInfo.reset();
+	suDatasetInfo.wait_n_reset();
 	model.init(opt->algorighm, nx, opt->algParam, 0.01);
 }
 
@@ -324,8 +357,7 @@ void Master::multicastParameter(const int source)
 
 void Master::waitParameterConfirmed()
 {
-	suParam.wait();
-	suParam.reset();
+	suParam.wait_n_reset();
 }
 
 bool Master::needArchive()
@@ -363,15 +395,13 @@ void Master::broadcastWorkerList()
 void Master::broadcastSignalPause()
 {
 	net->broadcast(MType::CTrainPause, "");
-	suTPause.wait();
-	suTPause.reset();
+	suTPause.wait_n_reset();
 }
 
 void Master::broadcastSignalContinue()
 {
 	net->broadcast(MType::CTrainContinue, "");
-	suTContinue.wait();
-	suTContinue.reset();
+	suTContinue.wait_n_reset();
 }
 
 void Master::broadcastSignalTerminate()
@@ -384,8 +414,7 @@ void Master::waitDeltaFromAny(){
 }
 
 void Master::waitDeltaFromAll(){
-	suDeltaAll.wait();
-	suDeltaAll.reset();
+	suDeltaAll.wait_n_reset();
 }
 
 void Master::gatherDelta()
@@ -481,6 +510,21 @@ void Master::handleDeltaTap(const std::string & data, const RPCInfo & info)
 	++stat.n_dlt_recv;
 	// directly send new parameter
 	sendParameter(s);
+}
+
+void Master::handleDeltaSsp(const std::string & data, const RPCInfo & info)
+{
+	Timer tmr;
+	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
+	stat.t_data_deserial += tmr.elapseSd();
+	int s = wm.nid2lid(info.source);
+	accumulateDelta(deltaMsg.second, deltaMsg.first);
+	//applyDelta(deltaMsg.second, s); // called at the main process
+	//rph.input(typeDDeltaAll, s);
+	//rph.input(typeDDeltaAny, s);
+	rph.input(typeDDeltaN, s);
+	//sendReply(info);
+	++stat.n_dlt_recv;
 }
 
 void Master::handleDeltaFsp(const std::string & data, const RPCInfo & info)

@@ -22,6 +22,8 @@ private:
 	void bspProcess();
 	void tapInit();
 	void tapProcess();
+	void sspInit();
+	void sspProcess();
 	void fspInit();
 	void fspProcess();
 	void aapInit();
@@ -59,6 +61,7 @@ public:
 	void handleDataset(const std::string& data, const RPCInfo& info);
 	void handleDelta(const std::string& data, const RPCInfo& info);
 	void handleDeltaTap(const std::string& data, const RPCInfo& info);
+	void handleDeltaSsp(const std::string& data, const RPCInfo& info);
 	void handleDeltaFsp(const std::string& data, const RPCInfo& info);
 	void handleDeltaAap(const std::string& data, const RPCInfo& info);
 	void handleDeltaTail(const std::string& data, const RPCInfo& info);
@@ -91,8 +94,8 @@ private:
 	SyncUnit suWorker;
 	SyncUnit suAllClosed;
 	SyncUnit suDatasetInfo;
-	int typeDDeltaAny, typeDDeltaAll;
-	SyncUnit suDeltaAny, suDeltaAll;
+	int typeDDeltaAny, typeDDeltaAll, typeDDeltaN;
+	SyncUnit suDeltaAny, suDeltaAll, suDeltaN;
 	SyncUnit suParam; // reply of parameter broadcast
 	SyncUnit suTPause, suTContinue;
 

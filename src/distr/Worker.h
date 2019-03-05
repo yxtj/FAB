@@ -18,6 +18,8 @@ private:
 	void bspProcess();
 	void tapInit();
 	void tapProcess();
+	void sspInit();
+	void sspProcess();
 	void fspInit();
 	void fspProcess();
 	void aapInit();
@@ -46,6 +48,7 @@ public:
 	void handleReply(const std::string& data, const RPCInfo& info);
 	void handleWorkerList(const std::string& data, const RPCInfo& info);
 	void handleParameter(const std::string& data, const RPCInfo& info);
+	void handleParameterSsp(const std::string& data, const RPCInfo& info);
 	void handleParameterFsp(const std::string& data, const RPCInfo& info);
 	void handleParameterAap(const std::string& data, const RPCInfo& info);
 	void handlePause(const std::string& data, const RPCInfo& info);
@@ -71,6 +74,8 @@ private:
 
 	std::vector<double> bfDelta;
 	size_t bfDeltaDpCount; // the number of data points used for current bfDelta
+
+	int iterParam;
 
 	//std::mutex mTrain;
 	std::atomic<bool> allowTrain;

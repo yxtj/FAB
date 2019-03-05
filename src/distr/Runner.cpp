@@ -132,6 +132,7 @@ void Runner::addRPHEach(
 void Runner::addRPHEachSU(const int type, SyncUnit& su){
 	addRPHEach(type, bind(&SyncUnit::notify, &su), static_cast<int>(nWorker), false);
 }
+
 void Runner::addRPHAny(
 	const int type, std::function<void()> fun, const bool newThread)
 {
@@ -143,6 +144,19 @@ void Runner::addRPHAny(
 void Runner::addRPHAnySU(const int type, SyncUnit& su)
 {
 	addRPHAny(type, bind(&SyncUnit::notify, &su), false);
+}
+
+void Runner::addRPHN(
+	const int type, std::function<void()> fun, const int n, const bool newThread)
+{
+	rph.addType(type,
+		ReplyHandler::condFactory(ReplyHandler::N_TIMES, n),
+		fun, newThread);
+	rph.activateType(type);
+}
+void Runner::addRPHNSU(const int type, SyncUnit& su)
+{
+	addRPHN(type, bind(&SyncUnit::notify, &su), static_cast<int>(nWorker), false);
 }
 
 void Runner::sendReply(const RPCInfo& info){

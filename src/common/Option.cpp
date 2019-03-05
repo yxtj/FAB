@@ -67,7 +67,7 @@ void Option::showUsage() const {
 		" <lrate> <batch-size> <term-iter> <term-time> [arv-iter=1000] [arv-time=0.5] [log-iter=1000]"
 		" [flex-param=portion:0.05] [mcast-param=all]" << endl;
 	//cout << "usage: <algorithm> <mode> <data-file> <output-file> <id-skip> <id-y> <nw> <batch-size> <term-iter> <term-time>" << endl;
-	cout << "  <mode>: bsp, fsp, tap, aap\n"
+	cout << "  <mode>: bsp, tap, ssp:<n>, fsp, aap\n"
 		<< "  <alg>: algorithm name. Support: lr, mlp, cnn, rnn, tm.\n"
 		<< "  <param>: parameter of the algorithm, usually the shape of the algorithm.\n"
 		<< "  <id-skip>: a list separated with space or comma.\n"
@@ -82,8 +82,15 @@ bool Option::preprocessMode(){
 		if(ch >= 'A' && ch <= 'Z')
 			ch += 'a' - 'A';
 	}
-	vector<string> supported = { "bsp", "tap", "fsp", "aap" };
-	auto it = find(supported.begin(), supported.end(), mode);
+	vector<string> t = getStringList(mode, ":");
+	vector<string> supported = { "bsp", "tap", "ssp", "fsp", "aap" };
+	auto it = find(supported.begin(), supported.end(), t[0]);
+	if(t[0] == "ssp"){
+		if(t.size() > 1)
+			sspGap = stoi(t[1]);
+		else
+			sspGap = 1;
+	}
 	return it != supported.end();
 }
 

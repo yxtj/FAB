@@ -12,16 +12,13 @@ Worker::Worker() : Runner() {
 	masterNID = 0;
 	dataPointer = 0;
 	iter = 0;
+	iterParam = 0;
 	localBatchSize = 1;
 	bfDeltaDpCount = 0;
 
 	hasNewParam = false;
 	allowTrain = true;
 	exitTrain = false;
-
-	suOnline.reset();
-	suParam.reset();
-	suDatasetInfo.reset();
 }
 
 void Worker::init(const Option* opt, const size_t lid)
@@ -38,6 +35,8 @@ void Worker::init(const Option* opt, const size_t lid)
 		bspInit();
 	} else if(opt->mode == "tap"){
 		tapInit();
+	} else if(opt->mode == "ssp"){
+		sspInit();
 	} else if(opt->mode == "fsp"){
 		fspInit();
 	} else if(opt->mode == "aap"){
@@ -78,6 +77,7 @@ void Worker::run()
 
 	DLOG(INFO) << "start training with mode: " << opt->mode << ", local batch size: " << localBatchSize;
 	iter = 1;
+	iterParam = 1;
 	//try{
 	//	generalProcess();
 	//} catch(exception& e){
@@ -87,6 +87,8 @@ void Worker::run()
 		bspProcess();
 	} else if(opt->mode == "tap"){
 		tapProcess();
+	} else if(opt->mode == "ssp"){
+		sspProcess();
 	} else if(opt->mode == "fsp"){
 		fspProcess();
 	} else if(opt->mode == "aap"){
@@ -165,6 +167,40 @@ void Worker::tapProcess()
 		waitParameter();
 		if(exitTrain==true){
 			break;
+		}
+		stat.t_par_wait += tmr.elapseSd();
+		tmr.restart();
+		applyBufferParameter();
+		stat.t_par_calc += tmr.elapseSd();
+		++iter;
+	}
+}
+
+void Worker::sspInit()
+{
+	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameter));
+}
+
+void Worker::sspProcess()
+{
+	while(!exitTrain){
+		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
+		Timer tmr;
+		bfDelta = trainer.batchDelta(dataPointer, localBatchSize, true);
+		updatePointer(localBatchSize);
+		stat.t_dlt_calc += tmr.elapseSd();
+		VLOG_EVERY_N(ln, 2) << "  send delta";
+		tmr.restart();
+		sendDelta(bfDelta, localBatchSize);
+		if(exitTrain == true){
+			break;
+		}
+		VLOG_EVERY_N(ln, 2) << "  wait for new parameter";
+		while(!exitTrain && iter - iterParam > opt->sspGap){
+			waitParameter();
+			if(exitTrain == true){
+				break;
+			}
 		}
 		stat.t_par_wait += tmr.elapseSd();
 		tmr.restart();
@@ -368,8 +404,7 @@ void Worker::applyBufferParameter()
 
 void Worker::waitParameter()
 {
-	suParam.wait();
-	suParam.reset();
+	suParam.wait_n_reset();
 }
 
 void Worker::fetchParmeter()
@@ -427,6 +462,20 @@ void Worker::handleParameter(const std::string & data, const RPCInfo & info)
 	p.set(move(weights));
 	bufferParameter(p);
 	suParam.notify();
+	//sendReply(info);
+	++stat.n_par_recv;
+}
+
+void Worker::handleParameterSsp(const std::string & data, const RPCInfo & info)
+{
+	Timer tmr;
+	auto weights = deserialize<vector<double>>(data);
+	stat.t_data_deserial += tmr.elapseSd();
+	Parameter p;
+	p.set(move(weights));
+	bufferParameter(p);
+	suParam.notify();
+	++iterParam;
 	//sendReply(info);
 	++stat.n_par_recv;
 }
