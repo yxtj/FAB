@@ -32,6 +32,10 @@ struct SyncUnit{
 	//   true -> waken up by notification
 	//   false -> waken up by timeout
 	bool wait_for(const double dur);
+	
+	// return after notified and reset condition before return
+	void wait_n_reset();
+	bool wait_n_reset_for(const double dur);
 
 	// wake up all waiters
 	void notify();
