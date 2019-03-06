@@ -41,12 +41,14 @@ private:
 	vector<bool> state;
 };
 struct ConditionEachOne64 :public ReplyHandler::Condition{
-	ConditionEachOne64(const int num){
+	ConditionEachOne64(const int num): state(0) {
 		expected = static_cast<uint64_t>(1) << num;
 		expected -= static_cast<uint64_t>(1);
 	}
 	bool update(const int source){
-		return state.fetch_or(static_cast<uint64_t>(1) << source) == expected;
+		lock_guard<mutex> lg(ms);
+		state |= (static_cast<uint64_t>(1) << source);
+		return state == expected;
 	}
 	bool ready() const{
 		return state == expected;
@@ -56,7 +58,8 @@ struct ConditionEachOne64 :public ReplyHandler::Condition{
 	}
 private:
 	uint64_t expected;
-	atomic<uint64_t> state;
+	mutex ms;
+	uint64_t state;
 };
 struct ConditionNTimes :public ReplyHandler::Condition{
 	ConditionNTimes(const int n) : n(n), state(0) {
