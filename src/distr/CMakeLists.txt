@@ -12,7 +12,9 @@ set(SOURCES
 	ReceiverSelector.cpp
 	Runner.cpp
 	Master.cpp
+	MasterMode.cpp
 	Worker.cpp
+	WorkerMode.cpp
 )
 add_library(distr
 	${HEADERS} ${SOURCES})
