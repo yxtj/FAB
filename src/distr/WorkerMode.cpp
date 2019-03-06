@@ -7,6 +7,8 @@
 
 using namespace std;
 
+// ---- bulk synchronous parallel
+
 void Worker::bspInit()
 {
 	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameter));
@@ -39,6 +41,8 @@ void Worker::bspProcess()
 	}
 }
 
+// ---- typical asynchronous parallel
+
 void Worker::tapInit()
 {
 	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameter));
@@ -47,10 +51,6 @@ void Worker::tapInit()
 void Worker::tapProcess()
 {
 	while(!exitTrain){
-		//if(allowTrain.load() == false){
-		//	sleep();
-		//	continue;
-		//}
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		bfDelta = trainer.batchDelta(dataPointer, localBatchSize, true);
@@ -75,6 +75,8 @@ void Worker::tapProcess()
 	}
 }
 
+// ---- staleness synchronous parallel
+
 void Worker::sspInit()
 {
 	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterSsp));
@@ -95,11 +97,11 @@ void Worker::sspProcess()
 			break;
 		}
 		VLOG_EVERY_N(ln, 2) << "  wait for new parameter";
-		while(!exitTrain && iter - iterParam > opt->sspGap){
+		while(!exitTrain && iter - iterParam > opt->staleGap){
 			waitParameter();
-			if(exitTrain == true){
-				break;
-			}
+		}
+		if(exitTrain == true){
+			break;
 		}
 		stat.t_par_wait += tmr.elapseSd();
 		tmr.restart();
@@ -108,6 +110,46 @@ void Worker::sspProcess()
 		++iter;
 	}
 }
+
+// ---- staleness asynchronous parallel
+
+void Worker::sapInit()
+{
+	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterSsp));
+}
+
+void Worker::sapProcess()
+{
+	localBatchSize = trainer.pd->size();
+	const size_t n = model.paramWidth();
+	while(!exitTrain){
+		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
+		Timer tmr;
+		bfDelta = trainer.batchDelta(dataPointer, localBatchSize, true);
+		updatePointer(localBatchSize);
+		stat.t_dlt_calc += tmr.elapseSd();
+		VLOG_EVERY_N(ln, 2) << "  send delta";
+		tmr.restart();
+		sendDelta(bfDelta, localBatchSize);
+		if(exitTrain == true){
+			break;
+		}
+		VLOG_EVERY_N(ln, 2) << "  wait for new parameter";
+		while(!exitTrain && iter - iterParam > opt->staleGap){
+			waitParameter();
+		}
+		if(exitTrain == true){
+			break;
+		}
+		stat.t_par_wait += tmr.elapseSd();
+		tmr.restart();
+		applyBufferParameter();
+		stat.t_par_calc += tmr.elapseSd();
+		++iter;
+	}
+}
+
+// ---- flexible synchronous parallel
 
 void Worker::fspInit()
 {
@@ -119,10 +161,6 @@ void Worker::fspProcess()
 	localBatchSize = trainer.pd->size();
 	const size_t n = model.paramWidth();
 	while(!exitTrain){
-		//if(allowTrain == false){
-		//	sleep();
-		//	continue;
-		//}
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		size_t left = trainer.pd->size();
@@ -163,6 +201,8 @@ void Worker::fspProcess()
 	}
 }
 
+// ---- aggressive asynchronous parallel
+
 void Worker::aapInit()
 {
 	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterAap));
@@ -174,10 +214,6 @@ void Worker::aapProcess()
 	const size_t n = model.paramWidth();
 	const double factor = 1.0 / localBatchSize;
 	while(!exitTrain){
-		//if(allowTrain == false){
-		//	sleep();
-		//	continue;
-		//}
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";// << ". msg waiting: " << driver.queSize();
 		Timer tmr;
 		size_t left = localBatchSize;
@@ -211,6 +247,8 @@ void Worker::aapProcess()
 		++iter;
 	}
 }
+
+// ---- handlers ----
 
 void Worker::handleParameter(const std::string & data, const RPCInfo & info)
 {

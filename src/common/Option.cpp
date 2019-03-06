@@ -83,13 +83,13 @@ bool Option::preprocessMode(){
 			ch += 'a' - 'A';
 	}
 	vector<string> t = getStringList(mode, ":");
-	vector<string> supported = { "bsp", "tap", "ssp", "fsp", "aap" };
+	vector<string> supported = { "bsp", "ssp", "fsp", "tap", "sap" "aap" };
 	auto it = find(supported.begin(), supported.end(), t[0]);
-	if(t[0] == "ssp"){
+	if(t[0] == "ssp" || t[0] == "sap"){
 		if(t.size() > 1)
-			sspGap = stoi(t[1]);
+			staleGap = stoi(t[1]);
 		else
-			sspGap = 1;
+			staleGap = 1;
 	}
 	mode = t[0];
 	return it != supported.end();

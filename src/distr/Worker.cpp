@@ -37,6 +37,8 @@ void Worker::init(const Option* opt, const size_t lid)
 		tapInit();
 	} else if(opt->mode == "ssp"){
 		sspInit();
+	} else if(opt->mode == "sap"){
+		sapInit();
 	} else if(opt->mode == "fsp"){
 		fspInit();
 	} else if(opt->mode == "aap"){
@@ -89,6 +91,8 @@ void Worker::run()
 		tapProcess();
 	} else if(opt->mode == "ssp"){
 		sspProcess();
+	} else if(opt->mode == "sap"){
+		sapProcess();
 	} else if(opt->mode == "fsp"){
 		fspProcess();
 	} else if(opt->mode == "aap"){

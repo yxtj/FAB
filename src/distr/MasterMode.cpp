@@ -5,6 +5,8 @@
 #include "logging/logging.h"
 using namespace std;
 
+// ---- bulk synchronous parallel
+
 void Master::bspInit()
 {
 	factorDelta = 1.0 / nWorker;
@@ -31,6 +33,8 @@ void Master::bspProcess()
 		++iter;
 	}
 }
+
+// ---- typical asynchronous parallel
 
 void Master::tapInit()
 {
@@ -65,6 +69,8 @@ void Master::tapProcess()
 		}
 	}
 }
+
+// ---- staleness synchronous parallel
 
 void Master::sspInit()
 {
@@ -108,6 +114,52 @@ void Master::sspProcess()
 	}
 }
 
+// ---- staleness asynchronous parallel
+
+void Master::sapInit()
+{
+	factorDelta = 1.0 / nWorker;
+	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaSsp));
+}
+
+void Master::sapProcess()
+{
+	bool newIter = true;
+	double tl = tmrTrain.elapseSd();
+	while(!terminateCheck()){
+		Timer tmr;
+		if(newIter){
+			VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;
+			newIter = false;
+			if(VLOG_IS_ON(2) && iter % 100 == 0){
+				double t = tmrTrain.elapseSd();
+				VLOG(2) << "  Time of recent 100 iterations: " << (t - tl);
+				tl = t;
+			}
+		}
+		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " update: " << nUpdate;
+		waitDeltaFromAny();
+		suDeltaAny.reset();
+		stat.t_dlt_wait += tmr.elapseSd();
+		int p = static_cast<int>(nUpdate / nWorker + 1);
+		if(iter != p){
+			{
+				lock_guard<mutex> lg(mbfd);
+				applyDelta(bfDelta, -1);
+				clearAccumulatedDelta();
+			}
+			// if multiple iteration is passed, send one parameter for each
+			for(int i = iter; i < p; ++i)
+				broadcastParameter();
+			archiveProgress();
+			iter = p;
+			newIter = true;
+		}
+	}
+}
+
+// ---- flexible synchronous parallel
+
 void Master::fspInit()
 {
 	factorDelta = 1.0 / nWorker;
@@ -148,6 +200,8 @@ void Master::fspProcess()
 	}
 }
 
+// ---- aggressive asynchronous parallel
+
 void Master::aapInit()
 {
 	factorDelta = 1.0;
@@ -183,6 +237,9 @@ void Master::aapProcess()
 		}
 	}
 }
+
+// ---- handlers ----
+
 void Master::handleDelta(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;

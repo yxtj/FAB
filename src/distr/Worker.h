@@ -20,6 +20,8 @@ private:
 	void tapProcess();
 	void sspInit();
 	void sspProcess();
+	void sapInit();
+	void sapProcess();
 	void fspInit();
 	void fspProcess();
 	void aapInit();

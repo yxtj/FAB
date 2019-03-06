@@ -12,7 +12,7 @@ struct Option{
 	bool doNormalize;
 
 	std::string mode;
-	int sspGap; // the max gap between current processing iteration and the parameter iteratoin
+	int staleGap; // the max gap between current processing iteration and the parameter iteratoin
 	bool aapWait; // force fab wait for its gradient reply before continue
 	std::vector<std::string> intervalParam; // parameters for the flexible coordinator
 	std::vector<std::string> mcastParam; // parameters for the multicast
