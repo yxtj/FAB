@@ -8,7 +8,6 @@ using namespace std;
 Master::Master() : Runner() {
 	typeDDeltaAny = MType::DDelta;
 	typeDDeltaAll = 128 + MType::DDelta;
-	typeDDeltaN = 192 + MType::DDelta;
 	trainer.bindModel(&model);
 	factorDelta = 1.0;
 	nx = 0;
@@ -188,23 +187,37 @@ void Master::sspInit()
 
 void Master::sspProcess()
 {
+	bool newIter = true;
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
 		Timer tmr;
-		if(VLOG_IS_ON(2) && iter % 100 == 0){
-			double t = tmrTrain.elapseSd();
-			VLOG(2) << "  Time of recent 100 iterations: " << (t - tl);
-			tl = t;
+		if(newIter){
+			VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;
+			newIter = false;
+			if(VLOG_IS_ON(2) && iter % 100 == 0){
+				double t = tmrTrain.elapseSd();
+				VLOG(2) << "  Time of recent 100 iterations: " << (t - tl);
+				tl = t;
+			}
 		}
-		VLOG_EVERY_N(ln, 1)<<"Start iteration: "<<iter;
-		suDeltaN.wait_n_reset();
+		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " update: " << nUpdate;
+		waitDeltaFromAny();
+		suDeltaAny.reset();
 		stat.t_dlt_wait += tmr.elapseSd();
-		applyDelta(bfDelta, -1);
-		VLOG_EVERY_N(ln, 2) << "  Broadcast new parameters";
-		broadcastParameter();
-		archiveProgress();
-		//waitParameterConfirmed();
-		++iter;
+		int p = static_cast<int>(nUpdate / nWorker + 1);
+		if(iter != p){
+			{
+				lock_guard<mutex> lg(mbfd);
+				applyDelta(bfDelta, -1);
+				clearAccumulatedDelta();
+			}
+			// if multiple iteration is passed, send one parameter for each
+			for(int i = iter; i < p; ++i)
+				broadcastParameter();
+			archiveProgress();
+			iter = p;
+			newIter = true;
+		}
 	}
 }
 
@@ -301,7 +314,6 @@ void Master::registerHandlers()
 	addRPHEachSU(MType::CTerminate, suAllClosed);
 	addRPHAnySU(typeDDeltaAny, suDeltaAny);
 	addRPHEachSU(typeDDeltaAll, suDeltaAll);
-	addRPHNSU(typeDDeltaN, suDeltaN);
 }
 
 void Master::bindDataset(const DataHolder* pdh)
@@ -519,11 +531,15 @@ void Master::handleDeltaSsp(const std::string & data, const RPCInfo & info)
 	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	accumulateDelta(deltaMsg.second, deltaMsg.first);
+	{
+		lock_guard<mutex> lg(mbfd);
+		accumulateDelta(deltaMsg.second, deltaMsg.first);
+	}
+	++nUpdate;
 	//applyDelta(deltaMsg.second, s); // called at the main process
 	//rph.input(typeDDeltaAll, s);
-	//rph.input(typeDDeltaAny, s);
-	rph.input(typeDDeltaN, s);
+	rph.input(typeDDeltaAny, s);
+	//rph.input(typeDDeltaN, s);
 	//sendReply(info);
 	++stat.n_dlt_recv;
 }

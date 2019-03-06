@@ -7,6 +7,7 @@
 #include "util/Timer.h"
 #include <vector>
 #include <fstream>
+#include <mutex>
 
 class Master : public Runner{
 public:
@@ -69,6 +70,7 @@ public:
 private:
 	Parameter param;
 	std::vector<double>  bfDelta;
+	std::mutex mbfd; // mutex for bdDelta
 	size_t bfDeltaDpCount; // the number of data points used for current bfDelta
 
 	IDMapper wm; // worker id mapper
@@ -94,8 +96,8 @@ private:
 	SyncUnit suWorker;
 	SyncUnit suAllClosed;
 	SyncUnit suDatasetInfo;
-	int typeDDeltaAny, typeDDeltaAll, typeDDeltaN;
-	SyncUnit suDeltaAny, suDeltaAll, suDeltaN;
+	int typeDDeltaAny, typeDDeltaAll;
+	SyncUnit suDeltaAny, suDeltaAll;
 	SyncUnit suParam; // reply of parameter broadcast
 	SyncUnit suTPause, suTContinue;
 

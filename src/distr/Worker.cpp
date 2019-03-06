@@ -178,7 +178,7 @@ void Worker::tapProcess()
 
 void Worker::sspInit()
 {
-	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameter));
+	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterSsp));
 }
 
 void Worker::sspProcess()
@@ -369,7 +369,6 @@ void Worker::accumulateDelta(const std::vector<double>& delta)
 
 void Worker::sendDelta(std::vector<double>& delta, const size_t cnt)
 {
-	// TODO: add staleness tolerance logic here
 	DVLOG(3) << "send delta: " << delta;
 	//DVLOG_EVERY_N(ln, 1) << "n-send: " << iter << " un-cmt msg: " << net->pending_pkgs() << " cmt msg: " << net->stat_send_pkg;
 	net->send(masterNID, MType::DDelta, make_pair(move(cnt), move(delta)));
