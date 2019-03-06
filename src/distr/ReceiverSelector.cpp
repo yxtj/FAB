@@ -108,7 +108,7 @@ ReceiverSelector* ReceiverSelectorFactory::generate(
 {
 	ReceiverSelector* res = nullptr;
 	const string& name = param[0];
-	if(name == "all"){
+	if(name == "all" || name == "broadcast"){
 		res = new ReceiverSelectorBroadcast();
 	} else if(name == "ring"){
 		res = new ReceiverSelectorRing();
