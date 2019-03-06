@@ -98,10 +98,11 @@ void Runner::showStat() const
 		<< "\ttime-total-work: " << stat.t_smy_work << "\ttime-total-wait: " << stat.t_smy_wait
 		<< "\n";
 	if(logName.find("M") != logName.npos){
-		oss << head << "time-per-1k-delta: " << stat.t_smy_work / stat.n_dlt_recv * 1000
-			<< "\ttime-per-1k-delta (c+d): " << (stat.t_smy_work + stat.t_data_deserial) / stat.n_dlt_recv * 1000;
+		oss << head << "time-per-1k-delta(c): " << stat.t_smy_work / stat.n_dlt_recv * 1000
+			<< "\ttime-per-1k-delta(d): " << (stat.t_data_deserial) / stat.n_dlt_recv * 1000;
 	} else{
-		oss << head << "time-per-1k-point: " << stat.t_dlt_calc / stat.n_point * 1000;
+		oss << head << "time-per-1k-point(c): " << stat.t_dlt_calc / stat.n_point * 1000
+			<< "\ttime-per-1k-delta(s): " << (stat.t_data_serial) / stat.n_dlt_send * 1000;
 	}	
 	LOG(INFO) << oss.str();
 }
