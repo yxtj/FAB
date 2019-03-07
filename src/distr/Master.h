@@ -35,6 +35,10 @@ private:
 // local logic
 private:
 	void applyDelta(std::vector<double>& delta, const int source);
+	void clearAccumulatedDelta();
+	void accumulateDelta(const std::vector<double>& delta, const size_t cnt);
+	void accumulateDeltaNext(const int d, const std::vector<double>& delta, const size_t cnt);
+	void adoptDeltaNext(const int d);
 	//void receiveDelta(std::vector<double>& delta, const int source);
 	bool terminateCheck();
 	void initializeParameter();
@@ -54,8 +58,6 @@ public:
 	void waitDeltaFromAny(); // dont reset suDeltaAny
 	void waitDeltaFromAll(); // reset suDeltaAll
 	void gatherDelta();
-	void clearAccumulatedDelta();
-	void accumulateDelta(const std::vector<double>& delta, const size_t cnt);
 
 // handler
 public:
@@ -65,6 +67,7 @@ public:
 	void handleDelta(const std::string& data, const RPCInfo& info);
 	void handleDeltaTap(const std::string& data, const RPCInfo& info);
 	void handleDeltaSsp(const std::string& data, const RPCInfo& info);
+	void handleDeltaSap(const std::string& data, const RPCInfo& info);
 	void handleDeltaFsp(const std::string& data, const RPCInfo& info);
 	void handleDeltaAap(const std::string& data, const RPCInfo& info);
 	void handleDeltaTail(const std::string& data, const RPCInfo& info);
@@ -72,8 +75,11 @@ public:
 private:
 	Parameter param;
 	std::vector<double>  bfDelta;
-	std::mutex mbfd; // mutex for bdDelta
 	size_t bfDeltaDpCount; // the number of data points used for current bfDelta
+	std::vector<int> deltaIter; // the number of delta received from a source
+	std::vector<std::vector<double>> bfDeltaNext; // buffer the delta for further 
+	std::vector<size_t> bfDeltaDpCountNext; // buffer the delta for further 
+	std::mutex mbfd; // mutex for bdDelta
 
 	IDMapper wm; // worker id mapper
 	double factorDelta;

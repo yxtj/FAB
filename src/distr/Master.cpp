@@ -158,6 +158,63 @@ void Master::applyDelta(std::vector<double>& delta, const int source)
 	stat.t_par_calc += tmr.elapseSd();
 }
 
+void Master::clearAccumulatedDelta()
+{
+	bfDelta.assign(model.paramWidth(), 0.0);
+	bfDeltaDpCount = 0;
+}
+
+void Master::accumulateDelta(const std::vector<double>& delta, const size_t cnt)
+{
+	Timer tmr;
+	for(size_t i = 0; i < delta.size(); ++i)
+		bfDelta[i] += delta[i];
+	bfDeltaDpCount += cnt;
+	stat.t_dlt_calc += tmr.elapseSd();
+}
+
+void Master::accumulateDeltaNext(const int d, const std::vector<double>& delta, const size_t cnt)
+{
+	Timer tmr;
+	if(bfDeltaNext.size() < d){
+		bfDeltaNext.resize(d, vector<double>(delta.size(), 0.0));
+		bfDeltaDpCountNext.resize(d, 0);
+	}
+	for(size_t i = 0; i < delta.size(); ++i)
+		bfDeltaNext[d - 1][i] += delta[i];
+	bfDeltaDpCountNext[d - 1] += cnt;
+	stat.t_dlt_calc += tmr.elapseSd();
+}
+
+// adopt the first <d> in XXXnext
+void Master::adoptDeltaNext(const int d)
+{
+	for(int i = 0; i < d; ++i){
+		applyDelta(bfDeltaNext[i], -1);
+	}
+	Timer tmr;
+	size_t bfSize = bfDeltaNext.size();
+	if(d == bfSize){
+		// set bfDelta
+		clearAccumulatedDelta();
+		// set bfDeltaNext
+		bfDeltaNext.clear();
+		bfDeltaDpCountNext.clear();
+	} else{
+		// set bfDelta
+		bfDelta = move(bfDeltaNext[d - 1]);
+		bfDeltaDpCount = bfDeltaDpCountNext[d - 1];
+		// set bfDeltaNext
+		for(size_t i = d; i < bfSize; ++i){
+			bfDeltaNext[i - d] = move(bfDeltaNext[i]);
+			bfDeltaDpCountNext[i - d] = bfDeltaDpCountNext[i];
+		}
+		bfDeltaNext.erase(bfDeltaNext.begin() + (bfSize - d), bfDeltaNext.end());
+		bfDeltaDpCountNext.erase(bfDeltaDpCountNext.begin() + (bfSize - d), bfDeltaDpCountNext.end());
+	}
+	stat.t_dlt_calc += tmr.elapseSd();
+}
+
 bool Master::terminateCheck()
 {
 	return (iter >= opt->tcIter)
@@ -263,21 +320,6 @@ void Master::gatherDelta()
 	suDeltaAll.reset();
 	net->broadcast(MType::DRDelta, "");
 	suDeltaAll.wait();
-}
-
-void Master::clearAccumulatedDelta()
-{
-	bfDelta.assign(model.paramWidth(), 0.0);
-	bfDeltaDpCount = 0;
-}
-
-void Master::accumulateDelta(const std::vector<double>& delta, const size_t cnt)
-{
-	Timer tmr;
-	for (size_t i = 0; i < delta.size(); ++i)
-		bfDelta[i] += delta[i];
-	bfDeltaDpCount += cnt;
-	stat.t_dlt_calc += tmr.elapseSd();
 }
 
 void Master::handleReply(const std::string & data, const RPCInfo & info)

@@ -74,8 +74,9 @@ void Master::tapProcess()
 
 void Master::sspInit()
 {
-	factorDelta = 1.0 / nWorker;
+	factorDelta = 1.0;
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaSsp));
+	deltaIter.assign(nWorker, 0.0);
 }
 
 void Master::sspProcess()
@@ -97,12 +98,16 @@ void Master::sspProcess()
 		waitDeltaFromAny();
 		suDeltaAny.reset();
 		stat.t_dlt_wait += tmr.elapseSd();
-		int p = static_cast<int>(nUpdate / nWorker + 1);
+		int p;
+		{
+			lock_guard<mutex> lg(mbfd);
+			p = *min_element(deltaIter.begin(), deltaIter.end());
+		}
 		if(iter != p){
 			{
 				lock_guard<mutex> lg(mbfd);
 				applyDelta(bfDelta, -1);
-				clearAccumulatedDelta();
+				adoptDeltaNext(p - iter);
 			}
 			// if multiple iteration is passed, send one parameter for each
 			for(int i = iter; i < p; ++i)
@@ -118,8 +123,9 @@ void Master::sspProcess()
 
 void Master::sapInit()
 {
-	factorDelta = 1.0 / nWorker;
-	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaSsp));
+	factorDelta = 1.0;
+	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaSap));
+	deltaIter.assign(nWorker, 0);
 }
 
 void Master::sapProcess()
@@ -278,6 +284,31 @@ void Master::handleDeltaSsp(const std::string & data, const RPCInfo & info)
 	{
 		lock_guard<mutex> lg(mbfd);
 		accumulateDelta(deltaMsg.second, deltaMsg.first);
+	}
+	++nUpdate;
+	//applyDelta(deltaMsg.second, s); // called at the main process
+	//rph.input(typeDDeltaAll, s);
+	rph.input(typeDDeltaAny, s);
+	//rph.input(typeDDeltaN, s);
+	//sendReply(info);
+	++stat.n_dlt_recv;
+}
+
+void Master::handleDeltaSap(const std::string & data, const RPCInfo & info)
+{
+	Timer tmr;
+	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
+	stat.t_data_deserial += tmr.elapseSd();
+	int s = wm.nid2lid(info.source);
+	{
+		deltaIter[s]++;
+		int d = deltaIter[s] - iter;
+		lock_guard<mutex> lg(mbfd);
+		if(d == 0){
+			accumulateDelta(deltaMsg.second, deltaMsg.first);
+		} else{
+			accumulateDeltaNext(d, deltaMsg.second, deltaMsg.first);
+		}
 	}
 	++nUpdate;
 	//applyDelta(deltaMsg.second, s); // called at the main process
