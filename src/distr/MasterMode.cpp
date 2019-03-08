@@ -120,7 +120,6 @@ void Master::sapInit()
 {
 	factorDelta = 1.0;
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaSap));
-	deltaIter.assign(nWorker, 0);
 }
 
 void Master::sapProcess()
@@ -143,14 +142,6 @@ void Master::sapProcess()
 		stat.t_dlt_wait += tmr.elapseSd();
 		int p = static_cast<int>(nUpdate / nWorker + 1);
 		if(iter != p){
-			{
-				lock_guard<mutex> lg(mbfd);
-				applyDelta(bfDelta, -1);
-				clearAccumulatedDelta();
-			}
-			// if multiple iteration is passed, send one parameter for each
-			for(int i = iter; i < p; ++i)
-				broadcastParameter();
 			archiveProgress();
 			iter = p;
 			newIter = true;
@@ -300,22 +291,15 @@ void Master::handleDeltaSap(const std::string & data, const RPCInfo & info)
 	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	{
-		++deltaIter[s];
-		lock_guard<mutex> lg(mbfd);
-		if(iter == deltaIter[s]){
-			accumulateDelta(deltaMsg.second, deltaMsg.first);
-		} else{
-			accumulateDeltaNext(deltaIter[s] - iter, deltaMsg.second, deltaMsg.first);
-		}
-	}
+	stat.n_point += deltaMsg.first;
+	applyDelta(deltaMsg.second, s);
 	++nUpdate;
-	//applyDelta(deltaMsg.second, s); // called at the main process
 	//rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
-	//rph.input(typeDDeltaN, s);
 	//sendReply(info);
 	++stat.n_dlt_recv;
+	// directly send new parameter
+	sendParameter(s);
 }
 
 void Master::handleDeltaFsp(const std::string & data, const RPCInfo & info)
