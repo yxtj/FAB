@@ -155,6 +155,7 @@ void Master::applyDelta(std::vector<double>& delta, const int source)
 	DVLOG(3) << "apply delta from " << source << " : " << delta
 		<< "\nonto: " << model.getParameter().weights;
 	model.accumulateParameter(delta, factorDelta);
+	stat.n_point += bfDeltaDpCount;
 	stat.t_par_calc += tmr.elapseSd();
 }
 
@@ -173,45 +174,85 @@ void Master::accumulateDelta(const std::vector<double>& delta, const size_t cnt)
 	stat.t_dlt_calc += tmr.elapseSd();
 }
 
-void Master::accumulateDeltaNext(const int d, const std::vector<double>& delta, const size_t cnt)
+void Master::applyDeltaNext(const int d)
 {
-	Timer tmr;
-	if(bfDeltaNext.size() < d){
-		bfDeltaNext.resize(d, vector<double>(delta.size(), 0.0));
-		bfDeltaDpCountNext.resize(d, 0);
+	if(d == 0)
+		return;
+	int size = min<int>(d, static_cast<int>(bfDelta.size()) - 1);
+	for(int i = 1; i <= size; ++i){
+		if(!bfDeltaNext[i].empty()){
+			applyDelta(bfDeltaNext[i], -1);
+			stat.n_point += bfDeltaDpCountNext[i];
+		}
 	}
-	for(size_t i = 0; i < delta.size(); ++i)
-		bfDeltaNext[d - 1][i] += delta[i];
-	bfDeltaDpCountNext[d - 1] += cnt;
+}
+
+void Master::clearAccumulatedDeltaNext(const int d)
+{
+	// move slot[d+1] to bfDelta
+	// move slot[d+2,...] to slot[1,...]
+	Timer tmr;
+	size_t bfSize = bfDeltaNext.size();
+	// set bfDelta
+	if(bfSize <= d + 1){ // no slot d+1
+		//VLOG(1) << "no slot " << d;
+		clearAccumulatedDelta();
+		bfDeltaNext.resize(1);
+		bfDeltaDpCountNext.resize(1);
+	} else{
+		//VLOG(1) << "move " << d << " " << bfSize << " " << iter << " " << deltaIter;
+		bfDelta = move(bfDeltaNext[d+1]);
+		bfDeltaDpCount = bfDeltaDpCountNext[d+1];
+	}
+	// set bfDeltaNext
+	size_t p = 1;
+	for(size_t i = d + 2; i < bfSize; ++i){
+		bfDeltaNext[p] = move(bfDeltaNext[i]);
+		bfDeltaDpCountNext[p] = bfDeltaDpCountNext[i];
+		++p;
+	}
+	if(bfSize >= d + 2){
+		bfDeltaNext.erase(bfDeltaNext.begin() + (bfSize - d - 1), bfDeltaNext.end());
+		bfDeltaDpCountNext.erase(bfDeltaDpCountNext.begin() + (bfSize - d - 1), bfDeltaDpCountNext.end());
+	}
 	stat.t_dlt_calc += tmr.elapseSd();
 }
 
-// adopt the first <d> in XXXnext
-void Master::adoptDeltaNext(const int d)
+void Master::shiftAccumulatedDeltaNext()
 {
-	for(int i = 0; i < d; ++i){
-		applyDelta(bfDeltaNext[i], -1);
-	}
+	// move slot[1] to bfDelta
+	// move slot[2,...] to slot[1,...]
 	Timer tmr;
 	size_t bfSize = bfDeltaNext.size();
-	if(d == bfSize){
-		// set bfDelta
+	if(bfSize <= 1){
 		clearAccumulatedDelta();
-		// set bfDeltaNext
-		bfDeltaNext.clear();
-		bfDeltaDpCountNext.clear();
-	} else{
-		// set bfDelta
-		bfDelta = move(bfDeltaNext[d - 1]);
-		bfDeltaDpCount = bfDeltaDpCountNext[d - 1];
-		// set bfDeltaNext
-		for(size_t i = d; i < bfSize; ++i){
-			bfDeltaNext[i - d] = move(bfDeltaNext[i]);
-			bfDeltaDpCountNext[i - d] = bfDeltaDpCountNext[i];
-		}
-		bfDeltaNext.erase(bfDeltaNext.begin() + (bfSize - d), bfDeltaNext.end());
-		bfDeltaDpCountNext.erase(bfDeltaDpCountNext.begin() + (bfSize - d), bfDeltaDpCountNext.end());
+	} else {
+		bfDelta = move(bfDeltaNext[1]);
+		bfDeltaDpCount = bfDeltaDpCountNext[1];
 	}
+	for(size_t i = 2; i < bfSize; ++i){
+		bfDeltaNext[i - 1] = move(bfDeltaNext[i]);
+		bfDeltaDpCountNext[i - 1] = bfDeltaDpCountNext[i];
+	}
+	if(bfSize >= 2){
+		bfDeltaNext.pop_back();
+		bfDeltaDpCountNext.pop_back();
+	}
+	stat.t_dlt_calc += tmr.elapseSd();
+}
+
+void Master::accumulateDeltaNext(const int d, const std::vector<double>& delta, const size_t cnt)
+{
+	Timer tmr;
+	if(bfDeltaNext.size() <= d){
+		bfDeltaNext.resize(d + 1, vector<double>(delta.size(), 0.0));
+		bfDeltaDpCountNext.resize(d + 1, 0);
+	} else if(bfDeltaNext[d].empty()){
+		bfDeltaNext[d].assign(delta.size(), 0.0);
+	}
+	for(size_t i = 0; i < delta.size(); ++i)
+		bfDeltaNext[d][i] += delta[i];
+	bfDeltaDpCountNext[d] += cnt;
 	stat.t_dlt_calc += tmr.elapseSd();
 }
 
@@ -308,7 +349,7 @@ void Master::broadcastSignalTerminate()
 }
 
 void Master::waitDeltaFromAny(){
-	suDeltaAny.wait();
+	suDeltaAny.wait_n_reset();
 }
 
 void Master::waitDeltaFromAll(){

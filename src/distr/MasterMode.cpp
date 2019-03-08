@@ -59,7 +59,6 @@ void Master::tapProcess()
 		}
 		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " update: " << nUpdate;
 		waitDeltaFromAny();
-		suDeltaAny.reset();
 		stat.t_dlt_wait += tmr.elapseSd();
 		int p = static_cast<int>(nUpdate / nWorker + 1);
 		if(iter != p){
@@ -76,46 +75,42 @@ void Master::sspInit()
 {
 	factorDelta = 1.0;
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaSsp));
-	deltaIter.assign(nWorker, 0.0);
+	deltaIter.assign(nWorker, 0);
+	bfDeltaNext.assign(1, vector<double>(trainer.pm->paramWidth(), 0.0));
+	bfDeltaDpCountNext.assign(1, 0);
 }
 
 void Master::sspProcess()
 {
-	bool newIter = true;
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
 		Timer tmr;
-		if(newIter){
-			VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;
-			newIter = false;
-			if(VLOG_IS_ON(2) && iter % 100 == 0){
-				double t = tmrTrain.elapseSd();
-				VLOG(2) << "  Time of recent 100 iterations: " << (t - tl);
-				tl = t;
-			}
+		VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;
+		if(VLOG_IS_ON(2) && iter % 100 == 0){
+			double t = tmrTrain.elapseSd();
+			VLOG(2) << "  Time of recent 100 iterations: " << (t - tl);
+			tl = t;
 		}
-		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " update: " << nUpdate;
-		waitDeltaFromAny();
-		suDeltaAny.reset();
-		stat.t_dlt_wait += tmr.elapseSd();
-		int p;
-		{
-			lock_guard<mutex> lg(mbfd);
+		VLOG_EVERY_N(ln, 2) << "  Waiting for all deltas";
+		int p = *min_element(deltaIter.begin(), deltaIter.end());
+		while(p < iter){
+			VLOG_EVERY_N(ln*nWorker, 2) << "Param-iteration: " << iter << " Delta-iteration: " << deltaIter;
+			waitDeltaFromAny();
 			p = *min_element(deltaIter.begin(), deltaIter.end());
 		}
-		if(iter != p){
-			{
-				lock_guard<mutex> lg(mbfd);
-				applyDelta(bfDelta, -1);
-				adoptDeltaNext(p - iter);
-			}
-			// if multiple iteration is passed, send one parameter for each
-			for(int i = iter; i < p; ++i)
-				broadcastParameter();
-			archiveProgress();
-			iter = p;
-			newIter = true;
+		// NODE: if is possible that p > iter (moves 2 or more iterations at once)
+		//       but we only process one param-iteration in one loop
+		stat.t_dlt_wait += tmr.elapseSd();
+		{
+			lock_guard<mutex> lg(mbfd);
+			applyDelta(bfDelta, -1);
+			//clearAccumulatedDeltaNext(0);
+			shiftAccumulatedDeltaNext();
+			++iter;
 		}
+		VLOG_EVERY_N(ln, 2) << "  Broadcast new parameters";
+		broadcastParameter();
+		archiveProgress();
 	}
 }
 
@@ -145,7 +140,6 @@ void Master::sapProcess()
 		}
 		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " update: " << nUpdate;
 		waitDeltaFromAny();
-		suDeltaAny.reset();
 		stat.t_dlt_wait += tmr.elapseSd();
 		int p = static_cast<int>(nUpdate / nWorker + 1);
 		if(iter != p){
@@ -232,7 +226,6 @@ void Master::aapProcess()
 		}
 		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " update: " << nUpdate;
 		waitDeltaFromAny();
-		suDeltaAny.reset();
 		stat.t_dlt_wait += tmr.elapseSd();
 		multicastParameter(lastDeltaSource);
 		int p = static_cast<int>(nUpdate / nWorker + 1);
@@ -252,6 +245,7 @@ void Master::handleDelta(const std::string & data, const RPCInfo & info)
 	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
+	stat.n_point += deltaMsg.first;
 	applyDelta(deltaMsg.second, s);
 	rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
@@ -265,9 +259,10 @@ void Master::handleDeltaTap(const std::string & data, const RPCInfo & info)
 	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
+	stat.n_point += deltaMsg.first;
 	applyDelta(deltaMsg.second, s);
 	++nUpdate;
-	rph.input(typeDDeltaAll, s);
+	//rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
 	//sendReply(info);
 	++stat.n_dlt_recv;
@@ -282,8 +277,13 @@ void Master::handleDeltaSsp(const std::string & data, const RPCInfo & info)
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
 	{
+		++deltaIter[s];
 		lock_guard<mutex> lg(mbfd);
-		accumulateDelta(deltaMsg.second, deltaMsg.first);
+		if(iter == deltaIter[s]){
+			accumulateDelta(deltaMsg.second, deltaMsg.first);
+		} else{
+			accumulateDeltaNext(deltaIter[s] - iter, deltaMsg.second, deltaMsg.first);
+		}
 	}
 	++nUpdate;
 	//applyDelta(deltaMsg.second, s); // called at the main process
@@ -301,13 +301,12 @@ void Master::handleDeltaSap(const std::string & data, const RPCInfo & info)
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
 	{
-		deltaIter[s]++;
-		int d = deltaIter[s] - iter;
+		++deltaIter[s];
 		lock_guard<mutex> lg(mbfd);
-		if(d == 0){
+		if(iter == deltaIter[s]){
 			accumulateDelta(deltaMsg.second, deltaMsg.first);
 		} else{
-			accumulateDeltaNext(d, deltaMsg.second, deltaMsg.first);
+			accumulateDeltaNext(deltaIter[s] - iter, deltaMsg.second, deltaMsg.first);
 		}
 	}
 	++nUpdate;
@@ -339,6 +338,7 @@ void Master::handleDeltaAap(const std::string & data, const RPCInfo & info)
 	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
+	stat.n_point += deltaMsg.first;
 	applyDelta(deltaMsg.second, s);
 	++nUpdate;
 	//static vector<int> cnt(nWorker, 0);
