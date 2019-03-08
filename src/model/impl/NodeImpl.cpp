@@ -2,6 +2,7 @@
 #include "math/activation_func.h"
 #include <cassert>
 #include <algorithm>
+#include <limits>
 //#include <numeric>
 
 using namespace std;
@@ -136,6 +137,34 @@ std::vector<double> ConvNode1D::gradient(std::vector<double>& grad, const std::v
 		res[i] = t;
 	}
 	return res;
+}
+
+// ---- Convolutional Node: 2D ----
+
+ConvNode2D::ConvNode2D(const size_t offset, const std::vector<int>& shape)
+	: NodeBase(offset, shape), n(shape[0]), m(shape[1]), k1(shape[2]), k2(shape[3])
+{
+	assert(shape.size() == 4);
+	assert(k1 > 0 && k2 > 0);
+	nw += 1; // the constant offset
+}
+
+std::vector<int> ConvNode2D::outShape(const std::vector<int>& inShape) const
+{
+	return { inShape[0] - k1 + 1, inShape[1] - k2 + 1 };
+}
+
+std::vector<double> ConvNode2D::predict(const std::vector<double>& x, const std::vector<double>& w)
+{
+	// TODO:
+	return std::vector<double>();
+}
+
+std::vector<double> ConvNode2D::gradient(std::vector<double>& grad, const std::vector<double>& x,
+	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+{
+	// TODO:
+	return std::vector<double>();
 }
 
 // ---- Recurrent Node Base ----
@@ -398,6 +427,59 @@ std::vector<double> PoolMaxNode1D::gradient(std::vector<double>& grad, const std
 	return res;
 }
 
+// ---- Pooling Node: 2D max ----
+
+PoolMaxNode2D::PoolMaxNode2D(const size_t offset, const std::vector<int>& shape)
+	: NodeBase(offset, shape), n(shape[0]), m(shape[1]), k1(shape[2]), k2(shape[3]),
+	on((n + k1 - 1) / k1), om((m + k2 - 1) / k2)
+{
+	assert(shape.size() == 4);
+	nw = 0;
+}
+
+std::vector<int> PoolMaxNode2D::outShape(const std::vector<int>& inShape) const
+{
+	return { static_cast<int>(on), static_cast<int>(om) };
+}
+
+std::vector<double> PoolMaxNode2D::predict(const std::vector<double>& x, const std::vector<double>& w)
+{
+	vector<double> res(on * om, numeric_limits<double>::lowest());
+	int p = 0;
+	for(int i = 0; i < n; ++i){
+		int p1 = i / k1; // in range [0, on)
+		int off = p1 * om;
+		for(int j = 0; j < m; ++j){
+			int p2 = j / k2; // in range [0, om)
+			res[off + p2] = max(res[off + p2], x[p]);
+			++p;
+		}
+	}
+	return res;
+}
+
+std::vector<double> PoolMaxNode2D::gradient(std::vector<double>& grad, const std::vector<double>& x,
+	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+{
+	// no weight -> no change on <grad>
+	// if argmax(x[1],...,x[n]) = i , then dy/dx = 1.0 and 0 for others
+	assert(y.size() == on * om);
+	vector<double> res(x.size(), 0.0);
+	int p = 0;
+	for(int i = 0; i < n; ++i){
+		int p1 = i / k1; // in range [0, on)
+		int off = p1 * om;
+		for(int j = 0; j < m; ++j){
+			int p2 = j / k2; // in range [0, om)
+			if(y[off + p2] == x[p]){
+				res[p] = pre[p];
+			}
+			++p;
+		}
+	}
+	return res;
+}
+
 // ---- Pooling Node: 1D min ----
 
 PoolMinNode1D::PoolMinNode1D(const size_t offset, const std::vector<int>& shape)
@@ -438,6 +520,59 @@ std::vector<double> PoolMinNode1D::gradient(std::vector<double>& grad, const std
 		for(size_t j = i * k; j < limit; ++j) {
 			if(x[j] == y[i])
 				res[j] = pre[i];
+		}
+	}
+	return res;
+}
+
+// ---- Pooling Node: 2D min ----
+
+PoolMinNode2D::PoolMinNode2D(const size_t offset, const std::vector<int>& shape)
+	: NodeBase(offset, shape), n(shape[0]), m(shape[1]), k1(shape[2]), k2(shape[3]),
+	on((n + k1 - 1) / k1), om((m + k2 - 1) / k2)
+{
+	assert(shape.size() == 4);
+	nw = 0;
+}
+
+std::vector<int> PoolMinNode2D::outShape(const std::vector<int>& inShape) const
+{
+	return { static_cast<int>(on), static_cast<int>(om) };
+}
+
+std::vector<double> PoolMinNode2D::predict(const std::vector<double>& x, const std::vector<double>& w)
+{
+	vector<double> res(on * om, numeric_limits<double>::max());
+	int p = 0;
+	for(int i = 0; i < n; ++i){
+		int p1 = i / k1; // in range [0, on)
+		int off = p1 * om;
+		for(int j = 0; j < m; ++j){
+			int p2 = j / k2; // in range [0, om)
+			res[off + p2] = min(res[off + p2], x[p]);
+			++p;
+		}
+	}
+	return res;
+}
+
+std::vector<double> PoolMinNode2D::gradient(std::vector<double>& grad, const std::vector<double>& x,
+	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+{
+	// no weight -> no change on <grad>
+	// if argmin(x[1],...,x[n]) = i , then dy/dx = 1.0 and 0 for others
+	assert(y.size() == on * om);
+	vector<double> res(x.size(), 0.0);
+	int p = 0;
+	for(int i = 0; i < n; ++i){
+		int p1 = i / k1; // in range [0, on)
+		int off = p1 * om;
+		for(int j = 0; j < m; ++j){
+			int p2 = j / k2; // in range [0, om)
+			if(y[off + p2] == x[p]){
+				res[p] = pre[p];
+			}
+			++p;
 		}
 	}
 	return res;
