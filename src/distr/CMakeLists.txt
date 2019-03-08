@@ -20,5 +20,6 @@ add_library(distr
 	${HEADERS} ${SOURCES})
 target_link_libraries(distr
 	common data math model train util
-	driver logging network 
+	driver logging network
+	${CMAKE_THREAD_LIBS_INIT}
 )
