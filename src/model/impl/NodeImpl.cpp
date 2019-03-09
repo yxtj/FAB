@@ -47,7 +47,7 @@ std::vector<double> WeightedSumNode::predict(const std::vector<double>& x, const
 {
 	assert(x.size() == n);
 	vector<double> res(k);
-	int idx = off;
+	size_t idx = off;
 	for(int i = 0; i < k;  ++i){
 		// idx = off + i * n;
 		double v = 0.0;
@@ -65,7 +65,7 @@ std::vector<double> WeightedSumNode::gradient(std::vector<double>& grad, const s
 	assert(x.size() == n);
 	assert(y.size() == k);
 	vector<double> res(n);
-	int idx = off;
+	size_t idx = off;
 	for(int i = 0; i < k; i++){
 		// idx = off + i * n;
 		const double factor = pre[i];
@@ -142,29 +142,77 @@ std::vector<double> ConvNode1D::gradient(std::vector<double>& grad, const std::v
 // ---- Convolutional Node: 2D ----
 
 ConvNode2D::ConvNode2D(const size_t offset, const std::vector<int>& shape)
-	: NodeBase(offset, shape), n(shape[0]), m(shape[1]), k1(shape[2]), k2(shape[3])
+	: NodeBase(offset, shape), n(shape[0]), m(shape[1]), k1(shape[2]), k2(shape[3]),
+	on(n - k1 + 1), om(m - k2 + 1)
 {
 	assert(shape.size() == 4);
 	assert(k1 > 0 && k2 > 0);
-	nw += 1; // the constant offset
+	nw = k1 * k2 + 1; // with the constant offset
 }
 
 std::vector<int> ConvNode2D::outShape(const std::vector<int>& inShape) const
 {
-	return { inShape[0] - k1 + 1, inShape[1] - k2 + 1 };
+	return { on, om };
 }
 
 std::vector<double> ConvNode2D::predict(const std::vector<double>& x, const std::vector<double>& w)
 {
-	// TODO:
-	return std::vector<double>();
+	const int sizeW = k1 * k2;
+	std::vector<double> res(on * om);
+	int py = 0;
+	for(int i = 0; i < on; ++i) for(int j = 0; j < om; ++j){
+		double t = w[off + sizeW];
+		int pw = off;
+		for(int p1 = 0; p1 < k1; ++p1){
+			int px = (i + p1) * m + j;
+			for(int p2 = 0; p2 < k2; ++p2){
+				t += w[pw++] * x[px++];
+			}
+		}
+		res[py] = t;
+		++py;
+	}
+	return res;
 }
 
 std::vector<double> ConvNode2D::gradient(std::vector<double>& grad, const std::vector<double>& x,
 	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
 {
-	// TODO:
-	return std::vector<double>();
+	const int sizeY = on * om;
+	assert(y.size() == sizeY);
+	// dy/dw
+	int py = 0;
+	for(int i = 0; i < on; ++i) for(int j = 0; j < om; ++j){
+		double f = pre[py++];
+		int pw = off;
+		for(int p1 = 0; p1 < k1; ++p1){
+			for(int p2 = 0; p2 < k2; ++p2){
+				int px = (i + p1)*m + j;
+				grad[pw++] += f * x[px];
+			}
+		}
+		grad[pw] += f;
+	}
+	// dy/dx
+	std::vector<double> res(n * m);
+	int px = 0;
+	for(int i = 0; i < n; ++i) for(int j = 0; j < m; ++j){
+		// lowI/J and upI/J are the coordinates in y
+		int lowi = max(0, i - k1 + 1), lowj = max(0, j - k2 + 1);
+		int upi = min(on - 1, i), upj = min(om - 1, j);
+		for(; lowi <= upi; ++lowi){
+			for(; lowj <= upj; ++lowj){
+				int py = lowi * m + lowj;
+				const double f = pre[py];
+				int wi = i - lowi;
+				int wj = j - lowj;
+				int pw = wi * k2 + wj;
+				res[px] += f * w[pw];
+			}
+		}
+		++px;
+	}
+	return res;
 }
 
 // ---- Recurrent Node Base ----
@@ -439,7 +487,7 @@ PoolMaxNode2D::PoolMaxNode2D(const size_t offset, const std::vector<int>& shape)
 
 std::vector<int> PoolMaxNode2D::outShape(const std::vector<int>& inShape) const
 {
-	return { static_cast<int>(on), static_cast<int>(om) };
+	return { on, om };
 }
 
 std::vector<double> PoolMaxNode2D::predict(const std::vector<double>& x, const std::vector<double>& w)
@@ -537,7 +585,7 @@ PoolMinNode2D::PoolMinNode2D(const size_t offset, const std::vector<int>& shape)
 
 std::vector<int> PoolMinNode2D::outShape(const std::vector<int>& inShape) const
 {
-	return { static_cast<int>(on), static_cast<int>(om) };
+	return { on, om };
 }
 
 std::vector<double> PoolMinNode2D::predict(const std::vector<double>& x, const std::vector<double>& w)

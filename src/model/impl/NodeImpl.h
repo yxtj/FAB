@@ -52,8 +52,9 @@ struct ConvNode1D
 struct ConvNode2D
 	: public NodeBase
 {
-	const size_t n, m;
+	const int n, m;
 	const int k1, k2;
+	const int on, om;
 	ConvNode2D(const size_t offset, const std::vector<int>& shape); // shape = {n, m, k1, k2}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
@@ -161,9 +162,9 @@ struct PoolMaxNode1D
 struct PoolMaxNode2D
 	: public NodeBase
 {
-	const size_t n, m;
-	const size_t k1, k2;
-	const size_t on, om;
+	const int n, m;
+	const int k1, k2;
+	const int on, om;
 	PoolMaxNode2D(const size_t offset, const std::vector<int>& shape); // shape = {n, m, k1, k2}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
@@ -193,9 +194,9 @@ struct PoolMinNode1D
 struct PoolMinNode2D
 	: public NodeBase
 {
-	const size_t n, m;
-	const size_t k1, k2;
-	const size_t on, om;
+	const int n, m;
+	const int k1, k2;
+	const int on, om;
 	PoolMinNode2D(const size_t offset, const std::vector<int>& shape); // shape = {n, m, k1, k2}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
