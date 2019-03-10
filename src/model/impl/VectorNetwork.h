@@ -32,6 +32,13 @@ private:
 	// First Arg: predicted value. Second Arg: expected value
 	std::function<feature_t(const feature_t& p, const feature_t& y)> fgl;
 public:
+	// R"((\d+(?:[\*x]\d+)*))"
+	std::string getRegShape() const;
+	// "[,-]"
+	std::string getRegSep() const;
+	// ",-"
+	std::string getRawSep() const;
+public:
 	void init(const std::string& param); // calls parse and build
 	// parse the parameter string into structure info
 	// require: layers separated with "," or "-". Detailed parameters separated with ":"

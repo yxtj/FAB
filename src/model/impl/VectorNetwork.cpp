@@ -5,6 +5,24 @@
 
 using namespace std;
 
+std::string VectorNetwork::getRegShape() const
+{
+	static string srShape = R"((\d+(?:[\*x]\d+)*))"; // v1[*v2[*v3[*v4]]], "*" can also be "x"
+	return srShape;
+}
+
+std::string VectorNetwork::getRegSep() const
+{
+	static string srSep("[,-]");
+	return srSep;
+}
+
+std::string VectorNetwork::getRawSep() const
+{
+	static string sSep(",-");
+	return sSep;
+}
+
 void VectorNetwork::init(const std::string& param){
 	auto info = parse(param);
 	build(info);
@@ -13,7 +31,7 @@ void VectorNetwork::init(const std::string& param){
 std::vector<std::tuple<int, NodeTypeGeneral, std::string>> VectorNetwork::parse(const std::string & param)
 {
 	// raw string format: R"(...)"
-	string srShape = R"((\d+(?:[\*x]\d+)*))"; // v1[*v2[*v3[*v4]]], "*" can also be "x"
+	string srShape = getRegShape();
 	regex ri(srShape); // input layer
 	regex ra(R"((?:1|1:)?(sig(?:moid)?|relu|tanh))"); // activation layer, i.e.: relu
 	regex rc(R"((\d+):?c:?)" + srShape); // convolutional layer, i.e.: 3c3, 4:c4*5, 4:c:4*5x3
@@ -22,7 +40,7 @@ std::vector<std::tuple<int, NodeTypeGeneral, std::string>> VectorNetwork::parse(
 	regex rf(R"((\d+):?f?)"); // fully-connected layer, i.e.: 4f
 
 	std::vector<std::tuple<int, NodeTypeGeneral, std::string>> res;
-	vector<string> strParam = getStringList(param, ",-");
+	vector<string> strParam = getStringList(param, getRegSep());
 	bool hasInput = false;
 	for(string& str : strParam){
 		smatch m;
@@ -276,8 +294,13 @@ void VectorNetwork::createLayerSum(const size_t i, const int n){
 
 void VectorNetwork::createLayerConv(const size_t i, const int n, const std::vector<int>& shape){
 	assert(shape.size() == shpFeatureLayer[i - 1].size());
-	if(shape.size() == 1)
+	if(shape.size() == 1){
 		coreCreateLayer(i, NodeType::Conv1D, n, shape);
+	} else if(shape.size() == 2){
+		vector<int> shapeParam = shpFeatureLayer[i - 1];
+		shapeParam.insert(shapeParam.end(), shape.begin(), shape.end());
+		coreCreateLayer(i, NodeType::Conv2D, n, shapeParam);
+	}
 }
 
 void VectorNetwork::createLayerRecr(const size_t i, const int n, const std::string& actType, const std::vector<int>& oshape){
@@ -291,15 +314,22 @@ void VectorNetwork::createLayerRecr(const size_t i, const int n, const std::stri
 }
 
 void VectorNetwork::createLayerPool(const size_t i, const std::string& type, const std::vector<int>& shape){
-	NodeType ntp;
+	NodeType ntp = NodeType::None;
 	if(type == "max"){
 		if(shape.size() == 1)
 			ntp = NodeType::PoolMax1D;
+		else if(shape.size() == 2)
+			ntp = NodeType::PoolMax2D;
 	} else if(type == "min"){
 		if(shape.size() == 1)
 			ntp = NodeType::PoolMin1D;
+		else if(shape.size() == 2)
+			ntp = NodeType::PoolMin2D;
 	}
-	coreCreateLayer(i, ntp, 1, shape);
+	vector<int> shapeParam = shape;
+	if(shape.size() == 2)
+		shapeParam.insert(shapeParam.begin(), shpFeatureLayer[i - 1].begin(), shpFeatureLayer[i - 1].end());
+	coreCreateLayer(i, ntp, 1, shapeParam);
 }
 
 void VectorNetwork::createLayerFC(const size_t i, const int n){

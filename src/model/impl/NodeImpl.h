@@ -8,7 +8,7 @@
 struct InputNode
 	: public NodeBase
 {
-	InputNode(const size_t offset, const std::vector<int>& shape); // shape = {1}
+	InputNode(const size_t offset, const std::vector<int>& shape); // shape = {n}
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
 	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);

@@ -3,13 +3,15 @@
 #include <vector>
 
 enum struct NodeTypeGeneral {
+	None, // for error
 	Input, Sum,
 	Conv, Recr,
-	Pool, Act, 
+	Pool, Act,
 	FC
 };
 
 enum struct NodeType {
+	None, // for error
 	Input, WeightedSum,
 	Conv1D, Conv2D,
 	RecrSig, RecrTanh, //RecrLSTM, RecrGate
