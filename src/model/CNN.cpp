@@ -85,13 +85,20 @@ std::vector<double> CNN::gradient(
 
 std::string CNN::preprocessParam(const std::string & param)
 {
-	string srShape = R"((\d+(?:[\*x]\d+)*))"; // v1[*v2[*v3[*v4]]], "*" can also be "x"
-	string sep = "[,-]?";
+	string res = procUnitCPx(param);
+	res = procUnitCxPx(res);
+	return res;
+}
+
+std::string CNN::procUnitCxPx(const std::string & param)
+{
+	string srShape = net.getRegShape();
+	string sep = net.getRegSep() + "?";
 	// 3c5p4 -> 3:c:5-sig-max:4
 	regex runit_c("(\\d+):?c:?" + srShape + sep + "([srt])?");
 	regex runit_p(sep + "p" + srShape); // the sep is important (3c5p3p2)
-	string res;
 
+	string res;
 	string buf = param;
 	auto first = buf.cbegin();
 	auto last = buf.cend();
@@ -123,5 +130,37 @@ std::string CNN::preprocessParam(const std::string & param)
 	}
 	res += string(first, last);
 
+	return res;
+}
+
+std::string CNN::procUnitCPx(const std::string & param)
+{
+	string srShape = net.getRegShape();
+	string sep = net.getRegSep() + "?";
+	// 3cp4 -> 3:c:4-sig-max:4
+	regex runit_cp("(\\d+):?c:?([srt])?:?p:?" + srShape);
+
+	string res;
+	string buf = param;
+	auto first = buf.cbegin();
+	auto last = buf.cend();
+	std::smatch sm;
+	// 3c5 ->3:c:5-sig
+	while(regex_search(first, last, sm, runit_cp)) {
+		first = sm[0].second; // the last matched position
+		string act;
+		if(!sm[2].matched || sm[2] == "s"){
+			act = "sigmoid";
+		} else if(sm[3] == "r"){
+			act = "relu";
+		} else if(sm[3] == "t"){
+			act = "tanh";
+		} else{
+			act = sm[2].str();
+		}
+		res += sm.prefix().str() + sm[1].str() + ":c:" + sm[3].str() + "-"
+			+ act + "-max:" + sm[3].str();
+	}
+	res += string(first, last);
 	return res;
 }

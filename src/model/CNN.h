@@ -22,7 +22,11 @@ public:
 		const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y) const;
 private:
 	// make the cnn param into the general format for network
+	std::string preprocessParam(const std::string& param);
 	// i.e. 5c4p3 -> 5:c:4,sigmoid,max:3
 	// i.e. 5c4r,min3 -> 5:c:4,relu,min:3
-	std::string preprocessParam(const std::string& param);
+	std::string procUnitCxPx(const std::string& param);
+	// i.e. 5cp2*2 -> 4:c:2*2,sigmoid,max:2*2
+	// i.e. 5crp2*2 -> 4:c:2*2,relu,max:2*2
+	std::string procUnitCPx(const std::string& param);
 };
