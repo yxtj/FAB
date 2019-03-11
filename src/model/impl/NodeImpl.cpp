@@ -200,12 +200,12 @@ std::vector<double> ConvNode2D::gradient(std::vector<double>& grad, const std::v
 		// lowI/J and upI/J are the coordinates in y
 		int lowi = max(0, i - k1 + 1), lowj = max(0, j - k2 + 1);
 		int upi = min(on - 1, i), upj = min(om - 1, j);
-		for(; lowi <= upi; ++lowi){
-			for(; lowj <= upj; ++lowj){
-				int py = lowi * m + lowj;
+		for(int pi = lowi; pi <= upi; ++pi){
+			for(int pj = lowj; pj <= upj; ++pj){
+				int py = pi * om + pj;
 				const double f = pre[py];
-				int wi = i - lowi;
-				int wj = j - lowj;
+				int wi = i - pi;
+				int wj = j - pj;
 				int pw = wi * k2 + wj;
 				res[px] += f * w[pw];
 			}
@@ -513,16 +513,17 @@ std::vector<double> PoolMaxNode2D::gradient(std::vector<double>& grad, const std
 	// if argmax(x[1],...,x[n]) = i , then dy/dx = 1.0 and 0 for others
 	assert(y.size() == on * om);
 	vector<double> res(x.size(), 0.0);
-	int p = 0;
+	int px = 0;
 	for(int i = 0; i < n; ++i){
 		int p1 = i / k1; // in range [0, on)
 		int off = p1 * om;
 		for(int j = 0; j < m; ++j){
 			int p2 = j / k2; // in range [0, om)
-			if(y[off + p2] == x[p]){
-				res[p] = pre[p];
+			int py = off + p2;
+			if(y[py] == x[px]){
+				res[px] = pre[py];
 			}
-			++p;
+			++px;
 		}
 	}
 	return res;
@@ -611,16 +612,17 @@ std::vector<double> PoolMinNode2D::gradient(std::vector<double>& grad, const std
 	// if argmin(x[1],...,x[n]) = i , then dy/dx = 1.0 and 0 for others
 	assert(y.size() == on * om);
 	vector<double> res(x.size(), 0.0);
-	int p = 0;
+	int px = 0;
 	for(int i = 0; i < n; ++i){
 		int p1 = i / k1; // in range [0, on)
 		int off = p1 * om;
 		for(int j = 0; j < m; ++j){
 			int p2 = j / k2; // in range [0, om)
-			if(y[off + p2] == x[p]){
-				res[p] = pre[p];
+			int py = off + p2;
+			if(y[py] == x[px]){
+				res[px] = pre[py];
 			}
-			++p;
+			++px;
 		}
 	}
 	return res;

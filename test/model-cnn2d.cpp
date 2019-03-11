@@ -18,7 +18,7 @@ vector<double> str2list(const string& str,
 	for(size_t i = 0; i < line.size(); ++i){
 		vector<double> t;
 		if(blength == 0){
-			t = getDoubleList(line, " ,");
+			t = getDoubleList(line[i], " ,");
 		} else{
 			for(size_t j = 0; j < line.size(); j += blength){
 				string unit = line[i].substr(j, blength);
@@ -28,7 +28,7 @@ vector<double> str2list(const string& str,
 		if(scale != 1.0)
 			for(auto& v : t)
 				v *= scale;
-		res.push_back(move(t));
+		res.insert(res.end(), t.begin(), t.end());
 	}
 	return res;
 }
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]){
 		return 1;
 	}
 
-	mt19937 gen;
+	mt19937 gen(1);
 	DataHolder dh(false, 1, 0);
 	auto fun = [](const string& s){return str2list(s, 1, 1.0 / 5); };
 	auto foo = [&](){ return rndlist(gen, 4, 4, 0.0, 5.0); };
@@ -104,19 +104,23 @@ int main(int argc, char* argv[]){
 	dh.add(fun("5050;5050;5050;0500"), { 0 });
 	dh.add(fun("0000;0000;0000;0000"), { 0 });
 	dh.add(fun("1040;0110;5050;0055"), { 0 });
-	dh.add(boo(), { 0 });
-	dh.add(boo(), { 0 });
-	dh.add(boo(), { 0 });
-	dh.add(boo(), { 0 });
-	dh.add(boo(), { 0 });
-	dh.add(boo(), { 0 });
-	dh.add(boo(), { 0 });
+	dh.add(foo(), { 0 });
+	dh.add(foo(), { 0 });
+	dh.add(foo(), { 0 });
+	dh.add(foo(), { 0 });
+	dh.add(foo(), { 0 });
+	dh.add(foo(), { 0 });
+	dh.add(foo(), { 0 });
 
 	Model m;
-	//m.init("cnn", dh.xlength(), "4*4-2c2*2p2*2-2c2*2p2*2-1f", 0.1);
-	m.init("cnn", dh.xlength(), "4*4-2cp2*2-2cp2*2-1f", 0.1);
-	
-	dh.normalize(false);
+	try{
+		//m.init("cnn", dh.xlength(), "4*4-2c2*2p2*2-1c2*2p2*2-1f", 0.01);
+		m.init("cnn", dh.xlength(), "4*4-2cp2*2-1cp2*2-1f", 0.01);
+	} catch(exception& e){
+		LOG(FATAL) << e.what();
+	}
+
+	//dh.normalize(false);
 	LOG(INFO) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;
 	LOG(INFO) << "data[1]: " << dh.get(1).x << " -> " << dh.get(1).y;
 

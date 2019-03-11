@@ -40,3 +40,6 @@ target_link_libraries(model-cnn data model train util logging)
 
 add_executable(model-rnn model-rnn.cpp)
 target_link_libraries(model-rnn data model train util logging)
+
+add_executable(model-cnn2d model-cnn2d.cpp)
+target_link_libraries(model-cnn2d data model train util logging)

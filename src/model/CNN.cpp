@@ -16,7 +16,7 @@ void CNN::init(const int xlength, const std::string & param)
     //     shape of fully-connected node: none
     try{
 		string pm = preprocessParam(param);
-		net.init(param);
+		net.init(pm);
 		net.bindGradLossFunc(&CNN::gradLoss);
     }catch(exception& e){
 		throw invalid_argument(string("Unable to create network: ") + e.what());
@@ -86,59 +86,17 @@ std::vector<double> CNN::gradient(
 std::string CNN::preprocessParam(const std::string & param)
 {
 	string res = procUnitCPx(param);
-	res = procUnitCxPx(res);
-	return res;
-}
-
-std::string CNN::procUnitCxPx(const std::string & param)
-{
-	string srShape = net.getRegShape();
-	string sep = net.getRegSep() + "?";
-	// 3c5p4 -> 3:c:5-sig-max:4
-	regex runit_c("(\\d+):?c:?" + srShape + sep + "([srt])?");
-	regex runit_p(sep + "p" + srShape); // the sep is important (3c5p3p2)
-
-	string res;
-	string buf = param;
-	auto first = buf.cbegin();
-	auto last = buf.cend();
-	std::smatch sm;
-	// 3c5 ->3:c:5-sig
-	while(regex_search(first, last, sm, runit_c)) {
-		first = sm[0].second; // the last matched position
-		string act;
-		if(!sm[3].matched || sm[3] == "s"){
-			act = "sigmoid";
-		} else if(sm[3] == "r"){
-			act = "relu";
-		} else if(sm[3] == "t"){
-			act = "tanh";
-		} else{
-			act = sm[3].str();
-		}
-		res += sm.prefix().str() + sm[1].str() + ":c:" + sm[2].str() + "-" + act;
-	}
-	res += string(first, last);
-	// p4 -> max:4
-	buf = res;
-	res.clear();
-	first = buf.cbegin();
-	last = buf.cend();
-	while(regex_search(first, last, sm, runit_p)) {
-		first = sm[0].second; // the last matched position
-		res += sm.prefix().str() + "-max:" + sm[1].str();
-	}
-	res += string(first, last);
-
+	res = procUnitCx(res);
+	res = procUnitPx(res);
 	return res;
 }
 
 std::string CNN::procUnitCPx(const std::string & param)
 {
 	string srShape = net.getRegShape();
-	string sep = net.getRegSep() + "?";
-	// 3cp4 -> 3:c:4-sig-max:4
-	regex runit_cp("(\\d+):?c:?([srt])?:?p:?" + srShape);
+	string srSep = "(?:[" + net.getRawSep() + "]?)";
+	// -3cp4 -> -3:c:4-sig-max:4
+	regex runit_cp(srSep + "(\\d+)?c([srt])?p:?" + srShape);
 
 	string res;
 	string buf = param;
@@ -148,6 +106,9 @@ std::string CNN::procUnitCPx(const std::string & param)
 	// 3c5 ->3:c:5-sig
 	while(regex_search(first, last, sm, runit_cp)) {
 		first = sm[0].second; // the last matched position
+		string cnt = "1";
+		if(sm[1].matched)
+			cnt = sm[1].str();
 		string act;
 		if(!sm[2].matched || sm[2] == "s"){
 			act = "sigmoid";
@@ -158,9 +119,66 @@ std::string CNN::procUnitCPx(const std::string & param)
 		} else{
 			act = sm[2].str();
 		}
-		res += sm.prefix().str() + sm[1].str() + ":c:" + sm[3].str() + "-"
+		res += sm.prefix().str() + "-" + cnt + ":c:" + sm[3].str() + "-"
 			+ act + "-max:" + sm[3].str();
 	}
 	res += string(first, last);
 	return res;
 }
+
+std::string CNN::procUnitCx(const std::string & param)
+{
+	string srShape = net.getRegShape();
+	string srSep = "(?:[" + net.getRawSep() + "]?)";
+	// 3c5p4 -> 3:c:5-sig-max:4
+	regex runit_c(srSep + "(\\d+)c" + srShape + "([srt])?");
+
+	string res;
+	string buf = param;
+	auto first = buf.cbegin();
+	auto last = buf.cend();
+	std::smatch sm;
+	// 3c5 ->3:c:5-sig
+	while(regex_search(first, last, sm, runit_c)) {
+		first = sm[0].second; // the last matched position
+		string cnt = "1";
+		if(sm[1].matched)
+			cnt = sm[1].str();
+		string act;
+		if(!sm[3].matched || sm[3] == "s"){
+			act = "sigmoid";
+		} else if(sm[3] == "r"){
+			act = "relu";
+		} else if(sm[3] == "t"){
+			act = "tanh";
+		} else{
+			act = sm[3].str();
+		}
+		res += sm.prefix().str() + "-" + cnt + ":c:" + sm[2].str() + "-" + act;
+	}
+	res += string(first, last);
+	return res;
+}
+
+std::string CNN::procUnitPx(const std::string & param)
+{
+	string srShape = net.getRegShape();
+	string srSep = net.getRegSep() + "?";
+	// -p3 -> -max:3
+	// p3 -> -max:3
+	regex runit_p(srSep + "p" + srShape); // the sep is important (eg. 3c5p3p2)
+
+	string res;
+	string buf = param;
+	auto first = buf.cbegin();
+	auto last = buf.cend();
+	std::smatch sm;
+	while(regex_search(first, last, sm, runit_p)) {
+		first = sm[0].second; // the last matched position
+		res += sm.prefix().str() + "-max:" + sm[1].str();
+	}
+	res += string(first, last);
+
+	return res;
+}
+
