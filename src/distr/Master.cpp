@@ -265,7 +265,9 @@ bool Master::terminateCheck()
 void Master::initializeParameter()
 {
 	suDatasetInfo.wait_n_reset();
-	model.init(opt->algorighm, static_cast<int>(nx), opt->algParam, 0.01);
+	unsigned seed = 123456;
+	//model.init(opt->algorighm, static_cast<int>(nx), opt->algParam, 0.01);
+	model.init(opt->algorighm, static_cast<int>(nx), opt->algParam, seed);
 }
 
 void Master::sendParameter(const int target)
