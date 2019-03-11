@@ -52,7 +52,7 @@ std::pair<std::string, std::vector<double>> ParameterIO::load(std::istream & is)
 void ParameterIO::writeLR(std::ostream & os, const std::vector<double>& w)
 {
 	for(size_t i = 0; i < w.size() - 1; ++i){
-		os << param[i] << ",";
+		os << w[i] << ",";
 	}
 	os << w.back() << endl;
 }
