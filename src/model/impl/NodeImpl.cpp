@@ -186,9 +186,9 @@ std::vector<double> ConvNode2D::gradient(std::vector<double>& grad, const std::v
 		double f = pre[py++];
 		int pw = off;
 		for(int p1 = 0; p1 < k1; ++p1){
+			int px = (i + p1)*m + j;
 			for(int p2 = 0; p2 < k2; ++p2){
-				int px = (i + p1)*m + j;
-				grad[pw++] += f * x[px];
+				grad[pw++] += f * x[px++];
 			}
 		}
 		grad[pw] += f;
