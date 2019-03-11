@@ -33,10 +33,13 @@ int main(int argc, char* argv[]){
 		LOG(INFO) << "Infromation:\nData file: " << opt.fnData << " \tNormalize: " << opt.doNormalize
 			<< "\n  Idx-y: " << opt.idY << "\tIdx-skip: " << opt.idSkip
 			<< "\nAlgorithm: " << opt.algorighm << "\tParam: " << opt.algParam
+			<< "\n  Interval Estimator: " << opt.intervalParam << "\tMulticast: " << opt.mcastParam
 			<< "\nRecord file: " << opt.fnOutput
 			<< "\nTraining configurations:\n  Mode: " << opt.mode << "\tLearning-rate: " << opt.lrate
 			<< "\tBatch-size: " << opt.batchSize << "\tWorker-#: " << opt.nw
-			<< "\nTerminating condition:\n  Max-iteration: " << opt.tcIter << "\tMax-time: " << opt.tcTime;
+			<< "\nTerminating condition:\n  Max-iteration: " << opt.tcIter << "\tMax-time: " << opt.tcTime
+			<< "\nArchive iteration: " << opt.arvIter << "\tinterval: " << opt.arvTime
+			<< "\nLog iteration: " << opt.logIter;
 	}
 #ifndef NDEBUG
 	if(net->id()==0){
