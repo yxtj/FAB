@@ -205,7 +205,8 @@ void NetworkThread::Terminate()
 		NetworkThread* p = nullptr;
 		swap(p, self);
 		p->running = false;
-		p->t_.~thread();
+		p->t_.join();
+		p->net = nullptr;
 		delete p;
 		NetworkImplMPI::Shutdown();
 	}

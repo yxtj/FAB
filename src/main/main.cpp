@@ -70,7 +70,7 @@ int main(int argc, char* argv[]){
 		}
 	}
 
-	NetworkThread::Shutdown();
-	//NetworkThread::Terminate();
+	//NetworkThread::Shutdown();
+	NetworkThread::Terminate();
 	return 0;
 }
