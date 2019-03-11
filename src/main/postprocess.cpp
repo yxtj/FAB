@@ -32,6 +32,7 @@ struct Option {
 	string fnOutput;
 	bool doNormalize = true;
 	bool show = false;
+	size_t topn = 0;
 
 	bool parse(int argc, char* argv[]){
 		int idx = 1;
@@ -57,6 +58,8 @@ struct Option {
 				doNormalize = beTrueOption(argv[idx++]);
 			if(argc > optIdx++)
 				show = beTrueOption(argv[idx++]);
+			if(argc > optIdx++)
+				topn = stoi(argv[idx++]);
 		} catch(exception& e){
 			cerr << "Cannot parse the " << idx << "-th parameter: " << argv[idx] << endl;
 			cerr << "Error message: " << e.what() << endl;
@@ -65,10 +68,11 @@ struct Option {
 		return true;
 	}
 	void usage(){
-		cout << "usage: <alg> <alg-param> <fn-record> <fn-data> <id-skip> <id-y> [fn-param]"
+		cout << "usage: <alg> <alg-param> <fn-record> <fn-data> <id-skip> <id-y> [fn-param] [top-n]"
 			" [fn-output] [normalize=true] [show=false]" << endl
 			<< "  <fn-record> and <fn-data> are required.\n"
 			<< "  [fn-param] and [fn-output] can be omitted or given as '-'\n"
+			<< "  [top-n] means only use the top n data points to calculate loss."
 			<< endl;
 	}
 	void processFn(string& fn){
@@ -181,7 +185,7 @@ int main(int argc, char* argv[]){
 		last = p.second;
 		param.set(move(p.second));
 		m.setParameter(move(param));
-		double loss = trainer.loss();
+		double loss = trainer.loss(opt.topn);
 		if(opt.show)
 			cout << p.first << "\t" << loss << "\t" << diff << "\t" << impro << endl;
 		if(write)

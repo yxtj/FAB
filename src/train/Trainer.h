@@ -13,7 +13,7 @@ public:
 	void bindModel(Model* pm);
 	void bindDataset(const DataHolder* pd);
 
-	double loss() const;
+	double loss(const size_t topn = 0) const;
 
 	// train using all the data in given range.
 	// <cnt> = 0 means use all the data points.

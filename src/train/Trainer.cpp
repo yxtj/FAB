@@ -9,9 +9,9 @@ void Trainer::bindDataset(const DataHolder* pd){
 	this->pd = pd;
 }
 
-double Trainer::loss() const {
+double Trainer::loss(const size_t topn) const {
 	double res = 0;
-	size_t n = pd->size();
+	size_t n = topn == 0 ? pd->size() : topn;
 	for(size_t i = 0; i < n; ++i){
 		res += pm->loss(pd->get(i));
 	}
