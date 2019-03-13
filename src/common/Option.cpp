@@ -116,7 +116,7 @@ std::vector<int> Option::preprocessList(const std::string & ystr)
 		auto p = s.find('-');
 		if(p != 0 && p != string::npos){ // 2-10
 			int f = stoi(s.substr(0, p));
-			int l = stoi(s.substr(p));
+			int l = stoi(s.substr(p + 1));
 			while(f <= l){
 				res.push_back(f);
 				++f;
