@@ -44,8 +44,8 @@ struct Option {
 			algParam = argv[idx++];
 			fnRecord = argv[idx++];
 			fnData = argv[idx++];
-			idSkip = getIntList(argv[idx++]);
-			idY = getIntList(argv[idx++]);
+			idSkip = getIntListByRange(argv[idx++]);
+			idY = getIntListByRange(argv[idx++]);
 			if(argc > optIdx++){
 				fnParam = argv[idx++];
 				processFn(fnParam);

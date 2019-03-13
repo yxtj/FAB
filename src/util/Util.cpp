@@ -86,6 +86,28 @@ std::vector<std::string> getStringList(const std::string & str, const std::strin
 	return res;
 }
 
+std::vector<int> getIntListByRange(const std::string & str, const std::string & sepper)
+{
+	vector<string> sl = getStringList(str, sepper);
+	vector<int> res;
+	for(auto& s : sl){
+		if(s.empty())
+			continue;
+		auto p = s.find('-');
+		if(p != 0 && p != string::npos){ // 2-10
+			int f = stoi(s.substr(0, p));
+			int l = stoi(s.substr(p + 1));
+			while(f <= l){
+				res.push_back(f);
+				++f;
+			}
+		} else{ // -1 or 3
+			res.push_back(stoi(s));
+		}
+	}
+	return res;
+}
+
 int stoiKMG(const std::string & str, const bool binary)
 {
 	if(str.empty())

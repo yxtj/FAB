@@ -40,7 +40,6 @@ struct Option{
 private:
 	bool preprocessMode();
 	bool processAlgorithm();
-	std::vector<int> preprocessList(const std::string& ystr);
 
 	struct Impl;
 	//Impl* pimpl;

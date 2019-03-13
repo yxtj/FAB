@@ -81,8 +81,8 @@ private:
 		} else if(algorithm == "mlp"){
 			vector<int> shape = getIntList(param, " ,-");
 			return shape.size() >= 2 && shape.front() == xlength && shape.back() == ylength;
-		} else if(algorithm == "cnn"){
-			vector<string> shape = getStringList(param, "-");
+		} else if(algorithm == "cnn" || algorithm == "rnn"){
+			vector<string> shape = getStringList(param, ",-");
 			return shape.size() >= 2;
 		}
 		return false;
@@ -107,7 +107,7 @@ public:
 			fpg = &ParameterGenerator::genLR;
 		} else if(k->name() == "mlp"){
 			fpg = &ParameterGenerator::genGeneral;
-		} else if(k->name() == "cnn"){
+		} else if(k->name() == "cnn" || k->name() == "rnn"){
 			fpg = &ParameterGenerator::genGeneral;
 		}
 	}
@@ -164,7 +164,7 @@ public:
 			fp = &Dumper::dumpClassify;
 		} else if(k->name() == "mlp"){
 			fp = &Dumper::dumpClassify;
-		} else if(k->name() == "cnn"){
+		} else if(k->name() == "cnn" || k->name() == "rnn"){
 			fp = &Dumper::dumpClassify;
 		}
 		if(sigma != 0.0){
