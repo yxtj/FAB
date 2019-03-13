@@ -1,11 +1,10 @@
 set(HEADERS
 	DataPoint.h
 	DataHolder.h
-	Loader.h
 )
 set(SOURCES
+	DataPoint.cpp
 	DataHolder.cpp
-	Loader.cpp
 )
 add_library(data
 	${HEADERS} ${SOURCES})

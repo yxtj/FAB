@@ -1,4 +1,4 @@
-#include "Loader.h"
+#include "DataPoint.h"
 #include <iostream>
 
 using namespace std;
@@ -16,7 +16,7 @@ DataPoint parseLine(const std::string& line, const std::string& sepper,
 	try{
 		while(p != string::npos){
 			if(xIds.count(idx) != 0)
-				x.push_back(stod(line.substr(pl, p - pl))); 
+				x.push_back(stod(line.substr(pl, p - pl)));
 			else if(yIds.count(idx) != 0)
 				y.push_back(stod(line.substr(pl, p - pl)));
 			pl = p + 1;
@@ -32,6 +32,6 @@ DataPoint parseLine(const std::string& line, const std::string& sepper,
 	} catch(...){
 		cout << "Error on idx= " << idx << " on line: " << line << endl;
 	}
-	return DataPoint{x, y};
+	return DataPoint{ x, y };
 }
 

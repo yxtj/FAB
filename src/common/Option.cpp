@@ -26,7 +26,8 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		fnData = argv[idx++];
 		fnOutput = argv[idx++];
 		idSkip = getIntList(argv[idx++]);
-		idY = getIntList(argv[idx++]);
+		//idY = getIntList(argv[idx++]);
+		idY = preprocessList(argv[idx++]);
 
 		doNormalize = beTrueOption(argv[idx++]);
 		lrate = stod(argv[idx++]);
@@ -70,7 +71,7 @@ void Option::showUsage() const {
 	cout << "  <mode>: bsp, tap, ssp:<n>, fsp, aap\n"
 		<< "  <alg>: algorithm name. Support: lr, mlp, cnn, rnn, tm.\n"
 		<< "  <param>: parameter of the algorithm, usually the shape of the algorithm.\n"
-		<< "  <id-skip>: a list separated with space or comma.\n"
+		<< "  <id-skip> <id-y>: a list separated with space, comma and a-b (a, a+1, a+2, ..., b).\n"
 		<< "  [flex-param]: supports: interval:x (x is in seconds), portion:x (x in 0~1), "
 		"improve:x,t (x: avg. imporovement, t: max waiting time), balance:w (num. of windows)\n"
 		<< "  [mcast-param]: supports: all, ring:k, random:k,seed, hash:k\n"
@@ -103,4 +104,26 @@ bool Option::processAlgorithm(){
 	vector<string> supported = { "lr", "mlp", "cnn", "rnn", "tm" };
 	auto it = find(supported.begin(), supported.end(), algorighm);
 	return it != supported.end();
+}
+
+std::vector<int> Option::preprocessList(const std::string & ystr)
+{
+	vector<string> sl = getStringList(ystr, " ,");
+	vector<int> res;
+	for(auto& s : sl){
+		if(s.empty())
+			continue;
+		auto p = s.find('-');
+		if(p != 0 && p != string::npos){ // 2-10
+			int f = stoi(s.substr(0, p));
+			int l = stoi(s.substr(p));
+			while(f <= l){
+				res.push_back(f);
+				++f;
+			}
+		} else{ // -1 or 3
+			res.push_back(stoi(s));
+		}
+	}
+	return res;
 }
