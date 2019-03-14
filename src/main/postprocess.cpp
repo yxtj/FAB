@@ -171,10 +171,12 @@ int main(int argc, char* argv[]){
 
 	string line;
 	vector<double> last(dh.xlength(), 0.0);
-	//int idx = 0;
+	int idx = 0;
 	while(getline(fin, line)){
 		if(line.size() < 3)
 			continue;
+		if(idx++ % 10000 == 0)
+			cout << "  processed: " << idx << endl;
 		//if(idx++ < 500)
 		//	continue;
 		pair<double, vector<double>> p = parseRecordLine(line);
