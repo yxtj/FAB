@@ -104,7 +104,9 @@ int main(int argc, char* argv[]){
 	size_t p = 0;
 	for(int iter = 0; iter < opt.niter; ++iter){
 		LOG(INFO) << "Iteration: " << iter;
-		vector<double> dlt = trainer.batchDelta(p, opt.batchSize, true);
+		size_t cnt;
+		vector<double> dlt;
+		tie(cnt, dlt) = trainer.batchDelta(p, opt.batchSize, true);
 		trainer.applyDelta(dlt);
 		double loss = trainer.loss();
 		p += opt.batchSize;

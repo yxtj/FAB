@@ -18,10 +18,11 @@ double Trainer::loss(const size_t topn) const {
 	return res / static_cast<double>(n);
 }
 
-void Trainer::train(const size_t start, const size_t cnt)
+size_t Trainer::train(const size_t start, const size_t cnt)
 {
-	vector<double> delta = batchDelta(start, cnt != 0 ? cnt : pd->size(), true);
-	applyDelta(delta, 1.0);
+	pair<size_t, vector<double>> res = batchDelta(start, cnt != 0 ? cnt : pd->size(), true);
+	applyDelta(res.second, 1.0);
+	return res.first;
 }
 
 size_t Trainer::train(std::atomic<bool>& cond, const size_t start, const size_t cnt)

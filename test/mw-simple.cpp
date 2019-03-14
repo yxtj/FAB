@@ -77,7 +77,7 @@ void test_1m1w(DataHolder& dh){
 	cout << "  loss 0: " << w_model.loss(dh.get(0)) << endl;
 
 	cout << "train 1" << endl;
-	w_grad = trainer.batchDelta(500, 500, true);
+	w_grad = trainer.batchDelta(500, 500, true).second;
 	w_model.accumulateParameter(w_grad);
 	cout << "  loss 1 w: " << w_model.loss(dh.get(0)) << endl;
 	cout << "  cooridinating" << endl;
@@ -90,7 +90,7 @@ void test_1m1w(DataHolder& dh){
 	cout << "  loss 1 m: " << m_model.loss(dh.get(0)) << endl;
 
 	cout << "train 2" << endl;
-	w_grad = trainer.batchDelta(1000, 500, true);
+	w_grad = trainer.batchDelta(1000, 500, true).second;
 	w_model.accumulateParameter(w_grad);
 	cout << "  loss 2 w: " << w_model.loss(dh.get(0)) << endl;
 	cout << "  cooridinating" << endl;
@@ -140,11 +140,11 @@ void test_1m2w(DataHolder& dh){
 	// iteration 1
 	size_t iter = 1;
 	cout << "Train " << iter << endl;
-	w1.bf_grad = w1.trainer.batchDelta((iter - 1)*nw*bs, bs, true);
+	w1.bf_grad = w1.trainer.batchDelta((iter - 1)*nw*bs, bs, true).second;
 	w1.trainer.applyDelta(w1.bf_grad);
 	cout << "  w1 loss: " << w1.trainer.loss() << endl;
 	showParameter("  w1 p", w1.model.getParameter());
-	w2.bf_grad = w2.trainer.batchDelta((iter - 1)*nw*bs + bs, bs, true);
+	w2.bf_grad = w2.trainer.batchDelta((iter - 1)*nw*bs + bs, bs, true).second;
 	w2.trainer.applyDelta(w2.bf_grad);
 	cout << "  w2 loss: " << w2.trainer.loss() << endl;
 	showParameter("  w2 p", w2.model.getParameter());
@@ -173,11 +173,11 @@ void test_1m2w(DataHolder& dh){
 	// iteration 2
 	++iter;
 	cout << "Train " << iter << endl;
-	w1.bf_grad = w1.trainer.batchDelta((iter - 1)*nw*bs, bs, true);
+	w1.bf_grad = w1.trainer.batchDelta((iter - 1)*nw*bs, bs, true).second;
 	w1.trainer.applyDelta(w1.bf_grad);
 	cout << "  w1 loss: " << w1.trainer.loss() << endl;
 	showParameter("  w1 p", w1.model.getParameter());
-	w2.bf_grad = w2.trainer.batchDelta((iter - 1)*nw*bs + bs, bs, true);
+	w2.bf_grad = w2.trainer.batchDelta((iter - 1)*nw*bs + bs, bs, true).second;
 	w2.trainer.applyDelta(w2.bf_grad);
 	cout << "  w2 loss: " << w2.trainer.loss() << endl;
 	showParameter("  w2 p", w2.model.getParameter());

@@ -17,14 +17,15 @@ double GD::getRate() const {
 	return rate;
 }
 
-std::vector<double> GD::batchDelta(const size_t start, const size_t cnt, const bool avg) const
+std::pair<size_t, std::vector<double>> GD::batchDelta(const size_t start, const size_t cnt, const bool avg) const
 {
 	size_t end = start + cnt;
 	if(end > pd->size())
 		end = pd->size();
 	size_t nx = pm->paramWidth();
 	vector<double> grad(nx, 0.0);
-	for(size_t i = start; i < end; ++i){
+	size_t i;
+	for(i = start; i < end; ++i){
 		auto g = pm->gradient(pd->get(i));
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
@@ -37,7 +38,7 @@ std::vector<double> GD::batchDelta(const size_t start, const size_t cnt, const b
 		for(auto& v : grad)
 			v *= factor;
 	}
-	return grad;
+	return make_pair(i - start, move(grad));
 }
 
 std::pair<size_t, std::vector<double>> GD::batchDelta(

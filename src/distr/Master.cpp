@@ -114,6 +114,7 @@ void Master::run()
 	DLOG(INFO) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
 	finishStat();
 	showStat();
+	rph.deactivateType(MType::DDelta);
 	suAllClosed.wait();
 	stopMsgLoop();
 }

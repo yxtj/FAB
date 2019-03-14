@@ -19,8 +19,13 @@ void Worker::bspProcess()
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
-		bfDelta = trainer.batchDelta(dataPointer, localBatchSize, true);
-		updatePointer(localBatchSize);
+		size_t left = localBatchSize;
+		do{
+			size_t cnt;
+			tie(cnt, bfDelta) = trainer.batchDelta(dataPointer, left, true);
+			updatePointer(cnt);
+			left -= cnt;
+		} while(left > 0);
 		stat.t_dlt_calc += tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
@@ -53,8 +58,13 @@ void Worker::tapProcess()
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
-		bfDelta = trainer.batchDelta(dataPointer, localBatchSize, true);
-		updatePointer(localBatchSize);
+		size_t left = localBatchSize;
+		do{
+			size_t cnt;
+			tie(cnt, bfDelta) = trainer.batchDelta(dataPointer, left, true);
+			updatePointer(cnt);
+			left -= cnt;
+		} while(left > 0);
 		stat.t_dlt_calc += tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
@@ -87,8 +97,13 @@ void Worker::sspProcess()
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
-		bfDelta = trainer.batchDelta(dataPointer, localBatchSize, true);
-		updatePointer(localBatchSize);
+		size_t left = localBatchSize;
+		do{
+			size_t cnt;
+			tie(cnt, bfDelta) = trainer.batchDelta(dataPointer, left, true);
+			updatePointer(cnt);
+			left -= cnt;
+		} while(left > 0);
 		stat.t_dlt_calc += tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
@@ -125,8 +140,13 @@ void Worker::sapProcess()
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
-		bfDelta = trainer.batchDelta(dataPointer, localBatchSize, true);
-		updatePointer(localBatchSize);
+		size_t left = localBatchSize;
+		do{
+			size_t cnt;
+			tie(cnt, bfDelta) = trainer.batchDelta(dataPointer, left, true);
+			updatePointer(cnt);
+			left -= cnt;
+		} while(left > 0);
 		stat.t_dlt_calc += tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
