@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import re
 
-os.chdir('E:/Code/FSB/score/rnn')
+os.chdir('E:/Code/FSB/score/')
 #os.chdir('E:/Code/FSB/score/lr/10-100k/1000-0.1')
 #os.chdir('E:/Code/FSB/score/mlp/10,15,1-100k/1000-0.1')
 
