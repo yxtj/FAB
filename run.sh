@@ -4,6 +4,13 @@ DATADIR=/tmp/tzhou/data
 RESBASEDIR=~/Code/FSB/result/
 SCRBASEDIR=~/Code/FSB/score/
 LOGBASEDIR=~/Code/FSB/log/
+MPICMD="mpirun -n $((i+1))"
+
+DATASET=mnist
+RESBASEDIR=~/efs/result/$DATASET
+SCRBASEDIR=~/efs/score/$DATASET
+LOGBASEDIR=~/efs/log/$DATASET
+MPICMD="mpirun -mca btl ^openib -n $((i+1))"
 
 ALG=lr
 PARAM=10
