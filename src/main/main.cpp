@@ -28,7 +28,7 @@ int main(int argc, char* argv[]){
 		NetworkThread::Shutdown();
 		return 1;
 	}
-	LOG(DEBUG) << "size=" << net->size() << " id=" << net->id();
+	DLOG(INFO) << "size=" << net->size() << " id=" << net->id();
 	if(net->id() == 0){
 		LOG(INFO) << "Infromation:\nData file: " << opt.fnData << " \tNormalize: " << opt.doNormalize
 			<< "\n  Idx-y: " << opt.idY << "\tIdx-skip: " << opt.idSkip
@@ -41,7 +41,7 @@ int main(int argc, char* argv[]){
 			<< "\nArchive iteration: " << opt.arvIter << "\tinterval: " << opt.arvTime
 			<< "\nLog iteration: " << opt.logIter;
 	}
-#ifndef NDEBUG
+#if !defined(NDEBUG) || defined(_DEBUG)
 	if(net->id()==0){
 		DLOG(DEBUG)<<"pause.";
 		DLOG(DEBUG)<<cin.get();
@@ -60,9 +60,10 @@ int main(int argc, char* argv[]){
 		try{
 			dh.load(opt.fnData, ",", opt.idSkip, opt.idY, opt.header, true);
 			DVLOG(2) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;
-			if(opt.doNormalize)
+			if(opt.doNormalize){
 				dh.normalize(false);
-			DVLOG(2) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;
+				DVLOG(2) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;
+			}
 			w.bindDataset(&dh);
 			w.run();
 		} catch(exception& e){
