@@ -176,10 +176,8 @@ void Master::fspProcess()
 		VLOG_EVERY_N(ln, 2) << "  Waiting for all deltas";
 		waitDeltaFromAll();
 		stat.t_dlt_wait += tmr.elapseSd();
-		tmr.restart();
 		applyDelta(bfDelta, -1);
 		VLOG_EVERY_N(ln, 2) << "  Broadcast new parameters";
-		stat.t_dlt_calc += tmr.elapseSd();
 		broadcastParameter();
 		//waitParameterConfirmed();
 		pie->update(bfDelta, interval, bfDeltaDpCount, tsync.elapseSd(), tmrTrain.elapseSd());
@@ -329,8 +327,8 @@ void Master::handleDeltaAap(const std::string & data, const RPCInfo & info)
 	//++cnt[s];
 	//VLOG_EVERY_N(ln/10, 1) << "Update: " << nUpdate << " rsp: " << cnt << " r-pkg: " << net->stat_recv_pkg;
 	//rph.input(typeDDeltaAll, s);
-	rph.input(typeDDeltaAny, s);
 	lastDeltaSource = s;
+	rph.input(typeDDeltaAny, s);
 	if(opt->aapWait)
 		sendReply(info);
 	++stat.n_dlt_recv;
