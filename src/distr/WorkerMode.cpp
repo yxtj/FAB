@@ -238,6 +238,7 @@ void Worker::aapProcess()
 		Timer tmr;
 		size_t left = localBatchSize;
 		bfDelta.assign(n, 0.0);
+		bool newBatch = true;
 		while(!exitTrain && left != 0){
 			tmr.restart();
 			size_t cnt = 0;
@@ -253,13 +254,14 @@ void Worker::aapProcess()
 			}
 			stat.t_dlt_calc += tmr.elapseSd();
 			tmr.restart();
-			if(opt->aapWait){
+			if(opt->aapWait && iter != 1 && newBatch){
 				waitParameter();
 				stat.t_par_wait += tmr.elapseSd();
 				tmr.restart();
 			}
 			applyBufferParameter();
 			stat.t_par_calc += tmr.elapseSd();
+			newBatch = false;
 		}
 		tmr.restart();
 		for(size_t i = 0; i < n; ++i)
