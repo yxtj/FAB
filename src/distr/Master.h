@@ -8,6 +8,7 @@
 #include <vector>
 #include <fstream>
 #include <mutex>
+#include <atomic>
 
 class Master : public Runner{
 public:
@@ -92,7 +93,7 @@ private:
 
 	IntervalEstimator* pie; // for flexible parallel modes
 	ReceiverSelector* prs;
-	int lastDeltaSource;
+	std::atomic<int> lastDeltaSource;
 
 	int ln; // log-every-n times
 

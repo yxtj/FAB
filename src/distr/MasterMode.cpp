@@ -218,7 +218,7 @@ void Master::aapProcess()
 		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " update: " << nUpdate;
 		waitDeltaFromAny();
 		stat.t_dlt_wait += tmr.elapseSd();
-		multicastParameter(lastDeltaSource);
+		multicastParameter(lastDeltaSource.load());
 		int p = static_cast<int>(nUpdate / nWorker + 1);
 		if(iter != p){
 			archiveProgress();
