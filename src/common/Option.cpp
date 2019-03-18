@@ -86,14 +86,18 @@ bool Option::preprocessMode(){
 	vector<string> t = getStringList(mode, ":");
 	vector<string> supported = { "bsp", "tap", "ssp", "sap", "fsp", "aap" };
 	auto it = find(supported.begin(), supported.end(), t[0]);
+	if(it == supported.end())
+		return false;
+	mode = t[0];
 	if(t[0] == "ssp" || t[0] == "sap"){
 		if(t.size() > 1)
 			staleGap = stoi(t[1]);
 		else
 			staleGap = 1;
+	} else if(t[0]=="aap"){
+		aapWait = t.size() >= 2 && beTrueOption(t[1]);
 	}
-	mode = t[0];
-	return it != supported.end();
+	return true;
 }
 
 bool Option::processAlgorithm(){

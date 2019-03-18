@@ -253,17 +253,23 @@ void Worker::aapProcess()
 			}
 			stat.t_dlt_calc += tmr.elapseSd();
 			tmr.restart();
+			if(opt->aapWait){
+				waitParameter();
+				stat.t_par_wait += tmr.elapseSd();
+				tmr.restart();
+			}
 			applyBufferParameter();
 			stat.t_par_calc += tmr.elapseSd();
 		}
 		tmr.restart();
 		for(size_t i = 0; i < n; ++i)
 			bfDelta[i] *= factor;
+		stat.t_dlt_calc += tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  send delta";
 		sendDelta(bfDelta, localBatchSize);
-		if(opt->aapWait)
-			waitParameter();
-		stat.t_par_wait += tmr.elapseSd();
+		//if(opt->aapWait)
+		//	waitParameter();
+		//stat.t_par_wait += tmr.elapseSd();
 		++iter;
 	}
 }
