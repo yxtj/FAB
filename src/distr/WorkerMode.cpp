@@ -59,6 +59,9 @@ void Worker::tapProcess()
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		size_t left = localBatchSize;
+		// make the reporting time more even
+		if(iter == 1)
+			left += localBatchSize * localID / nWorker;
 		do{
 			size_t cnt;
 			tie(cnt, bfDelta) = trainer.batchDelta(dataPointer, left, true);
@@ -237,6 +240,9 @@ void Worker::aapProcess()
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";// << ". msg waiting: " << driver.queSize();
 		Timer tmr;
 		size_t left = localBatchSize;
+		// make the reporting time more even
+		if(iter == 1)
+			left += localBatchSize * localID / nWorker;
 		bfDelta.assign(n, 0.0);
 		bool newBatch = true;
 		while(!exitTrain && left != 0){
