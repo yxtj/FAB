@@ -154,6 +154,10 @@ int main(int argc, char* argv[]){
 	dh.load(opt.fnData, ",", opt.idSkip, opt.idY, false, true);
 	if(opt.doNormalize)
 		dh.normalize(false);
+	size_t limit = opt.topn;
+	if(limit == 0 || limit > dh.size())
+		limit = dh.size();
+	double accuracy_factor = 1.0 / limit / dh.ylength();
 
 	Model m;
 	try{
@@ -187,11 +191,22 @@ int main(int argc, char* argv[]){
 		last = p.second;
 		param.set(move(p.second));
 		m.setParameter(move(param));
-		double loss = trainer.loss(opt.topn);
+		double loss = 0.0;
+		size_t correct = 0;
+		for(size_t i = 0; i < limit; ++i){
+			auto& d = dh.get(i);
+			auto p = m.predict(d);
+			loss += m.loss(p, d.y);
+			for(size_t j = 0; j < p.size(); ++j)
+				if(p[j] == d.y[j])
+					++correct;
+		}
+		loss /= limit;
+		double accuracy = correct * accuracy_factor;
 		if(opt.show)
-			cout << p.first << "\t" << loss << "\t" << diff << "\t" << impro << endl;
+			cout << p.first << "\t" << loss << "\t" << accuracy << "\t" << diff << "\t" << impro << endl;
 		if(write)
-			fout << p.first << "," << loss << "," << diff << "," << impro << "\n";
+			fout << p.first << "," << loss << "," << accuracy << "," << diff << "," << impro << "\n";
 	}
 	fin.close();
 	fout.close();
