@@ -68,8 +68,8 @@ struct Option {
 		return true;
 	}
 	void usage(){
-		cout << "usage: <alg> <alg-param> <fn-record> <fn-data> <id-skip> <id-y> [fn-param] [top-n]"
-			" [fn-output] [normalize=true] [show=false]" << endl
+		cout << "usage: <alg> <alg-param> <fn-record> <fn-data> <id-skip> <id-y>"
+			" [fn-param] [fn-output] [normalize=true] [show=false] [top-n=0]" << endl
 			<< "  <fn-record> and <fn-data> are required.\n"
 			<< "  [fn-param] and [fn-output] can be omitted or given as '-'\n"
 			<< "  [top-n] means only use the top n data points to calculate loss."
@@ -198,7 +198,7 @@ int main(int argc, char* argv[]){
 			auto p = m.predict(d);
 			loss += m.loss(p, d.y);
 			for(size_t j = 0; j < p.size(); ++j)
-				if(p[j] == d.y[j])
+				if(m.classify(p[j]) == d.y[j])
 					++correct;
 		}
 		loss /= limit;
