@@ -31,6 +31,7 @@ struct Option {
 	string fnParam;
 	string fnOutput;
 	bool doNormalize = true;
+	bool accuracy = false;
 	bool show = false;
 	size_t topn = 0;
 
@@ -57,6 +58,8 @@ struct Option {
 			if(argc > optIdx++)
 				doNormalize = beTrueOption(argv[idx++]);
 			if(argc > optIdx++)
+				accuracy = beTrueOption(argv[idx++]);
+			if(argc > optIdx++)
 				show = beTrueOption(argv[idx++]);
 			if(argc > optIdx++)
 				topn = stoi(argv[idx++]);
@@ -69,7 +72,7 @@ struct Option {
 	}
 	void usage(){
 		cout << "usage: <alg> <alg-param> <fn-record> <fn-data> <id-skip> <id-y>"
-			" [fn-param] [fn-output] [normalize=true] [show=false] [top-n=0]" << endl
+			" [fn-param] [fn-output] [normalize=true] [accuracy=false] [show=false] [top-n=0]" << endl
 			<< "  <fn-record> and <fn-data> are required.\n"
 			<< "  [fn-param] and [fn-output] can be omitted or given as '-'\n"
 			<< "  [top-n] means only use the top n data points to calculate loss."
@@ -197,6 +200,8 @@ int main(int argc, char* argv[]){
 			auto& d = dh.get(i);
 			auto p = m.predict(d);
 			loss += m.loss(p, d.y);
+			if(!opt.accuracy)
+				continue;
 			for(size_t j = 0; j < p.size(); ++j)
 				if(m.classify(p[j]) == d.y[j])
 					++correct;
