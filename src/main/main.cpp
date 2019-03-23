@@ -7,7 +7,7 @@
 #include "func.h"
 #include <string>
 #include <vector>
-//#include <iostream>
+#include <iostream>
 
 using namespace std;
 
@@ -47,6 +47,7 @@ int main(int argc, char* argv[]){
 		DLOG(DEBUG)<<cin.get();
 	}
 #endif
+	iostream::sync_with_stdio(false);
 	if(net->id()==0){
 		Master m;
 		m.init(&opt, 0);
