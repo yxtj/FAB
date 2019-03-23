@@ -3,6 +3,7 @@
 #include "IDMapper.h"
 #include "IntervalEstimator.h"
 #include "ReceiverSelector.h"
+#include "model/ParamArchiver.h"
 #include "driver/tools/SyncUnit.h"
 #include "util/Timer.h"
 #include <vector>
@@ -113,5 +114,6 @@ private:
 	SyncUnit suParam; // reply of parameter broadcast
 	SyncUnit suTPause, suTContinue;
 
-	std::ofstream foutput;
+	bool doArchive;
+	ParamArchiver archiver;
 };

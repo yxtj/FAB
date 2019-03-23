@@ -17,6 +17,7 @@ Master::Master() : Runner() {
 	nPoint = 0;
 	iter = 0;
 	nUpdate = 0;
+	doArchive = false;
 	pie = nullptr;
 	prs = nullptr;
 	lastArchIter = 0;
@@ -77,8 +78,9 @@ void Master::run()
 	clearAccumulatedDelta();
 	LOG(INFO) << "Got x-length: " << nx << ", y-length: " << ny << ", data points: " << nPoint;
 	if(!opt->fnOutput.empty()){
-		foutput.open(opt->fnOutput);
-		LOG_IF(foutput.fail(), FATAL) << "Cannot write to file: " << opt->fnOutput;
+		doArchive = true;
+		archiver.init_write(opt->fnOutput, model.paramWidth(), false, true);
+		LOG_IF(!archiver.valid(), FATAL) << "Cannot write to file: " << opt->fnOutput;
 	}
 	iter = 0;
 	tmrTrain.restart();
@@ -108,7 +110,7 @@ void Master::run()
 
 	broadcastSignalTerminate();
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaTail));
-	foutput.close();
+	archiver.close();
 	delete pie;
 	delete prs;
 	DLOG(INFO) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
@@ -304,7 +306,7 @@ void Master::waitParameterConfirmed()
 
 bool Master::needArchive()
 {
-	if(!foutput.is_open())
+	if(!doArchive)
 		return false;
 	if(iter - lastArchIter >= opt->arvIter
 		|| tmrArch.elapseSd() >= opt->arvTime)
@@ -320,11 +322,9 @@ void Master::archiveProgress(const bool force)
 {
 	if(!force && !needArchive())
 		return;
-	foutput << iter << "," << tmrTrain.elapseSd();
-	for(auto& v : model.getParameter().weights){
-		foutput << "," << v;
-	}
-	foutput <<"\n";
+	Timer t;
+	archiver.dump(iter, tmrTrain.elapseSd(), model.getParameter());
+	stat.t_archive += t.elapseSd();
 }
 
 void Master::broadcastWorkerList()
