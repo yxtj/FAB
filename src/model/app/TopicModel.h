@@ -1,5 +1,5 @@
 #pragma once
-#include "Kernel.h"
+#include "model/Kernel.h"
 
 class TopicModel
 	: public Kernel

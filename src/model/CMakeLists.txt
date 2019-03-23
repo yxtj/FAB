@@ -10,28 +10,35 @@ set(IMPL_SOURCES
 	impl/VectorNetwork.cpp
 	impl/MLPProxy.cpp
 )
+set(APP_HEADERS
+	app/LogisticRegression.h
+	app/MLP.h
+	app/CNN.h
+	app/RNN.h
+	app/TopicModel.h
+)
+set(APP_SOURCES
+	app/LogisticRegression.cpp
+	app/MLP.cpp
+	app/CNN.cpp
+	app/RNN.cpp
+	app/TopicModel.cpp
+)
 set(HEADERS
 	Kernel.h
 	KernelFactory.h
 	Parameter.h
+	ParamArchiver.h
 	Model.h
-	LogisticRegression.h
-	MLP.h
-	CNN.h
-	TopicModel.h
-	RNN.h
 )
 set(SOURCES
 	Kernel.cpp
 	KernelFactory.cpp
 	Parameter.cpp
+	ParamArchiver.cpp
 	Model.cpp
-	LogisticRegression.cpp
-	MLP.cpp
-	CNN.cpp
-	TopicModel.cpp
-	RNN.cpp
 )
 add_library(model
-	${IMPL_HEADERS} ${IMPL_SOURCES} ${HEADERS} ${SOURCES})
+	${IMPL_HEADERS} ${IMPL_SOURCES} ${HEADERS} ${SOURCES}
+	${APP_HEADERS} ${APP_SOURCES})
 target_link_libraries(model math data util)

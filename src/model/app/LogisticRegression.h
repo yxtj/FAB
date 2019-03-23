@@ -1,5 +1,5 @@
 #pragma once
-#include "Kernel.h"
+#include "model/Kernel.h"
 #include <vector>
 
 class LogisticRegression

@@ -1,6 +1,6 @@
 #pragma once
-#include "Kernel.h"
-#include "impl/VectorNetwork.h"
+#include "model/Kernel.h"
+#include "model/impl/VectorNetwork.h"
 
 class CNN
 	: public Kernel
