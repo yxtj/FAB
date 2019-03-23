@@ -19,5 +19,8 @@ struct Statistics {
 	// summary
 	double t_smy_work, t_smy_wait;
 
+	// specific
+	double t_archive;
+
 	Statistics();
 };
