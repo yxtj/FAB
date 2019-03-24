@@ -8,4 +8,4 @@ set(SOURCES
 )
 add_library(common
 	${HEADERS} ${SOURCES})
-#target_link_libraries(common util)
+target_link_libraries(common util Boost::program_options)

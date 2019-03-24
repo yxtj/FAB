@@ -1,22 +1,25 @@
 cmake_minimum_required (VERSION 3.0)
 
-macro(use_cxx11)
+macro(use_cxx14)
   if (CMAKE_VERSION VERSION_LESS "3.1")
     if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-      set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+      set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
     endif ()
   else ()
-    set (CMAKE_CXX_STANDARD 11)
+    set (CMAKE_CXX_STANDARD 14)
   endif ()
-endmacro(use_cxx11)
+endmacro(use_cxx14)
 
-project(lr C CXX)
+project(aap C CXX)
 
-use_cxx11()
+use_cxx14()
 
 # -------- Boost --------
-#find_package(Boost REQUIRED COMPONENTS filesystem system program_options)
-#include_directories(${Boost_INCLUDE_DIRS}) 
+find_package(Boost REQUIRED COMPONENTS filesystem system program_options)
+include_directories(${Boost_INCLUDE_DIRS})
+
+message(STATUS "Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS}")
+message(STATUS "Boost::program_options: " Boost::program_options)
 
 # -------- Python interface --------
 #find_package(PythonLibs)
@@ -98,5 +101,7 @@ set(CMAKE_CXX_FLAGS "${CXX_DEFAULT} ${CXX_WARN} ${CXX_DEFINE} ${CMAKE_THREAD_LIB
 
 add_subdirectory(src)
 
-add_subdirectory(test)
+if (CMAKE_BUILD_TYPE EQUAL "DEBUG")
+	add_subdirectory(test)
+endif (CMAKE_BUILD_TYPE EQUAL "DEBUG")
 

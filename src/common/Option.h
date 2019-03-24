@@ -10,6 +10,7 @@ struct Option{
 	std::vector<int> idY;
 	bool header;
 	bool doNormalize;
+	bool binary;
 
 	std::string mode;
 	int staleGap; // the max gap between current processing iteration and the parameter iteratoin
@@ -42,5 +43,5 @@ private:
 	bool processAlgorithm();
 
 	struct Impl;
-	//Impl* pimpl;
+	Impl* pimpl = nullptr;
 };
