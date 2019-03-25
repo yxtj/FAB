@@ -4,6 +4,7 @@
 #include "message/MType.h"
 #include "logging/logging.h"
 #include "util/Timer.h"
+#include <future>
 
 using namespace std;
 
@@ -17,11 +18,13 @@ Master::Master() : Runner() {
 	nPoint = 0;
 	iter = 0;
 	nUpdate = 0;
-	doArchive = false;
 	pie = nullptr;
 	prs = nullptr;
 	lastArchIter = 0;
 	tmrArch.restart();
+	doArchive = false;
+	cntArch = 0;
+	archDoing = false;
 
 	suOnline.reset();
 	suWorker.reset();
@@ -79,7 +82,7 @@ void Master::run()
 	LOG(INFO) << "Got x-length: " << nx << ", y-length: " << ny << ", data points: " << nPoint;
 	if(!opt->fnOutput.empty()){
 		doArchive = true;
-		archiver.init_write(opt->fnOutput, model.paramWidth(), false, true);
+		archiver.init_write(opt->fnOutput, model.paramWidth(), false, opt->binary);
 		LOG_IF(!archiver.valid(), FATAL) << "Cannot write to file: " << opt->fnOutput;
 	}
 	iter = 0;
@@ -311,8 +314,6 @@ bool Master::needArchive()
 	if(iter - lastArchIter >= opt->arvIter
 		|| tmrArch.elapseSd() >= opt->arvTime)
 	{
-		lastArchIter = iter;
-		tmrArch.restart();
 		return true;
 	}
 	return false;
@@ -322,9 +323,18 @@ void Master::archiveProgress(const bool force)
 {
 	if(!force && !needArchive())
 		return;
-	Timer t;
-	archiver.dump(iter, tmrTrain.elapseSd(), model.getParameter());
-	stat.t_archive += t.elapseSd();
+	if(archDoing)
+		return;
+	archDoing = true;
+	lastArchIter = iter;
+	tmrArch.restart();
+	++cntArch;
+	std::async(launch::async, [&](int iter, double time, Parameter param){
+		Timer t;
+		archiver.dump(iter, time, param);
+		archDoing = false;
+		stat.t_archive += t.elapseSd();
+	}, iter, tmrTrain.elapseSd(), model.getParameter());
 }
 
 void Master::broadcastWorkerList()

@@ -102,9 +102,6 @@ private:
 	size_t nUpdate; // used for Async case
 	Timer tmrTrain;
 
-	size_t lastArchIter;
-	Timer tmrArch;
-
 	SyncUnit suOnline;
 	SyncUnit suWorker;
 	SyncUnit suAllClosed;
@@ -114,6 +111,11 @@ private:
 	SyncUnit suParam; // reply of parameter broadcast
 	SyncUnit suTPause, suTContinue;
 
+	// archive
 	bool doArchive;
 	ParamArchiver archiver;
+	size_t lastArchIter;
+	Timer tmrArch;
+	int cntArch;
+	bool archDoing;
 };
