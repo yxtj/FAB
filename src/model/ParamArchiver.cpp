@@ -55,6 +55,11 @@ bool ParamArchiver::load(int & iter, double & time, Parameter & p)
 	return (this->*pfl)(iter, time, p);
 }
 
+bool ParamArchiver::eof() const
+{
+	return fs.eof();
+}
+
 void ParamArchiver::close()
 {
 	fs.close();
@@ -69,6 +74,8 @@ bool ParamArchiver::load_last(int & iter, double & time, Parameter & p)
 		return load_last_text(iter, time, p);
 	}
 }
+
+// private implementation
 
 void ParamArchiver::dump_text(const int iter, const double time, const Parameter & p)
 {

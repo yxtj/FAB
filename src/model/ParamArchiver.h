@@ -16,6 +16,8 @@ public:
 		const bool binary = false);
 	void dump(const int iter, const double time, const Parameter& p);
 	bool load(int& iter, double& time, Parameter& p);
+
+	bool eof() const;
 	void close();
 
 	bool load_last(int& iter, double& time, Parameter& p);
