@@ -20,6 +20,7 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 	string tmp_ids, tmp_idy;
 	string tmp_bs;
 	string tmp_t_iter, tmp_a_iter, tmp_l_iter;
+	int tmp_v;
 	if(pimpl == nullptr)
 		pimpl = new Impl(getScreenSize().first);
 	using boost::program_options::value;
@@ -27,7 +28,7 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 	pimpl->desc.add_options()
 		("help,h", "Print help messages")
 		// parallel
-		("mode,m", value(&mode), "The parallel mode: bsp, tap, ssp:<n>, sap:<n>, fsp, aap")
+		("mode,m", value(&mode)->required(), "The parallel mode: bsp, tap, ssp:<n>, sap:<n>, fsp, aap")
 		// parallel - broadcast
 		("cast_mode,c", value(&tmp_cast)->default_value("broadcast"),
 			"The method to send out new parameters. Supports: broadcast/all, ring:k, random:k,seed, hash:k")
@@ -62,19 +63,21 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		("term_time", value(&tcTime)->required(), "Termination condition: maximum training time")
 		// archive
 		("arch_iter", value(&tmp_a_iter)->default_value("1000"), "Progress archiving condition: maximum iteration")
-		("arch_time", value(&tcTime)->default_value(1.0), "Progress archiving condition: maximum training time")
+		("arch_time", value(&arvTime)->default_value(1.0), "Progress archiving condition: maximum training time")
 		// log
 		("log_iter", value(&tmp_l_iter)->default_value("100"), "Log training step every <log_iter> iterations")
+		("v", value(&tmp_v), "Verbose level")
 		;
 
 	boost::program_options::variables_map vm;
 	this->nw = nWorker;
 	try {
 		auto p = boost::program_options::command_line_parser(argc, argv).
-			options(pimpl->desc).allow_unregistered()
-			.style(boost::program_options::command_line_style::case_insensitive).run();
+			//options(pimpl->desc).allow_unregistered().run();
+			options(pimpl->desc).run();
 		boost::program_options::store(p, vm);
 		boost::program_options::notify(vm);
+
 		mcastParam = getStringList(tmp_cast, ":,; ");
 		intervalParam = getStringList(tmp_interval, ":,; ");
 		idSkip = getIntListByRange(tmp_ids);
