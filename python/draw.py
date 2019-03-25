@@ -51,7 +51,9 @@ def drawCmp(mode1, mode2, nw, n=200):
     #plt.hold(True)
     plt.plot(d1[:n][0], d1[:n][1])
     plt.plot(d2[:n][0], d2[:n][1])
-    plt.legend([mode1, mode2])
+    plt.legend(renameLegend([mode1, mode2]))
+    plt.xlabel('time (s)')
+    plt.ylabel('loss')
     plt.show()
 
 #drawCmp('async','fsb',8)
@@ -69,7 +71,7 @@ def renameLegend(lgd):
     for i in range(len(lgd)):
         s=lgd[i]
         s=s.replace('async','tap').replace('sync','bsp')
-        s=s.replace('fsb','fsp').replace('fab','fap')
+        s=s.replace('fsb','fsp').replace('fab','aap')
         lgd[i]=s
     return lgd
 
@@ -79,16 +81,26 @@ def drawList(prefix, mList, n=200):
         plotUnit(None, prefix+m+'.txt', m, '-', None, n)
     #plt.hold(True)
     plt.legend(renameLegend(mList))
+    plt.xlabel('time (s)')
+    plt.ylabel('loss')
+    plt.tight_layout()
     plt.show()
 
 #drawList('../10000-0.01/',['fab-1','fab-2','fab-4','fab-8'],10)
 #drawList('10000-0.1/',['sync-4','fsb-4','async-4','fab-4'])
+#ln=[1,2,4,8,12,16,20,24]
+#lmode=['bsp','tap','aap']
+#lmode_=['bsp-','tap-','aap-']
+#l=['%d-0.01/aap-%i' % (10*i*i,i) for i in ln]
 
 def genFLpre(pre, l):
-    return [pre+str(i) for i in l]
+    return [str(pre)+str(i) for i in l]
 
 def genFLpost(l, post):
-    return [str(i)+post for i in l]
+    return [str(i)+str(post) for i in l]
+
+def genFL(pre, l, post=''):
+    return [str(pre)+str(i)+post for i in l]
 
 def drawListCmp(prefix, mList1, mList2, mList3=None, n=200, save=False):
     assert(len(mList1) == len(mList2))
@@ -112,6 +124,7 @@ def drawListCmp(prefix, mList1, mList2, mList3=None, n=200, save=False):
         gfn=re.sub('/$','',gfn)
         gfn=gfn.replace('-100k/','/').replace('/','-')
         plt.savefig(gfn+'.png')
+    plt.tight_layout()
     plt.show()
 
 #drawListCmp('../10000-0.1/',['async-1','async-2','async-4'],['fab-1','fab-2','fab-4'])
