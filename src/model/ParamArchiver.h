@@ -36,5 +36,6 @@ private:
 	fp_dump_t pfd;
 	using fp_load_t = bool (ParamArchiver::*)(int&, double&, Parameter&);
 	fp_load_t pfl;
+	size_t binWeightLen;
 	size_t binUnitLen;
 };

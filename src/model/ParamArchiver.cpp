@@ -19,7 +19,8 @@ bool ParamArchiver::init_write(const std::string & fname,
 	if(binary){
 		mode |= ios_base::binary;
 		pfd = &ParamArchiver::dump_binary;
-		binUnitLen = sizeof(int) + sizeof(double) + wlen * sizeof(double);
+		binWeightLen = wlen * sizeof(double);
+		binUnitLen = sizeof(int) + sizeof(double) + binWeightLen;
 	} else{
 		pfd = &ParamArchiver::dump_text;
 	}
@@ -37,7 +38,8 @@ bool ParamArchiver::init_read(const std::string & fname,
 	if(binary){
 		mode |= ios_base::binary;
 		pfl = &ParamArchiver::load_binary;
-		binUnitLen = sizeof(int) + sizeof(double) + wlen * sizeof(double);
+		binWeightLen = wlen * sizeof(double);
+		binUnitLen = sizeof(int) + sizeof(double) + binWeightLen;
 	} else{
 		pfl = &ParamArchiver::load_text;
 	}
@@ -89,10 +91,9 @@ void ParamArchiver::dump_text(const int iter, const double time, const Parameter
 
 void ParamArchiver::dump_binary(const int iter, const double time, const Parameter & p)
 {
-	fs << iter << time;
-	for(auto& v : p.weights){
-		fs << v;
-	}
+	fs.write(reinterpret_cast<const char*>(&iter), sizeof(iter));
+	fs.write(reinterpret_cast<const char*>(&time), sizeof(time));
+	fs.write(reinterpret_cast<const char*>(p.weights.data()), binWeightLen);
 }
 
 bool ParamArchiver::load_text(int & iter, double & time, Parameter & p)
@@ -107,15 +108,12 @@ bool ParamArchiver::load_text(int & iter, double & time, Parameter & p)
 
 bool ParamArchiver::load_binary(int & iter, double & time, Parameter & p)
 {
-	fs >> iter >> time;
-	if(fs.fail())
-		return false;
+	fs.read(reinterpret_cast<char*>(&iter), sizeof(iter));
+	fs.read(reinterpret_cast<char*>(&time), sizeof(time));
 	vector<double> weights(wlen);
-	for(size_t i = 0; i < binUnitLen; ++i){
-		fs >> weights[i];
-	}
+	fs.read(reinterpret_cast<char*>(weights.data()), binWeightLen);
 	p.weights = move(weights);
-	return p.weights.size() == wlen;
+	return bool(fs);
 }
 
 bool ParamArchiver::load_last_text(int & iter, double & time, Parameter & p)

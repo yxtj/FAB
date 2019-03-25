@@ -4,8 +4,7 @@ using namespace std;
 
 void Parameter::init(const std::vector<double>& w)
 {
-	auto t = w;
-	set(t);
+	set(w);
 }
 
 void Parameter::init(const size_t n, const double v)
