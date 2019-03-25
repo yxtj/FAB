@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
 #include <vector>
-#include <utility>
 
-std::pair<double, std::vector<double>> parseRecordLine(const std::string& line);
+double vectorDifference(const std::vector<double>& a, const std::vector<double>& b);
 

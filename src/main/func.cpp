@@ -1,24 +1,14 @@
 #include "func.h"
+#include <cmath>
 
 using namespace std;
 
-pair<double, vector<double>> parseRecordLine(const string& line){
-	size_t pl = 0;
-	size_t p = line.find(',');
-	int id = stoi(line.substr(pl, p - pl)); // iteration-number
-	pl = p + 1;
-	p = line.find(',', pl);
-	double time = stod(line.substr(pl, p - pl)); // time
-	pl = p + 1;
-	p = line.find(',', pl);
-	vector<double> weights;
-	// weights
-	while(p != string::npos){
-		weights.push_back(stod(line.substr(pl, p - pl)));
-		pl = p + 1;
-		p = line.find(',', pl);
+double vectorDifference(const vector<double>& a, const vector<double>& b){
+	double res = 0.0;
+	size_t n = a.size();
+	for(size_t i = 0; i < n; ++i){
+		double t = a[i] - b[i];
+		res += t * t;
 	}
-	weights.push_back(stod(line.substr(pl)));
-	return make_pair(move(time), move(weights));
+	return sqrt(res);
 }
-

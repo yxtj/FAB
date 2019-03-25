@@ -1,4 +1,5 @@
 set(HEADERS
+	CLI11.hpp
 	func.h
 	ParameterIO.h
 )
@@ -18,7 +19,7 @@ target_link_libraries(main
 add_executable(postprocess postprocess.cpp
 	${HEADERS} ${SOURCES})
 target_link_libraries(postprocess
-	common data model train util
+	data model util
 )
 # exe: generate
 add_executable(generate generate.cpp
