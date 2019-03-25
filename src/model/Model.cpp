@@ -63,7 +63,7 @@ const Parameter & Model::getParameter() const
 
 size_t Model::paramWidth() const
 {
-	return param.size();
+	return kern->lengthParameter();
 }
 
 Kernel* Model::getKernel(){
