@@ -113,6 +113,7 @@ bool ParamArchiver::load_binary(int & iter, double & time, Parameter & p)
 	vector<double> weights(wlen);
 	fs.read(reinterpret_cast<char*>(weights.data()), binWeightLen);
 	p.weights = move(weights);
+	p.n = p.weights.size();
 	return bool(fs);
 }
 

@@ -100,6 +100,7 @@ void Runner::showStat() const
 	if(logName.find("M") != logName.npos){ // master
 		oss << head << "num-archive: " << stat.n_archive << "\ttime-archive: " << stat.t_archive
 			<< "\ttime-per-1k-archive: " << stat.t_archive / stat.n_archive * 1000
+			<< "\n"
 			<< head << "time-per-1k-delta(c): " << stat.t_smy_work / stat.n_dlt_recv * 1000
 			<< "\ttime-per-1k-delta(d): " << stat.t_data_deserial / stat.n_dlt_recv * 1000
 			<< "\ttime-per-1k-delta: " << (stat.t_smy_work + stat.t_data_deserial) / stat.n_dlt_recv * 1000;

@@ -39,7 +39,7 @@ struct Option {
 		app.add_option("-d,--data", fnData, "The data file")->required();
 		app.add_option("--skip", tmp_s, "The columns to skip in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)");
-		app.add_option("--ylist", tmp_y, "The columns to be used as y in the data file. "
+		app.add_option("-y,--ylist", tmp_y, "The columns to be used as y in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)");
 		app.add_flag("-n,--normalize", normalize, "Whether to do data normalization");
 		app.add_flag("-b,--binary", binary, "Whether to do data normalization");
@@ -156,10 +156,10 @@ int main(int argc, char* argv[]){
 	double time;
 	Parameter param;
 	int idx = 0;
-	while(!archiver.eof()){
+	while(!archiver.eof() && archiver.valid()){
 		if(!archiver.load(iter, time, param))
 			continue;
-		if(idx++ % 10000 == 0)
+		if(idx++ % 5000 == 0)
 			cout << "  processed: " << idx << endl;
 		//if(idx++ < 500)
 		//	continue;
@@ -167,7 +167,8 @@ int main(int argc, char* argv[]){
 		if(withRef)
 			diff = vectorDifference(ref, param.weights);
 		double impro = vectorDifference(last, param.weights);
-		last = param.weights;
+		m.setParameter(param);
+		last = move(param.weights);
 		double loss = 0.0;
 		size_t correct = 0;
 		for(size_t i = 0; i < dh.size(); ++i){

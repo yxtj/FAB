@@ -23,7 +23,6 @@ Master::Master() : Runner() {
 	lastArchIter = 0;
 	tmrArch.restart();
 	doArchive = false;
-	cntArch = 0;
 	archDoing = false;
 
 	suOnline.reset();
@@ -328,10 +327,11 @@ void Master::archiveProgress(const bool force)
 	archDoing = true;
 	lastArchIter = iter;
 	tmrArch.restart();
-	++cntArch;
+	++stat.n_archive;
 	std::async(launch::async, [&](int iter, double time, Parameter param){
 		Timer t;
 		archiver.dump(iter, time, param);
+//		archiver.dump(iter, tmrTrain.elapseSd(), model.getParameter());
 		archDoing = false;
 		stat.t_archive += t.elapseSd();
 	}, iter, tmrTrain.elapseSd(), model.getParameter());

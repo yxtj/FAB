@@ -17,7 +17,8 @@ int main(int argc, char* argv[]){
 	Option opt;
 	if(!opt.parse(argc, argv, net->size() - 1) || net->size() == 1){
 		NetworkThread::Shutdown();
-		opt.showUsage();
+		if(net->id() == 0)
+			opt.showUsage();
 		return 1;
 	}
 	DLOG(INFO) << "size=" << net->size() << " id=" << net->id();

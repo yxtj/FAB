@@ -116,6 +116,5 @@ private:
 	ParamArchiver archiver;
 	size_t lastArchIter;
 	Timer tmrArch;
-	int cntArch;
 	bool archDoing;
 };
