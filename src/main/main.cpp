@@ -4,7 +4,6 @@
 #include "data/DataHolder.h"
 #include "distr/Master.h"
 #include "distr/Worker.h"
-#include "func.h"
 #include <string>
 #include <vector>
 #include <iostream>
@@ -16,21 +15,15 @@ int main(int argc, char* argv[]){
 	NetworkThread::Init(argc, argv);
 	NetworkThread* net = NetworkThread::GetInstance();
 	Option opt;
-	if(net->size() == 1){
-		LOG(ERROR) << "# of MPI instance should be larger than 1";
+	if(!opt.parse(argc, argv, net->size() - 1) || net->size() == 1){
 		NetworkThread::Shutdown();
 		opt.showUsage();
-		return 2;
-	}
-	if(!opt.parse(argc, argv, net->size() - 1)){
-		if(net->id() == 0)
-			opt.showUsage();
-		NetworkThread::Shutdown();
 		return 1;
 	}
 	DLOG(INFO) << "size=" << net->size() << " id=" << net->id();
 	if(net->id() == 0){
-		LOG(INFO) << "Infromation:\nData file: " << opt.fnData << " \tNormalize: " << opt.doNormalize
+		LOG(INFO) << "Infromation:\nData file: " << opt.fnData
+			<< " \tNormalize: " << opt.normalize << "\tBinary: " << opt.binary
 			<< "\n  Idx-y: " << opt.idY << "\tIdx-skip: " << opt.idSkip
 			<< "\nAlgorithm: " << opt.algorighm << "\tParam: " << opt.algParam
 			<< "\n  Interval Estimator: " << opt.intervalParam << "\tMulticast: " << opt.mcastParam
@@ -61,7 +54,7 @@ int main(int argc, char* argv[]){
 		try{
 			dh.load(opt.fnData, ",", opt.idSkip, opt.idY, opt.header, true);
 			DVLOG(2) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;
-			if(opt.doNormalize){
+			if(opt.normalize){
 				dh.normalize(false);
 				DVLOG(2) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;
 			}

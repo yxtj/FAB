@@ -9,7 +9,7 @@ struct Option{
 	std::vector<int> idSkip;
 	std::vector<int> idY;
 	bool header;
-	bool doNormalize;
+	bool normalize;
 	bool binary;
 
 	std::string mode;

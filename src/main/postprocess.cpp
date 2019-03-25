@@ -40,14 +40,14 @@ struct Option {
 		app.add_option("--skip", tmp_s, "The columns to skip in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)");
 		app.add_option("--ylist", tmp_y, "The columns to be used as y in the data file. "
-			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)")->required();
+			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)");
 		app.add_flag("-n,--normalize", normalize, "Whether to do data normalization");
 		app.add_flag("-b,--binary", binary, "Whether to do data normalization");
 		app.add_option("-k,--topk", topk, "Only use the top-k data points");
 		//
-		app.add_option("--reference", fnParam, "The referenced parameter file. OPTIONAL");
+		app.add_option("--reference", fnParam, "The referenced parameter file");
 		// output
-		app.add_option("--output", fnOutput, "The output file.");
+		app.add_option("-o,--output", fnOutput, "The output file");
 		app.add_flag("--accuracy", accuracy, "Show the accuracy");
 		app.add_flag("--show", show, "Show the result on STDOUT");
 
@@ -146,7 +146,7 @@ int main(int argc, char* argv[]){
 	}
 
 	ParamArchiver archiver;
-	if(archiver.init_read(opt.fnRecord, m.paramWidth(), opt.binary)){
+	if(!archiver.init_read(opt.fnRecord, m.paramWidth(), opt.binary)){
 		cerr << "cannot open record file: " << opt.fnRecord << endl;
 		return 4;
 	}

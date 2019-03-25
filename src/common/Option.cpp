@@ -25,11 +25,11 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 	using boost::program_options::value;
 	using boost::program_options::bool_switch;
 	pimpl->desc.add_options()
-		("h,help", "Print help messages")
+		("help,h", "Print help messages")
 		// parallel
-		("m,mode", value(&mode), "The parallel mode: bsp, tap, ssp:<n>, sap:<n>, fsp, aap")
+		("mode,m", value(&mode), "The parallel mode: bsp, tap, ssp:<n>, sap:<n>, fsp, aap")
 		// parallel - broadcast
-		("c,cast_mode", value(&tmp_cast)->default_value("broadcast"),
+		("cast_mode,c", value(&tmp_cast)->default_value("broadcast"),
 			"The method to send out new parameters. Supports: broadcast/all, ring:k, random:k,seed, hash:k")
 		// parallel - fsp
 		("flex_interval", value(&tmp_interval)->default_value("portion:0.05"),
@@ -37,26 +37,26 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 			"Supports: interval:x(x is in seconds), portion : x(x in 0~1), "
 			"improve:x,t (x: avg. imporovement, t: max waiting time), balance:w (num. of windows)")
 		// app - algorithm
-		("a,algorithm", value(&algorighm)->required(), "The algorithm to run. "
+		("algorithm,a", value(&algorighm)->required(), "The algorithm to run. "
 			"Support: lr, mlp, cnn, rnn, tm.")
-		("p,parameter", value(&algParam)->required(),
+		("parameter,p", value(&algParam)->required(),
 			"The parameter of the algorithm, usually the shape of the algorithm")
 		// app - training
-		("b,batch_size", value(&tmp_bs)->required(), "The global batch size. Support suffix: k, m, g")
-		("l,learning_rate", value(&lrate)->required(), "The learning rate")
+		("batch_size,s", value(&tmp_bs)->required(), "The global batch size. Support suffix: k, m, g")
+		("learning_rate,l", value(&lrate)->required(), "The learning rate")
 		// file - input
-		("i,data_file", value(&fnData)->required(), "The file name of the input data")
+		("data_file,d", value(&fnData)->required(), "The file name of the input data")
 		("skip", value(&tmp_ids)->default_value({}, ""),
 			"The columns to skip in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)")
-		("ylist", value(&tmp_idy)->default_value({}, ""),
+		("ylist,y", value(&tmp_idy)->default_value({}, ""),
 			"The columns to be used as y in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)")
-		("normalize", bool_switch(&doNormalize)->default_value(false),
+		("normalize,n", bool_switch(&normalize)->default_value(false),
 			"Whether to do normailzation on the input file")
 		// file - output
-		("o,output_file", value(&fnOutput)->required(), "The file name of the archived parameter")
-		("binary", bool_switch(&binary)->default_value(false), "Whether to output using binary IO")
+		("output_file,o", value(&fnOutput)->required(), "The file name of the archived parameter")
+		("binary,b", bool_switch(&binary)->default_value(false), "Whether to output using binary IO")
 		// termination
 		("term_iter", value(&tmp_t_iter)->required(), "Termination condition: maximum iteration")
 		("term_time", value(&tcTime)->required(), "Termination condition: maximum training time")
