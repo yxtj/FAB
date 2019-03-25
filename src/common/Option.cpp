@@ -35,12 +35,12 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		("flex_interval", value(&tmp_interval)->default_value("portion:0.05"),
 			"The method to decide update interval for FSP. "
 			"Supports: interval:x(x is in seconds), portion : x(x in 0~1), "
-			"improve:x,t (x: avg. imporovement, t: max waiting time), balance:w (num. of windows)\n")
+			"improve:x,t (x: avg. imporovement, t: max waiting time), balance:w (num. of windows)")
 		// app - algorithm
 		("a,algorithm", value(&algorighm)->required(), "The algorithm to run. "
 			"Support: lr, mlp, cnn, rnn, tm.")
 		("p,parameter", value(&algParam)->required(),
-			"The parameter of the algorithm, usually the shape of the algorithm.")
+			"The parameter of the algorithm, usually the shape of the algorithm")
 		// app - training
 		("b,batch_size", value(&tmp_bs)->required(), "The global batch size. Support suffix: k, m, g")
 		("l,learning_rate", value(&lrate)->required(), "The learning rate")

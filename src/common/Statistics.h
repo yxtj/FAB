@@ -20,6 +20,7 @@ struct Statistics {
 	double t_smy_work, t_smy_wait;
 
 	// specific
+	size_t n_archive;
 	double t_archive;
 
 	Statistics();

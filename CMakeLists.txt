@@ -19,7 +19,7 @@ find_package(Boost REQUIRED COMPONENTS filesystem system program_options)
 include_directories(${Boost_INCLUDE_DIRS})
 
 message(STATUS "Boost_INCLUDE_DIRS: ${Boost_INCLUDE_DIRS}")
-message(STATUS "Boost::program_options: " Boost::program_options)
+message(STATUS "Boost::program_options: " ${Boost_PROGRAM_OPTIONS_LIBRARY})
 
 # -------- Python interface --------
 #find_package(PythonLibs)
