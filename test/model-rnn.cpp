@@ -68,7 +68,7 @@ int main(int argc, char* argv[]){
 	Model m;
 	if(!opt.fnData.empty()){
 		dh.load(opt.fnData, ",", {}, opt.idY, opt.withHeader, true);
-		m.init("rnn", dh.xlength(), opt.shape, 0.01);
+		m.init("rnn", opt.shape, 123456);
 	} else{
 		// pattern: the summation of entries for 3 sequential input are: 0.3, 0.6, 0.9
 		dh.add({ 0.0, 0.3 }, { 0 });
@@ -85,8 +85,11 @@ int main(int argc, char* argv[]){
 		dh.add({ 0.3, 0.3 }, { 0 }); // 6
 		dh.add({ 0.5, 0.4 }, { 0 }); // 9
 
-		m.init("rnn", dh.xlength(), "2-1r1-1", 0.01);
+		m.init("rnn", "2-1r1-1", 123456);
 	}
+	if(!m.checkData(dh.xlength(), dh.ylength()))
+		LOG(FATAL) << "data size does not match model";
+
 	if(opt.doNormalize)
 		dh.normalize(false);
 	LOG(INFO) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;

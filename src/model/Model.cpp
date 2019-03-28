@@ -12,26 +12,31 @@ void Model::initParamWithSize(const size_t n){
 	param.init(n, 0.01);
 }*/
 
-void Model::init(const std::string& name, const int nx, const std::string & paramKern)
+void Model::init(const std::string& name, const std::string & paramKern)
 {
 	generateKernel(name);
-	kern->init(nx, paramKern);
+	kern->init(paramKern);
 }
 
-void Model::init(const std::string& name, const int nx, const std::string & paramKern, const double w0)
+void Model::init(const std::string& name, const std::string & paramKern, const double w0)
 {
 	generateKernel(name);
-	kern->init(nx, paramKern);
+	kern->init(paramKern);
 	size_t n = kern->lengthParameter();
 	param.init(n, w0);
 }
 
-void Model::init(const std::string & name, const int nx, const std::string & paramKern, const unsigned seed)
+void Model::init(const std::string & name, const std::string & paramKern, const unsigned seed)
 {
 	generateKernel(name);
-	kern->init(nx, paramKern);
+	kern->init(paramKern);
 	size_t n = kern->lengthParameter();
 	param.init(n, 0.01, 0.01, seed);
+}
+
+bool Model::checkData(const size_t nx, const size_t ny)
+{
+	return kern->checkData(nx, ny);
 }
 
 void Model::clear()

@@ -46,6 +46,7 @@ void Master::init(const Option* opt, const size_t lid)
 	ln = opt->logIter;
 	logName = "M";
 	setLogThreadName(logName);
+	model.init(opt->algorighm, opt->algParam, opt->seed);
 
 	if(opt->mode == "bsp"){
 		bspInit();
@@ -76,7 +77,7 @@ void Master::run()
 	LOG(INFO) << "Send worker list";
 	broadcastWorkerList();
 	LOG(INFO)<<"Waiting dataset info to initialize parameters";
-	initializeParameter();
+	checkDataset();
 	clearAccumulatedDelta();
 	LOG(INFO) << "Got x-length: " << nx << ", y-length: " << ny << ", data points: " << nPoint;
 	if(!opt->fnOutput.empty()){
@@ -267,12 +268,10 @@ bool Master::terminateCheck()
 		|| (tmrTrain.elapseSd() > opt->tcTime);
 }
 
-void Master::initializeParameter()
+void Master::checkDataset()
 {
 	suDatasetInfo.wait_n_reset();
-	unsigned seed = 123456;
-	//model.init(opt->algorighm, static_cast<int>(nx), opt->algParam, 0.01);
-	model.init(opt->algorighm, static_cast<int>(nx), opt->algParam, seed);
+	model.checkData(nx, ny);
 }
 
 void Master::sendParameter(const int target)

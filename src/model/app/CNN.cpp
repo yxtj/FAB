@@ -6,9 +6,9 @@ using namespace std;
 
 // -------- CNN --------
 
-void CNN::init(const int xlength, const std::string & param)
+void CNN::init(const std::string & param)
 {
-	initBasic(xlength, param);
+	initBasic(param);
     // example: 10x10,4c3x3,relu,max2x2,f
 	// example: 10-4:c:3-1:relu-1:max:2-1:f
     // format: <n>:<type>[:<shape>]
@@ -21,9 +21,9 @@ void CNN::init(const int xlength, const std::string & param)
     }catch(exception& e){
 		throw invalid_argument(string("Unable to create network: ") + e.what());
     }
-	// check input layer size
-	if(xlength != net.lenFeatureLayer[0] || net.typeLayer[0] != NodeType::Input)
-		throw invalid_argument("The dataset does not match the input layer of the network");
+	// check input layer
+	if(net.typeLayer[0] != NodeType::Input)
+		throw invalid_argument("There is no input layer.");
 	// check FC layer
 	for(size_t i = 0; i < net.nLayer; ++i){
 		if(i != net.nLayer - 1 && net.typeLayer[i] == NodeType::FC){
@@ -32,6 +32,16 @@ void CNN::init(const int xlength, const std::string & param)
 			throw invalid_argument("The last layer must be a FC layer.");
 		}
 	}
+}
+
+bool CNN::checkData(const size_t nx, const size_t ny)
+{
+	// check input layer size
+	if(nx != net.lenFeatureLayer[0])
+		throw invalid_argument("The dataset does not match the input layer of the network");
+	// check output layer size
+	if(ny != 0 && ny != net.lenFeatureLayer.back())
+		throw invalid_argument("The dataset does not match the output layer of the network");
 }
 
 std::string CNN::name() const{

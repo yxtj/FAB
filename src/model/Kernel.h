@@ -5,7 +5,8 @@
 class Kernel
 {
 public:
-	virtual void init(const int xlength, const std::string& param) = 0;
+	virtual void init(const std::string& param) = 0;
+	virtual bool checkData(const size_t nx, const size_t ny) = 0;
 	virtual std::string name() const = 0;
 	std::string parameter() const;
 	virtual bool dataNeedConstant() const = 0;
@@ -19,7 +20,6 @@ public:
 		const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y) const = 0;
 
 protected:
-	int xlength;
 	std::string param;
-	void initBasic(const int xlength, const std::string& param);
+	void initBasic(const std::string& param);
 };

@@ -7,7 +7,8 @@ class CNN
 {
 	mutable VectorNetwork net;
 public:
-	void init(const int xlength, const std::string& param);
+	void init(const std::string& param);
+	bool checkData(const size_t nx, const size_t ny);
 	std::string name() const;
 	bool dataNeedConstant() const;
 	int lengthParameter() const;

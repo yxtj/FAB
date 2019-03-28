@@ -6,7 +6,8 @@ class LogisticRegression
 	: public Kernel
 {
 public:
-	void init(const int xlength, const std::string& param);
+	void init(const std::string& param);
+	bool checkData(const size_t nx, const size_t ny);
 	std::string name() const;
 	bool dataNeedConstant() const;
 	int lengthParameter() const;
@@ -17,4 +18,7 @@ public:
 	double loss(const std::vector<double>& pred, const std::vector<double>& label) const;
 	std::vector<double> gradient(
 		const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y) const;
+
+private:
+	int xlength;
 };

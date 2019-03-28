@@ -32,7 +32,11 @@ int main(int argc, char* argv[]){
 	cout << "training" << endl;
 	int nx = dh.xlength();
 	Model m;
-	m.init("lr", nx, to_string(nx), 0.01);
+	m.init("lr", to_string(nx), 0.01);
+	if(!m.checkData(dh.xlength(), dh.ylength())){
+		cerr << "data size does not match model" << endl;
+		return 2;
+	}
 	cout << "parameters:\n";
 	showParameter(m.getParameter());
 

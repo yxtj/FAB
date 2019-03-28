@@ -21,6 +21,7 @@ struct Option{
 	std::string algorighm;
 	std::string algParam;
 
+	unsigned seed;
 	double lrate; // learning rate
 	size_t nw; // number of workers
 	size_t batchSize;

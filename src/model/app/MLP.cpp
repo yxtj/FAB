@@ -7,15 +7,25 @@ using namespace std;
 
 // -------- MLP --------
 
-void MLP::init(const int xlength, const std::string & param)
+void MLP::init(const std::string & param)
 {
-	initBasic(xlength, param);
+	initBasic(param);
 	nNodeLayer = getIntList(param, " ,-");
-	if(nNodeLayer.empty() || xlength != nNodeLayer[0])
+	if(nNodeLayer.empty())
 		throw invalid_argument("MLP parameter not valid or does not match dataset");
 	// set n
 	nLayer = static_cast<int>(nNodeLayer.size());
 	proxy.init(nNodeLayer);
+}
+
+bool MLP::checkData(const size_t nx, const size_t ny)
+{
+	// check input layer size
+	if(nx != nNodeLayer[0])
+		throw invalid_argument("The dataset does not match the input layer of the network");
+	// check output layer size
+	if(ny != 0 && ny != nNodeLayer.back())
+		throw invalid_argument("The dataset does not match the output layer of the network");
 }
 
 std::string MLP::name() const{

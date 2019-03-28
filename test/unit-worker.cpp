@@ -87,7 +87,9 @@ void master_thread(){
 	sendReply(net, info);
 
 	Model m;
-	m.init("lr", nx, to_string(nx), 0.01);
+	m.init("lr", to_string(nx), 0.01);
+	if(!m.checkData(dh.xlength(), dh.ylength()))
+		LOG(FATAL) << "data size does not match model";
 	vector<double> delta;
 
 	// send parameter

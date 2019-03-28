@@ -214,7 +214,11 @@ int main(int argc, char* argv[]){
 
 	try{
 		Kernel* k = KernelFactory::generate(opt.algorithm);
-		k->init(opt.xlength, opt.param);
+		k->init(opt.param);
+		if(!k->checkData(opt.xlength, opt.ylength)){
+			cerr << "Error: Dataset does not match model." << endl;
+			return 2;
+		}
 		ParameterGenerator pg(k, opt.xlength, opt.paraMin, opt.paraMax);
 		vector<double> param = pg.gen(gen);
 		ofstream foutP(opt.fnameP);
@@ -232,7 +236,7 @@ int main(int argc, char* argv[]){
 		}
 	} catch(exception& e){
 		cerr << e.what() << endl;
-		return 2;
+		return 3;
 	}
 
 	return 0;

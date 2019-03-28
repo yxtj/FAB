@@ -45,7 +45,7 @@ private:
 	void accumulateDeltaNext(const int d, const std::vector<double>& delta, const size_t cnt); // include slot d
 	//void receiveDelta(std::vector<double>& delta, const int source);
 	bool terminateCheck();
-	void initializeParameter();
+	void checkDataset();
 	void sendParameter(const int target);
 	void broadcastParameter();
 	void multicastParameter(const int source);

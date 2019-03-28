@@ -12,11 +12,12 @@ class Model {
 
 public:
 	// initialize kernel, do not initialize parameter
-	void init(const std::string& name, const int nx, const std::string& paramKern);
+	void init(const std::string& name, const std::string& paramKern);
 	// initialize kernel, initialize parameter using <w0>
-	void init(const std::string& name, const int nx, const std::string& paramKern, const double w0);
+	void init(const std::string& name, const std::string& paramKern, const double w0);
 	// initialize kernel, initialize parameter using random value ~ N(0.01, 0.01)
-	void init(const std::string& name, const int nx, const std::string& paramKern, const unsigned seed);
+	void init(const std::string& name, const std::string& paramKern, const unsigned seed);
+	bool checkData(const size_t nx, const size_t ny);
 	void clear();
 	std::string kernelName() const;
 

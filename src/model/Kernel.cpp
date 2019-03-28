@@ -1,8 +1,7 @@
 #include "Kernel.h"
 using namespace std;
 
-void Kernel::initBasic(const int xlength, const std::string& param){
-	this->xlength = xlength;
+void Kernel::initBasic(const std::string& param){
 	this->param = param;
 }
 

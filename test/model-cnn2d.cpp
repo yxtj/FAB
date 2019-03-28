@@ -114,11 +114,13 @@ int main(int argc, char* argv[]){
 
 	Model m;
 	try{
-		//m.init("cnn", dh.xlength(), "4*4-2c2*2p2*2-1c2*2p2*2-1f", 0.01);
-		m.init("cnn", dh.xlength(), "4*4-2cp2*2-1cp2*2-1f", 0.01);
+		//m.init("cnn", "4*4-2c2*2p2*2-1c2*2p2*2-1f", 0.01);
+		m.init("cnn", "4*4-2cp2*2-1cp2*2-1f", 123456);
 	} catch(exception& e){
 		LOG(FATAL) << e.what();
 	}
+	if(!m.checkData(dh.xlength(), dh.ylength()))
+		LOG(FATAL) << "data size does not match model";
 
 	//dh.normalize(false);
 	LOG(INFO) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;

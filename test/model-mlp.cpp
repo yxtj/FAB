@@ -81,10 +81,12 @@ int main(int argc, char* argv[]){
 
 	Model m;
 	if(!opt.fnData.empty()){
-		m.init("mlp", dh.xlength(), opt.shape, 0.01);
+		m.init("mlp", opt.shape, 123456);
 	} else{
-		m.init("mlp", dh.xlength(), "2-3-1", 0.01);
+		m.init("mlp", "2-3-1", 123456);
 	}
+	if(!m.checkData(dh.xlength(), dh.ylength()))
+		LOG(FATAL) << "data size does not match model";
 
 	vector<double> pred = m.predict(dh.get(0));
 	double loss = m.loss(pred, dh.get(0).y);

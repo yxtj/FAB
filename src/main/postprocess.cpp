@@ -138,17 +138,21 @@ int main(int argc, char* argv[]){
 
 	Model m;
 	try{
-		m.init(opt.alg, dh.xlength(), algParam);
+		m.init(opt.alg, algParam, 123456U);
 	} catch(exception& e){
 		cerr << "Error in initialize model" << endl;
 		cerr << e.what() << endl;
 		return 3;
 	}
+	if(!m.checkData(dh.xlength(), dh.ylength())){
+		cerr << "data size does not match model" << endl;
+		return 4;
+	}
 
 	ParamArchiver archiver;
 	if(!archiver.init_read(opt.fnRecord, m.paramWidth(), opt.binary)){
 		cerr << "cannot open record file: " << opt.fnRecord << endl;
-		return 4;
+		return 5;
 	}
 
 	vector<double> last(dh.xlength(), 0.0);

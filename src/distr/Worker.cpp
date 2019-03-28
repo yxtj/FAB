@@ -30,6 +30,7 @@ void Worker::init(const Option* opt, const size_t lid)
 	ln = opt->logIter;
 	logName = "W"+to_string(localID);
 	setLogThreadName(logName);
+	model.init(opt->algorighm, opt->algParam);
 
 	if(opt->mode == "bsp"){
 		bspInit();
@@ -73,9 +74,8 @@ void Worker::run()
 	DLOG(INFO) << "waiting init parameter";
 	waitParameter();
 	DLOG(INFO) << "got init parameter";
-	model.init(opt->algorighm, trainer.pd->xlength(), opt->algParam);
-	trainer.bindModel(&model);
 	applyBufferParameter();
+	trainer.bindModel(&model);
 
 	DLOG(INFO) << "start training with mode: " << opt->mode << ", local batch size: " << localBatchSize;
 	iter = 1;

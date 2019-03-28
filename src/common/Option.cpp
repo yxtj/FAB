@@ -42,6 +42,7 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 			"Support: lr, mlp, cnn, rnn, tm.")
 		("parameter,p", value(&algParam)->required(),
 			"The parameter of the algorithm, usually the shape of the algorithm")
+		("seed", value(&seed)->default_value(123456U), "The seed to initialize parameters")
 		// app - training
 		("batch_size,s", value(&tmp_bs)->required(), "The global batch size. Support suffix: k, m, g")
 		("learning_rate,l", value(&lrate)->required(), "The learning rate")

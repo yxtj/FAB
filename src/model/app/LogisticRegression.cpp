@@ -4,12 +4,24 @@
 #include <stdexcept>
 using namespace std;
 
-void LogisticRegression::init(const int xlength, const std::string & param)
+void LogisticRegression::init(const std::string & param)
 {
-	initBasic(xlength, param);
-	int t = stoi(param);
-	if(xlength != t)
-		throw invalid_argument("LR parameter does not match dataset");
+	initBasic(param);
+	try{
+		xlength = stoi(param);
+	} catch(...){
+		throw invalid_argument("LR parameter is not invalid");
+	}
+}
+
+bool LogisticRegression::checkData(const size_t nx, const size_t ny)
+{
+	// check input layer size
+	if(nx != stoi(param))
+		throw invalid_argument("The dataset does not match the input layer of the network");
+	// check output layer size
+	if(ny != 1)
+		throw invalid_argument("The dataset does not match the output layer of the network");
 }
 
 std::string LogisticRegression::name() const{

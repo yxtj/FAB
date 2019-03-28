@@ -2,8 +2,14 @@
 
 using namespace std;
 
-void TopicModel::init(const int xlength, const std::string & param)
+void TopicModel::init(const std::string & param)
 {
+	initBasic(param);
+}
+
+bool TopicModel::checkData(const size_t nx, const size_t ny)
+{
+	return true;
 }
 
 std::string TopicModel::name() const

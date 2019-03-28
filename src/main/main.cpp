@@ -26,7 +26,7 @@ int main(int argc, char* argv[]){
 		LOG(INFO) << "Infromation:\nData file: " << opt.fnData
 			<< " \tNormalize: " << opt.normalize << "\tBinary: " << opt.binary
 			<< "\n  Idx-y: " << opt.idY << "\tIdx-skip: " << opt.idSkip
-			<< "\nAlgorithm: " << opt.algorighm << "\tParam: " << opt.algParam
+			<< "\nAlgorithm: " << opt.algorighm << "\tParam: " << opt.algParam << "\tSeed: " << opt.seed
 			<< "\n  Interval Estimator: " << opt.intervalParam << "\tMulticast: " << opt.mcastParam
 			<< "\nRecord file: " << opt.fnOutput
 			<< "\nTraining configurations:\n  Mode: " << opt.mode << "\tLearning-rate: " << opt.lrate
