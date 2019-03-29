@@ -76,7 +76,7 @@ void Master::sspInit()
 	factorDelta = 1.0;
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaSsp));
 	deltaIter.assign(nWorker, 0);
-	bfDeltaNext.assign(1, vector<double>(trainer.pm->paramWidth(), 0.0));
+	bfDeltaNext.assign(1, vector<double>(trainer->pm->paramWidth(), 0.0));
 	bfDeltaDpCountNext.assign(1, 0);
 }
 

@@ -106,9 +106,9 @@ double Model::loss(const std::vector<double>& pred, const std::vector<double>& l
 	return kern->loss(pred, label);
 }
 
-std::vector<double> Model::gradient(const DataPoint & dp) const
+std::vector<double> Model::gradient(const DataPoint & dp, std::vector<double>* ph) const
 {
-	return kern->gradient(dp.x, param.weights, dp.y);
+	return kern->gradient(dp.x, param.weights, dp.y, ph);
 }
 
 void Model::generateKernel(const std::string & name)

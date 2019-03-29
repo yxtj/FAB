@@ -16,8 +16,8 @@ public:
 	virtual int classify(const double p) const = 0;
 	
 	virtual double loss(const std::vector<double>& pred, const std::vector<double>& label) const = 0;
-	virtual std::vector<double> gradient(
-		const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y) const = 0;
+	virtual std::vector<double> gradient(const std::vector<double>& x,
+		const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph = nullptr) const = 0;
 
 protected:
 	std::string param;

@@ -26,7 +26,8 @@ void Worker::init(const Option* opt, const size_t lid)
 	this->opt = opt;
 	nWorker = opt->nw;
 	localID = lid;
-	trainer.setRate(opt->lrate);
+	trainer = TrainerFactory::generate(opt->optimizer, opt->optimizerParam);
+	LOG_IF(trainer == nullptr, FATAL) << "Trainer is not set correctly";
 	ln = opt->logIter;
 	logName = "W"+to_string(localID);
 	setLogThreadName(logName);
@@ -50,7 +51,7 @@ void Worker::init(const Option* opt, const size_t lid)
 void Worker::bindDataset(const DataHolder* pdh)
 {
 	VLOG(1) << "Bind dataset with " << pdh->size() << " data points";
-	trainer.bindDataset(pdh);
+	trainer->bindDataset(pdh);
 	// separated the mini-batch among all workers
 	localBatchSize = opt->batchSize / nWorker;
 	if(opt->batchSize % nWorker > localID)
@@ -75,7 +76,7 @@ void Worker::run()
 	waitParameter();
 	DLOG(INFO) << "got init parameter";
 	applyBufferParameter();
-	trainer.bindModel(&model);
+	trainer->bindModel(&model);
 
 	DLOG(INFO) << "start training with mode: " << opt->mode << ", local batch size: " << localBatchSize;
 	iter = 1;
@@ -116,7 +117,7 @@ void Worker::updatePointer(const size_t used)
 {
 	DVLOG(3) << "update pointer from " << dataPointer << " by " << used;
 	dataPointer += used;
-	if(dataPointer >= trainer.pd->size())
+	if(dataPointer >= trainer->pd->size())
 		dataPointer = 0;
 	stat.n_point += used;
 }
@@ -134,7 +135,7 @@ void Worker::waitWorkerList()
 void Worker::sendDatasetInfo()
 {
 	tuple<size_t, size_t, size_t> t{
-		trainer.pd->xlength(), trainer.pd->ylength(), trainer.pd->size() };
+		trainer->pd->xlength(), trainer->pd->ylength(), trainer->pd->size() };
 	net->send(masterNID, MType::CDataset, t);
 	suDatasetInfo.wait();
 }

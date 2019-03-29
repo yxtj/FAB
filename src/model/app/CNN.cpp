@@ -87,8 +87,8 @@ std::vector<double> CNN::gradLoss(const std::vector<double>& pred, const std::ve
 	return res;
 }
 
-std::vector<double> CNN::gradient(
-	const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y) const
+std::vector<double> CNN::gradient(const std::vector<double>& x,
+	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const
 {
 	return net.gradient(x, w, y);
 }

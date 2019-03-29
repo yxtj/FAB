@@ -9,6 +9,16 @@ void Trainer::bindDataset(const DataHolder* pd){
 	this->pd = pd;
 }
 
+void Trainer::initBasic(const std::vector<std::string>& param)
+{
+	this->param = param;
+}
+
+std::vector<std::string> Trainer::getParam() const
+{
+	return param;
+}
+
 double Trainer::loss(const size_t topn) const {
 	double res = 0;
 	size_t n = topn == 0 ? pd->size() : topn;
@@ -16,20 +26,6 @@ double Trainer::loss(const size_t topn) const {
 		res += pm->loss(pd->get(i));
 	}
 	return res / static_cast<double>(n);
-}
-
-size_t Trainer::train(const size_t start, const size_t cnt)
-{
-	pair<size_t, vector<double>> res = batchDelta(start, cnt != 0 ? cnt : pd->size(), true);
-	applyDelta(res.second, 1.0);
-	return res.first;
-}
-
-size_t Trainer::train(std::atomic<bool>& cond, const size_t start, const size_t cnt)
-{
-	pair<size_t, vector<double>> res = batchDelta(cond, start, cnt != 0 ? cnt : pd->size(), true);
-	applyDelta(res.second, 1.0);
-	return res.first;
 }
 
 void Trainer::applyDelta(const vector<double>& delta, const double factor)

@@ -42,7 +42,8 @@ double TopicModel::loss(const std::vector<double>& pred, const std::vector<doubl
 	return 0.0;
 }
 
-std::vector<double> TopicModel::gradient(const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y) const
+std::vector<double> TopicModel::gradient(const std::vector<double>& x,
+	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const
 {
 	return std::vector<double>();
 }

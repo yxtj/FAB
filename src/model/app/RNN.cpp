@@ -87,8 +87,8 @@ std::vector<double> RNN::gradLoss(const std::vector<double>& pred, const std::ve
 	return res;
 }
 
-std::vector<double> RNN::gradient(
-	const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y) const
+std::vector<double> RNN::gradient(const std::vector<double>& x,
+	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const
 {
 	return net.gradient(x, w, y);
 }

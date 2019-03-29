@@ -12,6 +12,8 @@ struct Option{
 	bool normalize;
 	bool binary;
 
+	size_t nw; // number of workers
+
 	std::string mode;
 	int staleGap; // the max gap between current processing iteration and the parameter iteratoin
 	bool aapWait; // force fab wait for its gradient reply before continue
@@ -21,10 +23,12 @@ struct Option{
 	std::string algorighm;
 	std::string algParam;
 
-	unsigned seed;
-	double lrate; // learning rate
-	size_t nw; // number of workers
+	std::string optimizer;
+	std::vector<std::string> optimizerParam;
+	//double lrate; // learning rate
 	size_t batchSize;
+
+	unsigned seed;
 
 	// condition for archive result and write log
 	size_t arvIter; // every n iterations
@@ -42,6 +46,7 @@ struct Option{
 private:
 	bool preprocessMode();
 	bool processAlgorithm();
+	bool processOptimizer();
 
 	struct Impl;
 	Impl* pimpl = nullptr;

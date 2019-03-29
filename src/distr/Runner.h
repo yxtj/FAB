@@ -4,7 +4,7 @@
 #include "driver/tools/ReplyHandler.h"
 #include "driver/tools/SyncUnit.h"
 #include "model/Model.h"
-#include "train/GD.h"
+#include "train/TrainerFactory.h"
 #include "common/Statistics.h"
 #include <string>
 #include <thread>
@@ -21,7 +21,7 @@ public:
 	int iter;
 	std::string logName;
 	Model model;
-	GD trainer;
+	Trainer* trainer = nullptr;
 	
 public:
 	Runner();

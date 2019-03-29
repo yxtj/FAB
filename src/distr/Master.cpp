@@ -11,7 +11,6 @@ using namespace std;
 Master::Master() : Runner() {
 	typeDDeltaAny = MType::DDelta;
 	typeDDeltaAll = 128 + MType::DDelta;
-	trainer.bindModel(&model);
 	factorDelta = 1.0;
 	nx = 0;
 	ny = 0;
@@ -41,7 +40,9 @@ void Master::init(const Option* opt, const size_t lid)
 	this->opt = opt;
 	nWorker = opt->nw;
 	nPointWorker.assign(nWorker, 0);
-	trainer.setRate(opt->lrate);
+	trainer = TrainerFactory::generate(opt->optimizer, opt->optimizerParam);
+	LOG_IF(trainer == nullptr, FATAL) << "Trainer is not set correctly";
+	trainer->bindModel(&model);
 	localID = lid;
 	ln = opt->logIter;
 	logName = "M";
@@ -152,7 +153,7 @@ void Master::registerHandlers()
 
 void Master::bindDataset(const DataHolder* pdh)
 {
-	trainer.bindDataset(pdh);
+	trainer->bindDataset(pdh);
 }
 
 void Master::applyDelta(std::vector<double>& delta, const int source)

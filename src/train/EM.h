@@ -1,9 +1,10 @@
 #pragma once
 #include "Trainer.h"
 
-class GD : public Trainer
+class EM : public Trainer
 {
 	double rate = 1.0;
+	std::vector<std::vector<double>> h; // hidden variable
 
 public:
 	virtual void init(const std::vector<std::string>& param);

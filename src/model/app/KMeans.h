@@ -2,7 +2,7 @@
 #include "model/Kernel.h"
 #include <vector>
 
-class LogisticRegression
+class KMeans
 	: public Kernel
 {
 public:
@@ -20,5 +20,6 @@ public:
 		const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph = nullptr) const;
 
 private:
-	int xlength;
+	size_t dim;
+	size_t ncenter;
 };

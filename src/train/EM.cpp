@@ -1,35 +1,35 @@
-#include "GD.h"
+#include "EM.h"
 #include <exception>
 using namespace std;
 
-void GD::init(const std::vector<std::string>& param)
+void EM::init(const std::vector<std::string>& param)
 {
 	try{
 		rate = stod(param[0]);
 		if(rate < 0)
 			rate = -rate;
 	} catch(...){
-		throw invalid_argument("Cannot parse parameters for GD");
+		throw invalid_argument("Cannot parse parameters for EM");
 	}
 }
 
-std::string GD::name() const
+std::string EM::name() const
 {
-	return "gd";
+	return "em";
 }
 
-void GD::setRate(const double rate) {
+void EM::setRate(const double rate) {
 	if(rate >= 0)
 		this->rate = rate;
 	else
 		this->rate = -rate;
 }
 
-double GD::getRate() const {
+double EM::getRate() const {
 	return rate;
 }
 
-std::pair<size_t, std::vector<double>> GD::batchDelta(
+std::pair<size_t, std::vector<double>> EM::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
 	size_t end = start + cnt;
@@ -39,7 +39,7 @@ std::pair<size_t, std::vector<double>> GD::batchDelta(
 	vector<double> grad(nx, 0.0);
 	size_t i;
 	for(i = start; i < end; ++i){
-		auto g = pm->gradient(pd->get(i));
+		auto g = pm->gradient(pd->get(i), &h[i]);
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
 	}
@@ -54,7 +54,7 @@ std::pair<size_t, std::vector<double>> GD::batchDelta(
 	return make_pair(i - start, move(grad));
 }
 
-std::pair<size_t, std::vector<double>> GD::batchDelta(
+std::pair<size_t, std::vector<double>> EM::batchDelta(
 	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
 {
 	size_t end = start + cnt;
@@ -64,7 +64,7 @@ std::pair<size_t, std::vector<double>> GD::batchDelta(
 	vector<double> grad(nx, 0.0);
 	size_t i;
 	for(i = start; i < end && cond.load(); ++i){
-		auto g = pm->gradient(pd->get(i));
+		auto g = pm->gradient(pd->get(i), &h[i]);
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
 	}
@@ -78,3 +78,4 @@ std::pair<size_t, std::vector<double>> GD::batchDelta(
 	}
 	return make_pair(i - start, move(grad));
 }
+

@@ -45,7 +45,9 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		("seed", value(&seed)->default_value(123456U), "The seed to initialize parameters")
 		// app - training
 		("batch_size,s", value(&tmp_bs)->required(), "The global batch size. Support suffix: k, m, g")
-		("learning_rate,l", value(&lrate)->required(), "The learning rate")
+		//("learning_rate,l", value(&lrate)->required(), "The learning rate")
+		("optimizer,o", value(&optimizer)->required()->default_value("gd:0.01"),
+			"The optimizer to train. Support: gd:<lr>, em:<lr>.")
 		// file - input
 		("data_file,d", value(&fnData)->required(), "The file name of the input data")
 		("skip", value(&tmp_ids)->default_value({}, ""),
@@ -57,7 +59,7 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		("normalize,n", bool_switch(&normalize)->default_value(false),
 			"Whether to do normailzation on the input file")
 		// file - output
-		("output_file,o", value(&fnOutput)->required(), "The file name of the archived parameter")
+		("record_file,r", value(&fnOutput)->required(), "The file name of the archived parameter")
 		("binary,b", bool_switch(&binary)->default_value(false), "Whether to output using binary IO")
 		// termination
 		("term_iter", value(&tmp_t_iter)->required(), "Termination condition: maximum iteration")
@@ -103,6 +105,10 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		cerr << "Error: algorithm not supported: " << algorighm << endl;
 		return false;
 	}
+	if(!processOptimizer()){
+		cerr << "Error: optimizer not supported: " << optimizer << endl;
+		return false;
+	}
 	// error handling
 
 	return true;
@@ -133,7 +139,7 @@ bool Option::preprocessMode(){
 		if(ch >= 'A' && ch <= 'Z')
 			ch += 'a' - 'A';
 	}
-	vector<string> t = getStringList(mode, ":");
+	vector<string> t = getStringList(mode, ":-, ");
 	vector<string> supported = { "bsp", "tap", "ssp", "sap", "fsp", "aap" };
 	auto it = find(supported.begin(), supported.end(), t[0]);
 	if(it == supported.end())
@@ -158,5 +164,22 @@ bool Option::processAlgorithm(){
 	vector<string> supported = { "lr", "mlp", "cnn", "rnn", "tm" };
 	auto it = find(supported.begin(), supported.end(), algorighm);
 	return it != supported.end();
+}
+
+bool Option::processOptimizer()
+{
+	for(char& ch : optimizer){
+		if(ch >= 'A' && ch <= 'Z')
+			ch += 'a' - 'A';
+	}
+	vector<string> t = getStringList(optimizer, ":-, ");
+	vector<string> supported = { "gd", "em" };
+	auto it = find(supported.begin(), supported.end(), t[0]);
+	if(it == supported.end())
+		return false;
+	optimizer = t[0];
+	for(size_t i = 1; i < t.size(); ++i)
+		optimizerParam.push_back(t[i]);
+	return true;
 }
 

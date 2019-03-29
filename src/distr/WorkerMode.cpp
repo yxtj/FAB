@@ -22,7 +22,7 @@ void Worker::bspProcess()
 		size_t left = localBatchSize;
 		do{
 			size_t cnt;
-			tie(cnt, bfDelta) = trainer.batchDelta(dataPointer, left, true);
+			tie(cnt, bfDelta) = trainer->batchDelta(dataPointer, left, true);
 			updatePointer(cnt);
 			left -= cnt;
 		} while(left > 0);
@@ -64,7 +64,7 @@ void Worker::tapProcess()
 			left += localBatchSize * localID / nWorker;
 		do{
 			size_t cnt;
-			tie(cnt, bfDelta) = trainer.batchDelta(dataPointer, left, true);
+			tie(cnt, bfDelta) = trainer->batchDelta(dataPointer, left, true);
 			updatePointer(cnt);
 			left -= cnt;
 		} while(left > 0);
@@ -103,7 +103,7 @@ void Worker::sspProcess()
 		size_t left = localBatchSize;
 		do{
 			size_t cnt;
-			tie(cnt, bfDelta) = trainer.batchDelta(dataPointer, left, true);
+			tie(cnt, bfDelta) = trainer->batchDelta(dataPointer, left, true);
 			updatePointer(cnt);
 			left -= cnt;
 		} while(left > 0);
@@ -138,7 +138,7 @@ void Worker::sapInit()
 
 void Worker::sapProcess()
 {
-	localBatchSize = trainer.pd->size();
+	localBatchSize = trainer->pd->size();
 	const size_t n = model.paramWidth();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
@@ -146,7 +146,7 @@ void Worker::sapProcess()
 		size_t left = localBatchSize;
 		do{
 			size_t cnt;
-			tie(cnt, bfDelta) = trainer.batchDelta(dataPointer, left, true);
+			tie(cnt, bfDelta) = trainer->batchDelta(dataPointer, left, true);
 			updatePointer(cnt);
 			left -= cnt;
 		} while(left > 0);
@@ -181,17 +181,17 @@ void Worker::fspInit()
 
 void Worker::fspProcess()
 {
-	localBatchSize = trainer.pd->size();
+	localBatchSize = trainer->pd->size();
 	const size_t n = model.paramWidth();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
-		size_t left = trainer.pd->size();
+		size_t left = trainer->pd->size();
 		bfDelta.assign(n, 0.0);
 		while(exitTrain == false && allowTrain && left != 0) {
 			vector<double> tmp;
 			size_t c;
-			tie(c, tmp) = trainer.batchDelta(allowTrain, dataPointer, left, false);
+			tie(c, tmp) = trainer->batchDelta(allowTrain, dataPointer, left, false);
 			accumulateDelta(tmp);
 			updatePointer(c);
 			left -= c;
@@ -199,7 +199,7 @@ void Worker::fspProcess()
 		// wait until allowTrain is set to false
 		while(allowTrain == true)
 			sleep();
-		size_t used = trainer.pd->size() - left;
+		size_t used = trainer->pd->size() - left;
 		const double factor = 1.0 / used;
 		for(size_t i = 0; i < n; ++i)
 			bfDelta[i] *= factor;
@@ -250,7 +250,7 @@ void Worker::aapProcess()
 			size_t cnt = 0;
 			vector<double> tmp;
 			resumeTrain();
-			tie(cnt, tmp) = trainer.batchDelta(allowTrain, dataPointer, left, false);
+			tie(cnt, tmp) = trainer->batchDelta(allowTrain, dataPointer, left, false);
 			left -= cnt;
 			updatePointer(cnt);
 			//DVLOG(3) <<"tmp: "<< tmp;

@@ -1,60 +1,63 @@
-#include "LogisticRegression.h"
+#include "KMeans.h"
 #include "math/activation_func.h"
+#include "util/Util.h"
 #include <cmath>
 #include <stdexcept>
 using namespace std;
 
-void LogisticRegression::init(const std::string & param)
+void KMeans::init(const std::string & param)
 {
 	initBasic(param);
 	try{
-		xlength = stoi(param);
+		auto vec = getIntList(param, ":-, ");
+		ncenter = stoi(vec[0]);
+		dim = stoi(vec[1])
 	} catch(...){
-		throw invalid_argument("LR parameter is not invalid");
+		throw invalid_argument("KMeans parameter is not invalid");
 	}
 }
 
-bool LogisticRegression::checkData(const size_t nx, const size_t ny)
+bool KMeans::checkData(const size_t nx, const size_t ny)
 {
 	// check input layer size
-	if(nx != stoi(param))
+	if(nx != dim)
 		throw invalid_argument("The dataset does not match the input layer of the network");
 	// check output layer size
-	if(ny != 1)
+	if(ny != 0)
 		throw invalid_argument("The dataset does not match the output layer of the network");
 }
 
-std::string LogisticRegression::name() const{
-	return "lr";
+std::string KMeans::name() const{
+	return "kmeans";
 }
 
-bool LogisticRegression::dataNeedConstant() const{
+bool KMeans::dataNeedConstant() const{
 	return false;
 }
 
-int LogisticRegression::lengthParameter() const
+int KMeans::lengthParameter() const
 {
-	return xlength + 1;
+	return xlength;
 }
 
-std::vector<double> LogisticRegression::predict(
-	const std::vector<double>& x, const std::vector<double>& w) const 
+std::vector<double> KMeans::predict(
+	const std::vector<double>& x, const std::vector<double>& w) const
 {
 	double t = w.back();
-	for (int i = 0; i < xlength; ++i) {
+	for(int i = 0; i < xlength; ++i) {
 		t += x[i] * w[i];
 	}
 	return { sigmoid(t) };
 }
 
-int LogisticRegression::classify(const double p) const
+int KMeans::classify(const double p) const
 {
 	return p >= 0.5 ? 1 : 0;
 }
 
 constexpr double MAX_LOSS = 100;
 
-double LogisticRegression::loss(
+double KMeans::loss(
 	const std::vector<double>& pred, const std::vector<double>& label) const
 {
 	//double cost1 = label * log(pred);
@@ -67,14 +70,14 @@ double LogisticRegression::loss(
 	} else{
 		cost = log(pred[0]);
 	}
-//	if(std::isnan(cost) || std::isinf(cost)) // this std:: is needed for a know g++ bug
+	//	if(std::isnan(cost) || std::isinf(cost)) // this std:: is needed for a know g++ bug
 	if(std::isinf(cost))
 		return MAX_LOSS;
 	else
 		return -cost;
 }
 
-std::vector<double> LogisticRegression::gradient(const std::vector<double>& x,
+std::vector<double> KMeans::gradient(const std::vector<double>& x,
 	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const
 {
 	// s'(x) = s(x)*(1-s(x))
@@ -83,7 +86,7 @@ std::vector<double> LogisticRegression::gradient(const std::vector<double>& x,
 	double pred = predict(x, w)[0];
 	double g0 = pred - y[0];
 	vector<double> grad(w.size(), g0);
-	for (size_t i = 0; i < xlength; ++i) {
+	for(size_t i = 0; i < xlength; ++i) {
 		grad[i] *= x[i];
 	}
 	return grad;

@@ -29,7 +29,8 @@ int main(int argc, char* argv[]){
 			<< "\nAlgorithm: " << opt.algorighm << "\tParam: " << opt.algParam << "\tSeed: " << opt.seed
 			<< "\n  Interval Estimator: " << opt.intervalParam << "\tMulticast: " << opt.mcastParam
 			<< "\nRecord file: " << opt.fnOutput
-			<< "\nTraining configurations:\n  Mode: " << opt.mode << "\tLearning-rate: " << opt.lrate
+			<< "\nTraining configurations:\n  Mode: " << opt.mode
+			<< "\tOptimizer: " << opt.optimizer << "\tParam: " << opt.optimizerParam
 			<< "\tBatch-size: " << opt.batchSize << "\tWorker-#: " << opt.nw
 			<< "\nTerminating condition:\n  Max-iteration: " << opt.tcIter << "\tMax-time: " << opt.tcTime
 			<< "\nArchive iteration: " << opt.arvIter << "\tinterval: " << opt.arvTime
