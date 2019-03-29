@@ -9,6 +9,10 @@ void Trainer::bindDataset(const DataHolder* pd){
 	this->pd = pd;
 }
 
+void Trainer::ready()
+{
+}
+
 void Trainer::initBasic(const std::vector<std::string>& param)
 {
 	this->param = param;

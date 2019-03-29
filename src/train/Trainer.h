@@ -11,12 +11,14 @@ public:
 	Model* pm;
 	const DataHolder* pd;
 public:
-	void bindModel(Model* pm);
-	void bindDataset(const DataHolder* pd);
-
 	virtual void init(const std::vector<std::string>& param) = 0;
 	virtual std::string name() const = 0;
 	std::vector<std::string> getParam() const;
+
+	void bindModel(Model* pm);
+	void bindDataset(const DataHolder* pd);
+	// last step before running
+	virtual void ready();
 
 	double loss(const size_t topn = 0) const;
 

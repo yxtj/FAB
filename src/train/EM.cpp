@@ -29,6 +29,11 @@ double EM::getRate() const {
 	return rate;
 }
 
+void EM::ready()
+{
+	h.assign(pd->size(), vector<double>(1));
+}
+
 std::pair<size_t, std::vector<double>> EM::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
