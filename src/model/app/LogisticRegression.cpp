@@ -22,6 +22,7 @@ bool LogisticRegression::checkData(const size_t nx, const size_t ny)
 	// check output layer size
 	if(ny != 1)
 		throw invalid_argument("The dataset does not match the output layer of the network");
+	return true;
 }
 
 std::string LogisticRegression::name() const{
