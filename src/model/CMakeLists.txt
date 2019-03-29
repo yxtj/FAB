@@ -16,6 +16,7 @@ set(APP_HEADERS
 	app/CNN.h
 	app/RNN.h
 	app/TopicModel.h
+	app/KMeans.h
 )
 set(APP_SOURCES
 	app/LogisticRegression.cpp
@@ -23,6 +24,7 @@ set(APP_SOURCES
 	app/CNN.cpp
 	app/RNN.cpp
 	app/TopicModel.cpp
+	app/KMeans.cpp
 )
 set(HEADERS
 	Kernel.h

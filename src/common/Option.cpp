@@ -39,7 +39,7 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 			"improve:x,t (x: avg. imporovement, t: max waiting time), balance:w (num. of windows)")
 		// app - algorithm
 		("algorithm,a", value(&algorighm)->required(), "The algorithm to run. "
-			"Support: lr, mlp, cnn, rnn, tm.")
+			"Support: lr, mlp, cnn, rnn, tm, kmeans.")
 		("parameter,p", value(&algParam)->required(),
 			"The parameter of the algorithm, usually the shape of the algorithm")
 		("seed", value(&seed)->default_value(123456U), "The seed to initialize parameters")
@@ -161,7 +161,7 @@ bool Option::processAlgorithm(){
 		if(ch >= 'A' && ch <= 'Z')
 			ch += 'a' - 'A';
 	}
-	vector<string> supported = { "lr", "mlp", "cnn", "rnn", "tm" };
+	vector<string> supported = { "lr", "mlp", "cnn", "rnn", "tm", "kmeans" };
 	auto it = find(supported.begin(), supported.end(), algorighm);
 	return it != supported.end();
 }

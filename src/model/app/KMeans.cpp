@@ -3,6 +3,7 @@
 #include "util/Util.h"
 #include <cmath>
 #include <stdexcept>
+
 using namespace std;
 
 void KMeans::init(const std::string & param)
@@ -10,8 +11,9 @@ void KMeans::init(const std::string & param)
 	initBasic(param);
 	try{
 		auto vec = getIntList(param, ":-, ");
-		ncenter = stoi(vec[0]);
-		dim = stoi(vec[1])
+		ncenter = vec[0];
+		dim = vec[1];
+		parlen = ncenter * (dim + 1);
 	} catch(...){
 		throw invalid_argument("KMeans parameter is not invalid");
 	}
@@ -25,6 +27,7 @@ bool KMeans::checkData(const size_t nx, const size_t ny)
 	// check output layer size
 	if(ny != 0)
 		throw invalid_argument("The dataset does not match the output layer of the network");
+	return true;
 }
 
 std::string KMeans::name() const{
@@ -37,58 +40,70 @@ bool KMeans::dataNeedConstant() const{
 
 int KMeans::lengthParameter() const
 {
-	return xlength;
+	return parlen;
 }
 
 std::vector<double> KMeans::predict(
 	const std::vector<double>& x, const std::vector<double>& w) const
 {
-	double t = w.back();
-	for(int i = 0; i < xlength; ++i) {
-		t += x[i] * w[i];
+	int min_id = -1;
+	double min_v;
+	size_t off = 0;
+	for(size_t i = 0; i < ncenter; ++i){
+		double d = quickDist(x.begin(), x.end(), w.begin() + off, w[off + dim + 1]);
+		off += dim + 1;
+		if(min_id == -1 || d < min_v){
+			min_id = i;
+			min_v = d;
+		}
 	}
-	return { sigmoid(t) };
+	return { static_cast<double>(min_id) };
 }
 
 int KMeans::classify(const double p) const
 {
-	return p >= 0.5 ? 1 : 0;
+	return p > 1e-6 ? 1 : 0;
 }
-
-constexpr double MAX_LOSS = 100;
 
 double KMeans::loss(
 	const std::vector<double>& pred, const std::vector<double>& label) const
 {
-	//double cost1 = label * log(pred);
-	//double cost2 = (1 - label)*log(1 - pred);
-	//return -(cost1 + cost2);
-	// the above got overflow
-	double cost;
-	if(label[0] == 0.0){
-		cost = log(1 - pred[0]);
-	} else{
-		cost = log(pred[0]);
-	}
-	//	if(std::isnan(cost) || std::isinf(cost)) // this std:: is needed for a know g++ bug
-	if(std::isinf(cost))
-		return MAX_LOSS;
-	else
-		return -cost;
+	double diff = 0.0;
+	for(size_t i = 0; i < pred.size(); ++i)
+		diff += abs(pred[i] - label[i]);
+	return diff;
 }
 
 std::vector<double> KMeans::gradient(const std::vector<double>& x,
 	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const
 {
-	// s'(x) = s(x)*(1-s(x))
-	// c'(x) = x*(s(x) - y)
-	//assert(w.size() == xlength+1);
-	double pred = predict(x, w)[0];
-	double g0 = pred - y[0];
-	vector<double> grad(w.size(), g0);
-	for(size_t i = 0; i < xlength; ++i) {
-		grad[i] *= x[i];
+	vector<double> grad(parlen, 0.0);
+	vector<double> pred = predict(x, w);
+	size_t oldp = static_cast<int>((*ph)[0]);
+	size_t newp = static_cast<int>(pred[0]);
+	if(oldp != newp){
+		oldp *= dim + 1;
+		newp *= dim + 1;
+		for(size_t i = 0; i < dim; ++i){
+			grad[oldp + i] -= x[i];
+			grad[newp + i] += x[i];
+		}
+		grad[oldp + dim] -= 1;
+		grad[newp + dim] += 1;
 	}
 	return grad;
+}
+
+double KMeans::quickDist(it_t xf, it_t xl, it_t yf, const double n)
+{
+	double yy = 0.0;
+	double xy = 0.0;
+	while(xf != xl){
+		xy += *xf * *yf;
+		yy += *yf * *yf;
+		++xf;
+		++yf;
+	}
+	return yy - 2 * n*xy;
 }
 

@@ -16,10 +16,17 @@ public:
 	int classify(const double p) const;
 
 	double loss(const std::vector<double>& pred, const std::vector<double>& label) const;
+	// ph stores the current assignment of the node
 	std::vector<double> gradient(const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph = nullptr) const;
+		const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const;
 
+private:
+	using it_t = typename std::vector<double>::const_iterator;
+	// sum (x_i - y_i/n)^2 . x is fixed and y changes. 
+	// change to sum(y_i^2) - 2*n*sum ( x_i - y_i)^2
+	static double quickDist(it_t xf, it_t xl, it_t yf, const double n);
 private:
 	size_t dim;
 	size_t ncenter;
+	size_t parlen;
 };
