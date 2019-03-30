@@ -46,41 +46,37 @@ int KMeans::lengthParameter() const
 std::vector<double> KMeans::predict(
 	const std::vector<double>& x, const std::vector<double>& w) const
 {
-	int min_id = -1;
+	size_t min_id = ncenter;
 	double min_v;
 	size_t off = 0;
 	for(size_t i = 0; i < ncenter; ++i){
-		double d = quickDist(x.begin(), x.end(), w.begin() + off, w[off + dim + 1]);
+		double d = dist(x.begin(), x.end(), w.begin() + off, w[off + dim + 1]);
 		off += dim + 1;
-		if(min_id == -1 || d < min_v){
+		if(min_id == ncenter || d < min_v){
 			min_id = i;
 			min_v = d;
 		}
 	}
-	return { static_cast<double>(min_id) };
+	return { static_cast<double>(min_id), min_v };
 }
 
 int KMeans::classify(const double p) const
 {
-	return p > 1e-6 ? 1 : 0;
+	return 0;
 }
 
 double KMeans::loss(
 	const std::vector<double>& pred, const std::vector<double>& label) const
 {
-	double diff = 0.0;
-	for(size_t i = 0; i < pred.size(); ++i)
-		diff += abs(pred[i] - label[i]);
-	return diff;
+	return pred[1];
 }
 
 std::vector<double> KMeans::gradient(const std::vector<double>& x,
 	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const
 {
 	vector<double> grad(parlen, 0.0);
-	vector<double> pred = predict(x, w);
 	size_t oldp = static_cast<int>((*ph)[0]);
-	size_t newp = static_cast<int>(pred[0]);
+	size_t newp = quickPredict(x, w);
 	if(oldp != newp){
 		oldp *= dim + 1;
 		newp *= dim + 1;
@@ -94,6 +90,18 @@ std::vector<double> KMeans::gradient(const std::vector<double>& x,
 	return grad;
 }
 
+double KMeans::dist(it_t xf, it_t xl, it_t yf, const double n)
+{
+	double r = *xf - *yf / n;
+	r *= r;
+	while(++xf != xl){
+		++yf;
+		double t = *xf - *yf / n;
+		r += t * t;
+	}
+	return sqrt(r);
+}
+
 double KMeans::quickDist(it_t xf, it_t xl, it_t yf, const double n)
 {
 	double yy = 0.0;
@@ -105,5 +113,21 @@ double KMeans::quickDist(it_t xf, it_t xl, it_t yf, const double n)
 		++yf;
 	}
 	return yy - 2 * n*xy;
+}
+
+size_t KMeans::quickPredict(const std::vector<double>& x, const std::vector<double>& w) const
+{
+	int min_id = -1;
+	double min_v;
+	size_t off = 0;
+	for(size_t i = 0; i < ncenter; ++i){
+		double d = quickDist(x.begin(), x.end(), w.begin() + off, w[off + dim + 1]);
+		off += dim + 1;
+		if(min_id == -1 || d < min_v){
+			min_id = i;
+			min_v = d;
+		}
+	}
+	return min_id;
 }
 

@@ -63,7 +63,7 @@ struct Option{
 			<< "The range of each entry of <x> is [-1,1]. Error follows normal distribution N(0, <err>^2).\n"
 			<< "Example: generate record.txt \"\" lr 3 3 1 100 -1 1 0.05 123456\n"
 			<< "  <fname-r> <fname-p>: file name of generated records and parameter. If <fnname-p> is empty, it is omitted.\n"
-			<< "  <alg>: supports: LR (Logistic Regession).\n"
+			<< "  <alg>: supports: lr, mlp, cnn, rnn, tm, kmeans.\n"
 			<< "  <alg-param>: the parameters for the algorithm, usually the shape of the model.\n"
 			<< "  <xlength> <ylength>: length of the x/y part of each generated record.\n"
 			<< "  <n>: number of lines of the output record file, supports k,m,g suffix.\n"
@@ -93,7 +93,6 @@ class ParameterGenerator{
 	Kernel* k;
 	int xlength;
 	double pmin, pmax;
-	string param;
 
 	using fn_g_t = vector<double>(ParameterGenerator::*)(mt19937&);
 	fn_g_t fpg;
@@ -109,6 +108,8 @@ public:
 			fpg = &ParameterGenerator::genGeneral;
 		} else if(k->name() == "cnn" || k->name() == "rnn"){
 			fpg = &ParameterGenerator::genGeneral;
+		} else if(k->name() == "km"){
+			fpg = &ParameterGenerator::genKM;
 		}
 	}
 	vector<double> gen(mt19937& gen){
@@ -136,6 +137,19 @@ private:
 		}
 		return res;
 	}
+	vector<double> genKM(mt19937& gen){
+		vector<double> res;
+		uniform_real_distribution<double> dis(pmin, pmax);
+		auto v = getIntList(k->parameter());
+		const size_t nc = v[0];
+		const size_t dim = v[1];
+		for(size_t i = 0; i < nc; ++i){
+			for(size_t j = 0; j < dim; ++j)
+				res.push_back(dis(gen));
+			res.push_back(0.0);
+		}
+		return res;
+	}
 };
 
 
@@ -151,6 +165,10 @@ class Dumper{
 
 	using fn_t = void (Dumper::*)(mt19937&);
 	fn_t fp;
+private:
+	// kmeans
+	uniform_int_distribution<int> km_cdis;
+	size_t km_k, km_dim;
 public:
 	Dumper(Kernel* k, const string& fname, const vector<double>* pparam,
 		const size_t xlength, const size_t ylength, const double sigma)
@@ -166,6 +184,13 @@ public:
 			fp = &Dumper::dumpClassify;
 		} else if(k->name() == "cnn" || k->name() == "rnn"){
 			fp = &Dumper::dumpClassify;
+		} else if(k->name() == "kmeans"){
+			fp = &Dumper::dumpKMeans;
+			xdis = uniform_real_distribution<double>(-0.5, 0.5);
+			auto v = getIntList(k->parameter()); // k, dim
+			km_k = v[0];
+			km_dim = v[1];
+			km_cdis = uniform_int_distribution<int>(0, static_cast<int>(km_k) - 1);
 		}
 		if(sigma != 0.0){
 			edis = normal_distribution<double>(0, sigma);
@@ -200,6 +225,19 @@ private:
 		for(size_t i = 0; i < ylength - 1; ++i)
 			fout << yy[i] << ",";
 		fout << yy.back() << "\n";
+	}
+	void dumpKMeans(mt19937& gen){
+		int c = km_cdis(gen);
+		// initialize x with the centroid
+		vector<double> x(param->begin() + c * (km_dim + 1),
+			param->begin() + (c + 1)*(km_dim + 1));
+		// add error to x
+		for(size_t i = 0; i < xlength; ++i)
+			x[i] += edis(gen);
+		// dump
+		for(size_t i = 0; i < xlength - 1; ++i)
+			fout << x[i] << ",";
+		fout << x.back() << "\n";
 	}
 };
 

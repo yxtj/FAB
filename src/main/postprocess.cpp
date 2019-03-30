@@ -66,37 +66,6 @@ struct Option {
 	}
 };
 
-struct ParameterLoader{
-	pair<string, vector<double>> loadParameter(const string& name, ifstream& fin){
-		if(name == "lr")
-			return funLR(fin);
-		else
-			return funGeneral(fin);
-		return {};
-	}
-private:
-	pair<string, vector<double>> funLR(ifstream& fin){
-		string line;
-		getline(fin, line);
-		vector<double> vec = getDoubleList(line);
-		string param = to_string(vec.size() - 1);
-		return make_pair(move(param), move(vec));
-	}
-	pair<string, vector<double>> funGeneral(ifstream& fin){
-		string line;
-		getline(fin, line);
-		string param = line;
-		vector<int> shape = getIntList(line, " ,-");
-		vector<double> vec;
-		for(size_t i = 0; i < shape.size() - 1; ++i){
-			getline(fin, line);
-			vector<double> temp = getDoubleList(line);
-			vec.insert(vec.end(), temp.begin(), temp.end());
-		}
-		return make_pair(move(param), move(vec));
-	}
-};
-
 int main(int argc, char* argv[]){
 	Option opt;
 	if(!opt.parse(argc, argv)){
@@ -122,6 +91,7 @@ int main(int argc, char* argv[]){
 		}
 		algParam = tmp;
 	}
+	const bool doAccuracy = opt.accuracy && opt.alg != "kmeans";
 
 	ofstream fout(opt.fnOutput);
 	if(!opt.fnOutput.empty() && fout.fail()){
@@ -179,7 +149,7 @@ int main(int argc, char* argv[]){
 			auto& d = dh.get(i);
 			auto p = m.predict(d);
 			loss += m.loss(p, d.y);
-			if(!opt.accuracy)
+			if(!doAccuracy)
 				continue;
 			for(size_t j = 0; j < p.size(); ++j)
 				if(m.classify(p[j]) == d.y[j])

@@ -7,7 +7,7 @@ using namespace std;
 ParameterIO::ParameterIO(const std::string & name, const std::string & param)
 	: name(name), param(param)
 {
-	vector<string> supported = { "lr", "mlp", "cnn" };
+	vector<string> supported = { "lr", "mlp", "cnn", "rnn", "kmeans" };
 	for(char& ch : this->name){
 		if(ch >= 'A' && ch <= 'Z')
 			ch += 'a' - 'A';
@@ -32,6 +32,8 @@ void ParameterIO::write(std::ostream & os, const std::vector<double>& w)
 		return writeMLP(os, w);
 	} else if(name == "cnn" || name == "rnn"){
 		return writeNN(os, w);
+	} else if(name == "km"){
+		return writeKM(os, w);
 	}
 }
 
@@ -43,6 +45,8 @@ std::pair<std::string, std::vector<double>> ParameterIO::load(std::istream & is)
 		return loadMLP(is);
 	} else if(name == "cnn" || name == "rnn"){
 		return loadNN(is);
+	} else if(name == "km"){
+		return loadKM(is);
 	}
 	return std::pair<std::string, std::vector<double>>();
 }
@@ -136,3 +140,35 @@ std::pair<std::string, std::vector<double>> ParameterIO::loadNN(std::istream & i
 	return make_pair(move(param), move(vec));
 }
 
+// -------- KMeans --------
+
+void ParameterIO::writeKM(std::ostream & os, const std::vector<double>& w)
+{
+	os << param << "\n";
+	auto vec = getIntList(param);
+	size_t k = vec[0];
+	size_t dim = vec[1];
+	for(size_t i = 0; i < k; ++i){
+		size_t off = (dim + 1)*i;
+		for(size_t j = 0; j < dim; ++j)
+			os << w[off + j] << ",";
+		os << w[off + dim] << "\n";
+	}
+}
+
+std::pair<std::string, std::vector<double>> ParameterIO::loadKM(std::istream & is)
+{
+	string line;
+	getline(is, line);
+	string param = line;
+	auto t = getIntList(param);
+	size_t k = t[0];
+	size_t dim = t[1];
+	vector<double> vec;
+	for(size_t i = 0; i < k; ++i){
+		getline(is, line);
+		auto v = getDoubleList(line);
+		vec.insert(vec.end(), v.begin(), v.end());
+	}
+	return make_pair(move(param), move(vec));
+}
