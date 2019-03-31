@@ -31,7 +31,7 @@ bool KMeans::checkData(const size_t nx, const size_t ny)
 }
 
 std::string KMeans::name() const{
-	return "kmeans";
+	return "km";
 }
 
 bool KMeans::dataNeedConstant() const{

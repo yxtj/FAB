@@ -91,7 +91,7 @@ int main(int argc, char* argv[]){
 		}
 		algParam = tmp;
 	}
-	const bool doAccuracy = opt.accuracy && opt.alg != "kmeans";
+	const bool doAccuracy = opt.accuracy && opt.alg != "km";
 
 	ofstream fout(opt.fnOutput);
 	if(!opt.fnOutput.empty() && fout.fail()){

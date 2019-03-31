@@ -19,7 +19,7 @@ Kernel* KernelFactory::generate(const std::string& name){
 		return new RNN();
 	else if(name == "tm")
 		return new TopicModel();
-	else if(name == "kmeans")
+	else if(name == "km")
 		return new KMeans();
 	else
 		throw invalid_argument("do not support the method: " + name);

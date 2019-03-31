@@ -7,7 +7,7 @@ using namespace std;
 ParameterIO::ParameterIO(const std::string & name, const std::string & param)
 	: name(name), param(param)
 {
-	vector<string> supported = { "lr", "mlp", "cnn", "rnn", "kmeans" };
+	vector<string> supported = { "lr", "mlp", "cnn", "rnn", "km" };
 	for(char& ch : this->name){
 		if(ch >= 'A' && ch <= 'Z')
 			ch += 'a' - 'A';
@@ -21,7 +21,7 @@ ParameterIO::ParameterIO(const std::string & name, const std::string & param)
 		}
 	}
 	if(!flag)
-		throw invalid_argument("ParameterIO module does not algorithm: " + name);
+		throw invalid_argument("ParameterIO module does not support algorithm: " + name);
 }
 
 void ParameterIO::write(std::ostream & os, const std::vector<double>& w)
