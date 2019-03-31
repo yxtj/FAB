@@ -63,7 +63,7 @@ struct Option{
 			<< "The range of each entry of <x> is [-1,1]. Error follows normal distribution N(0, <err>^2).\n"
 			<< "Example: generate record.txt \"\" lr 3 3 1 100 -1 1 0.05 123456\n"
 			<< "  <fname-r> <fname-p>: file name of generated records and parameter. If <fnname-p> is empty, it is omitted.\n"
-			<< "  <alg>: supports: lr, mlp, cnn, rnn, tm, kmeans.\n"
+			<< "  <alg>: supports: lr, mlp, cnn, rnn, tm, km.\n"
 			<< "  <alg-param>: the parameters for the algorithm, usually the shape of the model.\n"
 			<< "  <xlength> <ylength>: length of the x/y part of each generated record.\n"
 			<< "  <n>: number of lines of the output record file, supports k,m,g suffix.\n"
@@ -84,6 +84,8 @@ private:
 		} else if(algorithm == "cnn" || algorithm == "rnn"){
 			vector<string> shape = getStringList(param, ",-");
 			return shape.size() >= 2;
+		} else if(algorithm == "km"){
+			return true;
 		}
 		return false;
 	}
@@ -184,7 +186,7 @@ public:
 			fp = &Dumper::dumpClassify;
 		} else if(k->name() == "cnn" || k->name() == "rnn"){
 			fp = &Dumper::dumpClassify;
-		} else if(k->name() == "kmeans"){
+		} else if(k->name() == "km"){
 			fp = &Dumper::dumpKMeans;
 			xdis = uniform_real_distribution<double>(-0.5, 0.5);
 			auto v = getIntList(k->parameter()); // k, dim
@@ -235,9 +237,10 @@ private:
 		for(size_t i = 0; i < xlength; ++i)
 			x[i] += edis(gen);
 		// dump
-		for(size_t i = 0; i < xlength - 1; ++i)
-			fout << x[i] << ",";
-		fout << x.back() << "\n";
+		fout << x[0];
+		for(size_t i = 1; i < xlength; ++i)
+			fout << "," << x[i];
+		fout << "\n";
 	}
 };
 
