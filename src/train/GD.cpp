@@ -29,6 +29,20 @@ double GD::getRate() const {
 	return rate;
 }
 
+void GD::ready()
+{
+	if(!pm->getKernel()->needInitParameterByData())
+		return;
+	Parameter p;
+	p.weights.assign(pm->paramWidth(), 0.0);
+	pm->setParameter(p);
+	size_t s = pd->size();
+	for(size_t i = 0; i < s; ++i){
+		pm->getKernel()->initVariables(
+			pd->get(i).x, pm->getParameter().weights, pd->get(i).y, nullptr);
+	}
+}
+
 std::pair<size_t, std::vector<double>> GD::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
