@@ -47,9 +47,11 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		("batch_size,s", value(&tmp_bs)->required(), "The global batch size. Support suffix: k, m, g")
 		//("learning_rate,l", value(&lrate)->required(), "The learning rate")
 		("optimizer,o", value(&optimizer)->required()->default_value("gd:0.01"),
-			"The optimizer to train. Support: gd:<lr>, em:<lr>.")
+			"The optimizer to train. Support: gd:<lr>, em:<lr>, kmeans.")
 		// file - input
 		("data_file,d", value(&fnData)->required(), "The file name of the input data")
+		("header", bool_switch(&header)->default_value(false), 
+			"Whether the input file contain a header line")
 		("skip", value(&tmp_ids)->default_value({}, ""),
 			"The columns to skip in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)")
@@ -173,7 +175,7 @@ bool Option::processOptimizer()
 			ch += 'a' - 'A';
 	}
 	vector<string> t = getStringList(optimizer, ":-, ");
-	vector<string> supported = { "gd", "em" };
+	vector<string> supported = { "gd", "em", "kmeans" };
 	auto it = find(supported.begin(), supported.end(), t[0]);
 	if(it == supported.end())
 		return false;
