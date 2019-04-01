@@ -81,9 +81,9 @@ int main(int argc, char* argv[]){
 
 	Model m;
 	if(!opt.fnData.empty()){
-		m.init("mlp", opt.shape, 123456);
+		m.init("mlp", opt.shape, 123456u);
 	} else{
-		m.init("mlp", "2-3-1", 123456);
+		m.init("mlp", "2-3-1", 123456u);
 	}
 	if(!m.checkData(dh.xlength(), dh.ylength()))
 		LOG(FATAL) << "data size does not match model";

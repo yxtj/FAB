@@ -46,7 +46,8 @@ int main(int argc, char* argv[]){
 	trainer.setRate(0.1);
 
 	for(int i = 0; i < 5; i++){
-		trainer.train(i*500, 500);
+		auto v = trainer.batchDelta(i * 500, 500);
+		trainer.applyDelta(v.second);
 		cout << i << " iter: " << trainer.loss() << endl;
 		cout << "parameters:\n";
 		showParameter(m.getParameter());
@@ -54,7 +55,8 @@ int main(int argc, char* argv[]){
 
 	cout << "full trainning:" << endl;
 	for(int i = 0; i < 300; ++i){
-		trainer.train();
+		auto v = trainer.batchDelta(0, dh.size());
+		trainer.applyDelta(v.second);
 		if(i % 10 == 0){
 			cout << i << " iter: " << trainer.loss() << endl;
 			cout << "parameters:\n";

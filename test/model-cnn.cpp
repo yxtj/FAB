@@ -68,7 +68,7 @@ int main(int argc, char* argv[]){
 	Model m;
 	if(!opt.fnData.empty()){
 		dh.load(opt.fnData, ",", {}, opt.idY, opt.withHeader, true);
-		m.init("cnn", opt.shape, 123456);
+		m.init("cnn", opt.shape, 123456u);
 	} else{
 		// pattern: have sequence 0.3, 0.9, 0.6
 		dh.add({ 0.0, 0.2, 0.8, 0.3, 0.9, 0.6, 0.4, 0.9 }, { 1 });
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]){
 		dh.add({ 0.2, 0.3, 0.6, 0.9, 0.9, 0.2, 0.6, 0.1 }, { 0.1 });
 		dh.add({ 0.3, 0.7, 0.3, 0.6, 0.4, 0.9, 0.5, 0.6 }, { 0.2 });
 
-		m.init("cnn", "8-1c3-sig-max:2-1f", 12346);
+		m.init("cnn", "8-1c3-sig-max:2-1f", 12346u);
 	}
 	if(!m.checkData(dh.xlength(), dh.ylength()))
 		LOG(FATAL) << "data size does not match model";

@@ -68,7 +68,7 @@ int main(int argc, char* argv[]){
 	LOG(INFO) << "data[1]: " << dh.get(1).x << " -> " << dh.get(1).y;
 
 	Model m;
-	m.init("lr", to_string(dh.xlength()), 123456);
+	m.init("lr", to_string(dh.xlength()), 123456U);
 	if(!m.checkData(dh.xlength(), dh.ylength()))
 		LOG(FATAL) << "data size does not match model";
 

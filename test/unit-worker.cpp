@@ -88,7 +88,7 @@ void master_thread(){
 
 	Model m;
 	m.init("lr", to_string(nx), 0.01);
-	if(!m.checkData(dh.xlength(), dh.ylength()))
+	if(!m.checkData(nx, 1))
 		LOG(FATAL) << "data size does not match model";
 	vector<double> delta;
 

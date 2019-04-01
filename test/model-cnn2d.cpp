@@ -115,7 +115,7 @@ int main(int argc, char* argv[]){
 	Model m;
 	try{
 		//m.init("cnn", "4*4-2c2*2p2*2-1c2*2p2*2-1f", 0.01);
-		m.init("cnn", "4*4-2cp2*2-1cp2*2-1f", 123456);
+		m.init("cnn", "4*4-2cp2*2-1cp2*2-1f", 123456u);
 	} catch(exception& e){
 		LOG(FATAL) << e.what();
 	}
