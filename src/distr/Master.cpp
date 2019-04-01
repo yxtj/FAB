@@ -94,10 +94,11 @@ void Master::run()
 		LOG_IF(!archiver.valid(), FATAL) << "Cannot write to file: " << opt->fnOutput;
 	}
 	iter = 0;
-	tmrTrain.restart();
-	archiveProgress(true);
 	LOG(INFO) << "Coordinae initializing parameter";
 	initializeParameter();
+
+	tmrTrain.restart();
+	archiveProgress(true);
 
 	LOG(INFO)<<"Start traning with mode: "<<opt->mode;
 	//tmrTrain.restart();
@@ -438,15 +439,12 @@ void Master::handleDataset(const std::string& data, const RPCInfo& info){
 
 void Master::handleParameter(const std::string & data, const RPCInfo & info)
 {
-	DLOG(INFO) << "Got parameter from " << info.source;
 	Timer tmr;
 	vector<double> param = deserialize<vector<double>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	tmr.restart();
 	int s = wm.nid2lid(info.source);
-	DLOG(INFO) << "got-param: " << param;
 	model.accumulateParameter(param);
-	DLOG(INFO) << "new-param: " << model.getParameter().weights;
 	++stat.n_dlt_recv;
 	stat.t_par_calc += tmr.elapseSd();
 	rph.input(MType::DParameter, s);

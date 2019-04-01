@@ -32,7 +32,10 @@ double EM::getRate() const {
 void EM::ready()
 {
 	int nh = pm->getKernel()->lengthHidden();
-	h.assign(pd->size(), vector<double>(nh));
+	if(nh != 0)
+		h.assign(pd->size(), vector<double>(nh));
+	if(!pm->getKernel()->needInitParameterByData())
+		return;
 	Parameter p;
 	p.weights.assign(pm->paramWidth(), 0.0);
 	pm->setParameter(p);

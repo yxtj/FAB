@@ -180,7 +180,6 @@ void Worker::initializeParameter()
 {
 	if(model.getKernel()->needInitParameterByData()){
 		// model.param is set in trainer->ready()
-		DLOG(INFO) << "init-param: " << model.getParameter().weights;
 		net->send(masterNID, MType::DParameter, model.getParameter().weights);
 	}
 	waitParameter();

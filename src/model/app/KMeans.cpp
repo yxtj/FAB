@@ -70,7 +70,7 @@ std::vector<double> KMeans::predict(
 	double min_v;
 	size_t off = 0;
 	for(size_t i = 0; i < ncenter; ++i){
-		double d = dist(x.begin(), x.end(), w.begin() + off, w[off + dim + 1]);
+		double d = dist(x.begin(), x.end(), w.begin() + off, w[off + dim]);
 		off += dim + 1;
 		if(min_id == ncenter || d < min_v){
 			min_id = i;

@@ -104,7 +104,9 @@ int main(int argc, char* argv[]){
 	dh.load(opt.fnData, ",", opt.idSkip, opt.idY, false, true, opt.topk);
 	if(opt.normalize)
 		dh.normalize(false);
-	double accuracy_factor = 1.0 / dh.size() / dh.ylength();
+	double accuracy_factor = 0.0;
+	if(dh.size() != 0 && dh.ylength() != 0)
+		accuracy_factor = 1.0 / dh.size() / dh.ylength();
 
 	Model m;
 	try{
