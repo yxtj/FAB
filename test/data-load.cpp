@@ -17,9 +17,10 @@ int main(int argc, char* argv[]){
 	cout<<"start"<<endl;
 	string prefix = argc > 1 ? argv[1] : "E:/Code/FSB/dataset/";
 	string name = argc > 2 ? argv[2] : "affairs.csv";
-	DataHolder dh(true, 2, 0);
+	bool header = argc > 3 ? argv[3] == "1" : true;
+	DataHolder dh(false, 1, 0);
 	try{
-		dh.load(prefix + name, ",", { 0 }, { 9 }, true, false);
+		dh.load(prefix + name, ",", { 0 }, { 9 }, header, true);
 	}catch(exception& e){
 		cerr << "load error:\n" << e.what() << endl;
 		return 1;
