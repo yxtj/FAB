@@ -29,10 +29,6 @@ std::string LogisticRegression::name() const{
 	return "lr";
 }
 
-bool LogisticRegression::dataNeedConstant() const{
-	return false;
-}
-
 int LogisticRegression::lengthParameter() const
 {
 	return xlength + 1;

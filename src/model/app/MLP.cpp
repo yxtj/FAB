@@ -33,10 +33,6 @@ std::string MLP::name() const{
 	return "mlp";
 }
 
-bool MLP::dataNeedConstant() const{
-	return false;
-}
-
 int MLP::lengthParameter() const
 {
 	return proxy.lengthParameter();

@@ -47,7 +47,14 @@ void Master::init(const Option* opt, const size_t lid)
 	ln = opt->logIter;
 	logName = "M";
 	setLogThreadName(logName);
-	model.init(opt->algorighm, opt->algParam, opt->seed);
+	model.init(opt->algorighm, opt->algParam);
+	Parameter param;
+	if(model.getKernel()->needInitParameterByData()){
+		param.init(model.paramWidth(), 0.0);
+	} else{
+		param.init(model.paramWidth(), 0.01, 0.01, opt->seed);
+	}
+	model.setParameter(move(param));
 
 	if(opt->mode == "bsp"){
 		bspInit();
@@ -89,8 +96,8 @@ void Master::run()
 	iter = 0;
 	tmrTrain.restart();
 	archiveProgress(true);
-	LOG(INFO) << "Broadcasting initial parameter";
-	broadcastParameter();
+	LOG(INFO) << "Coordinae initializing parameter";
+	initializeParameter();
 
 	LOG(INFO)<<"Start traning with mode: "<<opt->mode;
 	//tmrTrain.restart();
@@ -137,6 +144,7 @@ void Master::registerHandlers()
 	regDSPProcess(MType::CReply, localCBBinder(&Master::handleReply));
 	regDSPProcess(MType::COnline, localCBBinder(&Master::handleOnline));
 	regDSPProcess(MType::CDataset, localCBBinder(&Master::handleDataset));
+	regDSPProcess(MType::DParameter, localCBBinder(&Master::handleParameter));
 	// regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDelta)); // for bsp and fsp
 	// regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaTap)); // for tap
 
@@ -273,6 +281,14 @@ void Master::checkDataset()
 {
 	suDatasetInfo.wait_n_reset();
 	model.checkData(nx, ny);
+}
+
+void Master::initializeParameter()
+{
+	if(model.getKernel()->needInitParameterByData()){
+		suParam.wait_n_reset();
+	}
+	broadcastParameter();
 }
 
 void Master::sendParameter(const int target)
@@ -418,6 +434,22 @@ void Master::handleDataset(const std::string& data, const RPCInfo& info){
 	nPoint += tnp;
 	rph.input(MType::CDataset, source);
 	sendReply(info);
+}
+
+void Master::handleParameter(const std::string & data, const RPCInfo & info)
+{
+	DLOG(INFO) << "Got parameter from " << info.source;
+	Timer tmr;
+	vector<double> param = deserialize<vector<double>>(data);
+	stat.t_data_deserial += tmr.elapseSd();
+	tmr.restart();
+	int s = wm.nid2lid(info.source);
+	DLOG(INFO) << "got-param: " << param;
+	model.accumulateParameter(param);
+	DLOG(INFO) << "new-param: " << model.getParameter().weights;
+	++stat.n_dlt_recv;
+	stat.t_par_calc += tmr.elapseSd();
+	rph.input(MType::DParameter, s);
 }
 
 void Master::handleDeltaTail(const std::string & data, const RPCInfo & info)

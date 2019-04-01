@@ -49,10 +49,6 @@ std::string CNN::name() const{
 	return "cnn";
 }
 
-bool CNN::dataNeedConstant() const{
-	return false;
-}
-
 int CNN::lengthParameter() const
 {
 	return net.lengthParameter();

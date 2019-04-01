@@ -36,6 +36,7 @@ private:
 
 	void accumulateDelta(const std::vector<double>& delta);
 	void sendDelta(std::vector<double>& delta, const size_t cnt);
+	void initializeParameter();
 	void bufferParameter(Parameter& p);
 	void applyBufferParameter(); // using the buffer
 	void waitParameter();

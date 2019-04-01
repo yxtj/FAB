@@ -49,10 +49,6 @@ std::string RNN::name() const{
 	return "rnn";
 }
 
-bool RNN::dataNeedConstant() const{
-	return false;
-}
-
 int RNN::lengthParameter() const
 {
 	return net.lengthParameter();

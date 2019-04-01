@@ -17,11 +17,6 @@ std::string TopicModel::name() const
 	return std::string("tm");
 }
 
-bool TopicModel::dataNeedConstant() const
-{
-	return false;
-}
-
 int TopicModel::lengthParameter() const
 {
 	return nWeight;

@@ -3,6 +3,7 @@
 #include "util/Util.h"
 #include <cmath>
 #include <stdexcept>
+#include <random>
 
 using namespace std;
 
@@ -34,13 +35,32 @@ std::string KMeans::name() const{
 	return "km";
 }
 
-bool KMeans::dataNeedConstant() const{
-	return false;
+int KMeans::lengthHidden() const{
+	return 1;
 }
 
 int KMeans::lengthParameter() const
 {
 	return parlen;
+}
+
+bool KMeans::needInitParameterByData() const
+{
+	return true;
+}
+
+void KMeans::initVariables(const std::vector<double>& x,
+	std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph)
+{
+	static uniform_int_distribution<int> dist(0, ncenter - 1);
+	static mt19937 gen;
+	int c = dist(gen);
+	(*ph)[0] = static_cast<double>(c);
+	size_t off = c * (dim + 1);
+	for(size_t i = 0; i < dim; ++i){
+		w[off + i] += x[i];
+	}
+	w[off + dim] += 1;
 }
 
 std::vector<double> KMeans::predict(
@@ -121,7 +141,7 @@ size_t KMeans::quickPredict(const std::vector<double>& x, const std::vector<doub
 	double min_v;
 	size_t off = 0;
 	for(size_t i = 0; i < ncenter; ++i){
-		double d = quickDist(x.begin(), x.end(), w.begin() + off, w[off + dim + 1]);
+		double d = quickDist(x.begin(), x.end(), w.begin() + off, w[off + dim]);
 		off += dim + 1;
 		if(min_id == -1 || d < min_v){
 			min_id = i;

@@ -9,8 +9,13 @@ public:
 	virtual bool checkData(const size_t nx, const size_t ny) = 0;
 	virtual std::string name() const = 0;
 	std::string parameter() const;
-	virtual bool dataNeedConstant() const = 0;
 	virtual int lengthParameter() const = 0;
+	virtual bool needInitParameterByData() const; // default false
+
+	// default doing nothing
+	virtual void initVariables(const std::vector<double>& x,
+		std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph);
+	virtual int lengthHidden() const; // default 0
 
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w) const = 0;
 	virtual int classify(const double p) const = 0;

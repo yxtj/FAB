@@ -72,12 +72,12 @@ void Worker::run()
 	waitWorkerList();
 	DLOG(INFO) << "send dataset info";
 	sendDatasetInfo();
-	DLOG(INFO) << "waiting init parameter";
-	waitParameter();
-	DLOG(INFO) << "got init parameter";
-	applyBufferParameter();
+	DLOG(INFO) << "initialize parameter";
 	trainer->bindModel(&model);
 	trainer->ready();
+	initializeParameter();
+	DLOG(INFO) << "got init parameter";
+	applyBufferParameter();
 
 	DLOG(INFO) << "start training with mode: " << opt->mode << ", local batch size: " << localBatchSize;
 	iter = 1;
@@ -174,6 +174,16 @@ void Worker::sendDelta(std::vector<double>& delta, const size_t cnt)
 	//DVLOG_EVERY_N(ln, 1) << "n-send: " << iter << " un-cmt msg: " << net->pending_pkgs() << " cmt msg: " << net->stat_send_pkg;
 	net->send(masterNID, MType::DDelta, make_pair(move(cnt), move(delta)));
 	++stat.n_dlt_send;
+}
+
+void Worker::initializeParameter()
+{
+	if(model.getKernel()->needInitParameterByData()){
+		// model.param is set in trainer->ready()
+		DLOG(INFO) << "init-param: " << model.getParameter().weights;
+		net->send(masterNID, MType::DParameter, model.getParameter().weights);
+	}
+	waitParameter();
 }
 
 void Worker::bufferParameter(Parameter & p)

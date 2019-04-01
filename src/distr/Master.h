@@ -46,6 +46,7 @@ private:
 	//void receiveDelta(std::vector<double>& delta, const int source);
 	bool terminateCheck();
 	void checkDataset();
+	void initializeParameter();
 	void sendParameter(const int target);
 	void broadcastParameter();
 	void multicastParameter(const int source);
@@ -68,6 +69,8 @@ public:
 	void handleReply(const std::string& data, const RPCInfo& info);
 	void handleOnline(const std::string& data, const RPCInfo& info);
 	void handleDataset(const std::string& data, const RPCInfo& info);
+	void handleParameter(const std::string& data, const RPCInfo& info);
+
 	void handleDelta(const std::string& data, const RPCInfo& info);
 	void handleDeltaTap(const std::string& data, const RPCInfo& info);
 	void handleDeltaSsp(const std::string& data, const RPCInfo& info);
@@ -77,8 +80,6 @@ public:
 	void handleDeltaTail(const std::string& data, const RPCInfo& info);
 
 private:
-	Parameter param;
-
 	std::vector<double>  bfDelta;
 	size_t bfDeltaDpCount; // the number of data points used for current bfDelta
 	std::vector<int> deltaIter; // the number of delta received from each source

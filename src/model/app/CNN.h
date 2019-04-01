@@ -10,7 +10,6 @@ public:
 	void init(const std::string& param);
 	bool checkData(const size_t nx, const size_t ny);
 	std::string name() const;
-	bool dataNeedConstant() const;
 	int lengthParameter() const;
 
 	std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w) const;

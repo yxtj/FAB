@@ -31,7 +31,16 @@ double EM::getRate() const {
 
 void EM::ready()
 {
-	h.assign(pd->size(), vector<double>(1));
+	int nh = pm->getKernel()->lengthHidden();
+	h.assign(pd->size(), vector<double>(nh));
+	Parameter p;
+	p.weights.assign(pm->paramWidth(), 0.0);
+	pm->setParameter(p);
+	size_t s = pd->size();
+	for(size_t i = 0; i < s; ++i){
+		pm->getKernel()->initVariables(
+			pd->get(i).x, pm->getParameter().weights, pd->get(i).y, &h[i]);
+	}
 }
 
 std::pair<size_t, std::vector<double>> EM::batchDelta(

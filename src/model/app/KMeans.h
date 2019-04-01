@@ -9,8 +9,12 @@ public:
 	void init(const std::string& param);
 	bool checkData(const size_t nx, const size_t ny);
 	std::string name() const;
-	bool dataNeedConstant() const;
 	int lengthParameter() const;
+	bool needInitParameterByData() const;
+
+	int lengthHidden() const;
+	void initVariables(const std::vector<double>& x,
+		std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph);
 
 	std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w) const;
 	int classify(const double p) const;
