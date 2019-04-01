@@ -10,6 +10,8 @@ using namespace std;
 void Master::bspInit()
 {
 	factorDelta = 1.0 / nWorker;
+	if(!trainer->needAveragedDelta())
+		factorDelta = 1.0;
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDelta));
 }
 
@@ -154,6 +156,8 @@ void Master::sapProcess()
 void Master::fspInit()
 {
 	factorDelta = 1.0 / nWorker;
+	if(!trainer->needAveragedDelta())
+		factorDelta = 1.0;
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaFsp));
 }
 

@@ -20,12 +20,17 @@ void Worker::bspProcess()
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		size_t left = localBatchSize;
+		clearDelta();
 		do{
 			size_t cnt;
-			tie(cnt, bfDelta) = trainer->batchDelta(dataPointer, left, true);
+			vector<double> tmp;
+			tie(cnt, tmp) = trainer->batchDelta(dataPointer, left, false);
+			accumulateDelta(tmp);
 			updatePointer(cnt);
 			left -= cnt;
 		} while(left > 0);
+		if(trainer->needAveragedDelta())
+			averageDelta(localBatchSize);
 		stat.t_dlt_calc += tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
@@ -62,12 +67,17 @@ void Worker::tapProcess()
 		// make the reporting time more even
 		if(iter == 1)
 			left += localBatchSize * localID / nWorker;
+		clearDelta();
 		do{
 			size_t cnt;
-			tie(cnt, bfDelta) = trainer->batchDelta(dataPointer, left, true);
+			vector<double> tmp;
+			tie(cnt, tmp) = trainer->batchDelta(dataPointer, left, false);
+			accumulateDelta(tmp);
 			updatePointer(cnt);
 			left -= cnt;
 		} while(left > 0);
+		if(trainer->needAveragedDelta())
+			averageDelta(localBatchSize);
 		stat.t_dlt_calc += tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
@@ -101,12 +111,17 @@ void Worker::sspProcess()
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		size_t left = localBatchSize;
+		clearDelta();
 		do{
 			size_t cnt;
-			tie(cnt, bfDelta) = trainer->batchDelta(dataPointer, left, true);
+			vector<double> tmp;
+			tie(cnt, tmp) = trainer->batchDelta(dataPointer, left, false);
+			accumulateDelta(tmp);
 			updatePointer(cnt);
 			left -= cnt;
 		} while(left > 0);
+		if(trainer->needAveragedDelta())
+			averageDelta(localBatchSize);
 		stat.t_dlt_calc += tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
@@ -139,17 +154,24 @@ void Worker::sapInit()
 void Worker::sapProcess()
 {
 	localBatchSize = trainer->pd->size();
-	const size_t n = model.paramWidth();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		size_t left = localBatchSize;
+		// make the reporting time more even
+		if(iter == 1)
+			left += localBatchSize * localID / nWorker;
+		clearDelta();
 		do{
 			size_t cnt;
-			tie(cnt, bfDelta) = trainer->batchDelta(dataPointer, left, true);
+			vector<double> tmp;
+			tie(cnt, tmp) = trainer->batchDelta(dataPointer, left, false);
+			accumulateDelta(tmp);
 			updatePointer(cnt);
 			left -= cnt;
 		} while(left > 0);
+		if(trainer->needAveragedDelta())
+			averageDelta(localBatchSize);
 		stat.t_dlt_calc += tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
@@ -182,15 +204,14 @@ void Worker::fspInit()
 void Worker::fspProcess()
 {
 	localBatchSize = trainer->pd->size();
-	const size_t n = model.paramWidth();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		size_t left = trainer->pd->size();
-		bfDelta.assign(n, 0.0);
+		clearDelta();
 		while(exitTrain == false && allowTrain && left != 0) {
-			vector<double> tmp;
 			size_t c;
+			vector<double> tmp;
 			tie(c, tmp) = trainer->batchDelta(allowTrain, dataPointer, left, false);
 			accumulateDelta(tmp);
 			updatePointer(c);
@@ -200,9 +221,8 @@ void Worker::fspProcess()
 		while(allowTrain == true)
 			sleep();
 		size_t used = trainer->pd->size() - left;
-		const double factor = 1.0 / used;
-		for(size_t i = 0; i < n; ++i)
-			bfDelta[i] *= factor;
+		if(trainer->needAveragedDelta())
+			averageDelta(used);
 		stat.t_dlt_calc += tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  calculate delta with " << used << " data points";
 		VLOG_EVERY_N(ln, 2) << "  send delta";
@@ -234,8 +254,6 @@ void Worker::aapInit()
 void Worker::aapProcess()
 {
 	// require different handleParameter -> handleParameterFab
-	const size_t n = model.paramWidth();
-	const double factor = 1.0 / localBatchSize;
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";// << ". msg waiting: " << driver.queSize();
 		Timer tmr;
@@ -243,7 +261,7 @@ void Worker::aapProcess()
 		// make the reporting time more even
 		if(iter == 1)
 			left += localBatchSize * localID / nWorker;
-		bfDelta.assign(n, 0.0);
+		clearDelta();
 		bool newBatch = true;
 		while(!exitTrain && left != 0){
 			tmr.restart();
@@ -270,8 +288,8 @@ void Worker::aapProcess()
 			newBatch = false;
 		}
 		tmr.restart();
-		for(size_t i = 0; i < n; ++i)
-			bfDelta[i] *= factor;
+		if(trainer->needAveragedDelta())
+			averageDelta(localBatchSize);
 		stat.t_dlt_calc += tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  send delta";
 		sendDelta(bfDelta, localBatchSize);

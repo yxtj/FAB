@@ -41,7 +41,7 @@ int KMeans::lengthHidden() const{
 
 int KMeans::lengthParameter() const
 {
-	return parlen;
+	return static_cast<int>(parlen);
 }
 
 bool KMeans::needInitParameterByData() const
@@ -52,7 +52,7 @@ bool KMeans::needInitParameterByData() const
 void KMeans::initVariables(const std::vector<double>& x,
 	std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph)
 {
-	static uniform_int_distribution<int> dist(0, ncenter - 1);
+	static uniform_int_distribution<int> dist(0, static_cast<int>(ncenter) - 1);
 	static mt19937 gen;
 	int c = dist(gen);
 	(*ph)[0] = static_cast<double>(c);
@@ -97,6 +97,7 @@ std::vector<double> KMeans::gradient(const std::vector<double>& x,
 	vector<double> grad(parlen, 0.0);
 	size_t oldp = static_cast<int>((*ph)[0]);
 	size_t newp = quickPredict(x, w);
+	(*ph)[0] = static_cast<double>(newp);
 	if(oldp != newp){
 		oldp *= dim + 1;
 		newp *= dim + 1;
@@ -112,11 +113,12 @@ std::vector<double> KMeans::gradient(const std::vector<double>& x,
 
 double KMeans::dist(it_t xf, it_t xl, it_t yf, const double n)
 {
-	double r = *xf - *yf / n;
+	double nn = round(n);
+	double r = *xf - *yf / nn;
 	r *= r;
 	while(++xf != xl){
 		++yf;
-		double t = *xf - *yf / n;
+		double t = *xf - *yf / nn;
 		r += t * t;
 	}
 	return sqrt(r);
@@ -132,18 +134,18 @@ double KMeans::quickDist(it_t xf, it_t xl, it_t yf, const double n)
 		++xf;
 		++yf;
 	}
-	return yy - 2 * n*xy;
+	return yy - 2 * round(n) * xy;
 }
 
 size_t KMeans::quickPredict(const std::vector<double>& x, const std::vector<double>& w) const
 {
-	int min_id = -1;
+	size_t min_id = ncenter;
 	double min_v;
 	size_t off = 0;
 	for(size_t i = 0; i < ncenter; ++i){
 		double d = quickDist(x.begin(), x.end(), w.begin() + off, w[off + dim]);
 		off += dim + 1;
-		if(min_id == -1 || d < min_v){
+		if(min_id == ncenter || d < min_v){
 			min_id = i;
 			min_v = d;
 		}

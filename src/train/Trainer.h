@@ -14,6 +14,7 @@ public:
 	virtual void init(const std::vector<std::string>& param) = 0;
 	virtual std::string name() const = 0;
 	std::vector<std::string> getParam() const;
+	virtual bool needAveragedDelta() const;
 
 	void bindModel(Model* pm);
 	void bindDataset(const DataHolder* pd);

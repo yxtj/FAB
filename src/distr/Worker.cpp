@@ -162,6 +162,17 @@ void Worker::registerHandlers()
 	addRPHAnySU(MType::CDataset, suDatasetInfo);
 }
 
+void Worker::clearDelta()
+{
+	bfDelta.assign(model.paramWidth(), 0.0);
+}
+
+void Worker::averageDelta(const size_t size)
+{
+	for(auto& v : bfDelta)
+		v /= size;
+}
+
 void Worker::accumulateDelta(const std::vector<double>& delta)
 {
 	for (size_t i = 0; i < delta.size(); ++i)

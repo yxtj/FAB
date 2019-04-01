@@ -23,6 +23,11 @@ std::vector<std::string> Trainer::getParam() const
 	return param;
 }
 
+bool Trainer::needAveragedDelta() const
+{
+	return true;
+}
+
 double Trainer::loss(const size_t topn) const {
 	double res = 0;
 	size_t n = topn == 0 ? pd->size() : topn;

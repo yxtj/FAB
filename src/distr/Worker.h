@@ -34,6 +34,8 @@ private:
 	void sendDatasetInfo();
 	void sendClosed();
 
+	void clearDelta();
+	void averageDelta(const size_t size);
 	void accumulateDelta(const std::vector<double>& delta);
 	void sendDelta(std::vector<double>& delta, const size_t cnt);
 	void initializeParameter();
