@@ -31,18 +31,19 @@ double EM::getRate() const {
 
 void EM::ready()
 {
+	// initialize hidden variable
 	int nh = pm->getKernel()->lengthHidden();
-	if(nh != 0)
-		h.assign(pd->size(), vector<double>(nh));
-	if(!pm->getKernel()->needInitParameterByData())
-		return;
-	Parameter p;
-	p.weights.assign(pm->paramWidth(), 0.0);
-	pm->setParameter(p);
-	size_t s = pd->size();
-	for(size_t i = 0; i < s; ++i){
-		pm->getKernel()->initVariables(
-			pd->get(i).x, pm->getParameter().weights, pd->get(i).y, &h[i]);
+	h.assign(pd->size(), vector<double>(nh));
+	// initialize parameter by data
+	if(pm->getKernel()->needInitParameterByData()){
+		Parameter p;
+		p.init(pm->paramWidth(), 0.0);
+		pm->setParameter(p);
+		size_t s = pd->size();
+		for(size_t i = 0; i < s; ++i){
+			pm->getKernel()->initVariables(
+				pd->get(i).x, pm->getParameter().weights, pd->get(i).y, nullptr);
+		}
 	}
 }
 

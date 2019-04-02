@@ -1,6 +1,7 @@
 #pragma once
 #include "Trainer.h"
 
+// hidden variable + non-average
 class EM_KMeans : public Trainer
 {
 	std::vector<std::vector<double>> h; // hidden variable

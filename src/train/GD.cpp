@@ -34,7 +34,7 @@ void GD::ready()
 	if(!pm->getKernel()->needInitParameterByData())
 		return;
 	Parameter p;
-	p.weights.assign(pm->paramWidth(), 0.0);
+	p.init(pm->paramWidth(), 0.0);
 	pm->setParameter(p);
 	size_t s = pd->size();
 	for(size_t i = 0; i < s; ++i){
