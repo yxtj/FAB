@@ -3,6 +3,7 @@ set(HEADERS
 	GD.h
 	EM.h
 	EM_KMeans.h
+	PSGD_poc.h
 	PrioritizedSGD.h
 	TrainerFactory.h
 )
@@ -11,6 +12,7 @@ set(SOURCES
 	GD.cpp
 	EM.cpp
 	EM_KMeans.cpp
+	PSGD_poc.cpp
 	PrioritizedSGD.cpp
 	TrainerFactory.cpp
 )
