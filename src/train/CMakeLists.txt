@@ -3,6 +3,7 @@ set(HEADERS
 	GD.h
 	EM.h
 	EM_KMeans.h
+	PrioritizedSGD.h
 	TrainerFactory.h
 )
 set(SOURCES
@@ -10,7 +11,11 @@ set(SOURCES
 	GD.cpp
 	EM.cpp
 	EM_KMeans.cpp
+	PrioritizedSGD.cpp
 	TrainerFactory.cpp
 )
+set(IMPL_FILES
+	impl/PrioritizedHolder.hpp
+)
 add_library(train
-	${HEADERS} ${SOURCES})
+	${HEADERS} ${SOURCES} ${IMPL_FILES})
