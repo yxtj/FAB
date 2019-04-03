@@ -60,21 +60,23 @@ std::pair<size_t, std::vector<double>> PrioritizedSGD::batchDelta(
 {
 	const size_t end = pd->size();
 	vector<double> grad(paramWidth, 0.0);
-	const size_t nblocks= cnt * n_dmblock / dpblock;
+	const size_t nblocks = cnt * n_dmblock / dpblock;
 	// update
 	size_t used_block = 0;
 	size_t ndp = 0;
 	unordered_set<int> used_dpblock;
 	vector<pair<pair<int, int>, float>> buffer_priority;
+	//unordered_map<int, vector<int>> picked;
 	while(used_block++ < nblocks){
 		pair<int, int> coord = priQue.top();
+		//picked[coord.first].push_back(coord.second);
 		priQue.pop();
 		if(used_dpblock.find(coord.first) != used_dpblock.end()){
 			continue;
 		}
 		used_dpblock.insert(coord.first);
 		size_t i_f = coord.first*dpblock, i_l = min(coord.first*dpblock + dpblock, end);
-		//size_t j_f = coord.second*dmblock, j_l = min(coord.second*dmblock + dmblock, paramWidth);
+		//size_t j_f = coord.second*dbatch, j_l = min(coord.second*dbatch + dbatch, paramWidth);
 		vector<double> tg(paramWidth, 0.0);
 		size_t i;
 		for(i = i_f; i < i_l; ++i){
@@ -97,7 +99,7 @@ std::pair<size_t, std::vector<double>> PrioritizedSGD::batchDelta(
 			buffer_priority.emplace_back(make_pair(coord.first, j), priority[j]);
 	}
 	// update priority
-	for(auto& cp: buffer_priority)
+	for(auto& cp : buffer_priority)
 		priQue.update(cp.first, cp.second);
 	// update gradient
 	if(ndp != 0){
@@ -121,6 +123,7 @@ std::pair<size_t, std::vector<double>> PrioritizedSGD::batchDelta(
 	size_t used_block = 0;
 	size_t ndp = 0;
 	unordered_set<int> used_dpblock;
+	vector<pair<pair<int, int>, float>> buffer_priority;
 	while(cond.load() && used_block++ < nblocks){
 		pair<int, int> coord = priQue.top();
 		//priQue.pop();
@@ -138,15 +141,23 @@ std::pair<size_t, std::vector<double>> PrioritizedSGD::batchDelta(
 				tg[j] += g[j];
 			++ndp;
 		}
-		// update gradient
+		// calculate gradient
 		for(size_t j = 0; j < paramWidth; ++j)
 			grad[j] += tg[j];
-		// update priority
+		// calculate priority
 		vector<float> priority = calcPriority(tg);
-		float factor = 1.0f / (i - i_f) / (i - i_f);
+		if(i - i_f != dpblock){
+			float factor = static_cast<float>(dpblock * dpblock) / (i - i_f) / (i - i_f);
+			for(auto& v : priority)
+				v *= factor;
+		}
 		for(int j = 0; j < n_dmblock; ++j)
-			priQue.update(make_pair(coord.first, j), priority[j]*factor);
+			buffer_priority.emplace_back(make_pair(coord.first, j), priority[j]);
 	}
+	// update priority
+	for(auto& cp : buffer_priority)
+		priQue.update(cp.first, cp.second);
+	// update gradient
 	if(ndp != 0){
 		// this is gradient DESCENT, so rate is set to negative
 		double factor = -rate;
@@ -155,7 +166,7 @@ std::pair<size_t, std::vector<double>> PrioritizedSGD::batchDelta(
 		for(auto& v : grad)
 			v *= factor;
 	}
-	return make_pair(cnt, move(grad));
+	return make_pair(ndp, move(grad));
 }
 
 std::vector<float> PrioritizedSGD::calcPriority(const std::vector<double>& grad)
@@ -171,4 +182,14 @@ std::vector<float> PrioritizedSGD::calcPriority(const std::vector<double>& grad)
 		priority.push_back(static_cast<float>(tp));
 	}
 	return priority;
+}
+
+std::unordered_map<int, std::vector<int>> PrioritizedSGD::mergeSelected(
+	const std::vector<std::pair<int, int>>& pick)
+{
+	std::unordered_map<int, std::vector<int>> res;
+	for(auto& p : pick){
+		res[p.first].push_back(p.second);
+	}
+	return res;
 }
