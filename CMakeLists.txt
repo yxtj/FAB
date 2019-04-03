@@ -101,7 +101,8 @@ set(CMAKE_CXX_FLAGS "${CXX_DEFAULT} ${CXX_WARN} ${CXX_DEFINE} ${CMAKE_THREAD_LIB
 
 add_subdirectory(src)
 
-if (NOT CMAKE_BUILD_TYPE STREQUAL "Release")
+set(UNIT_TEST "${UNIT_TEST}")
+if (UNIT_TEST)
 	add_subdirectory(test)
 endif ()
 
