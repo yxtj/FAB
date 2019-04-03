@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <numeric>
 
 template<class T, typename S = double>
 struct TopKHolder {
