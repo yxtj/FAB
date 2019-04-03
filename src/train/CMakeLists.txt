@@ -18,6 +18,7 @@ set(SOURCES
 )
 set(IMPL_FILES
 	impl/PrioritizedHolder.hpp
+	impl/TopKHolder.hpp
 )
 add_library(train
 	${HEADERS} ${SOURCES} ${IMPL_FILES})

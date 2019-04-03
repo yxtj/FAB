@@ -1,8 +1,10 @@
 #include "PSGD_poc.h"
 #include "impl/TopKHolder.hpp"
+#include "util/Timer.h"
+#include "logging/logging.h"
 #include <algorithm>
-#include <random>
 #include <numeric>
+#include <cmath>
 
 using namespace std;
 
@@ -37,6 +39,11 @@ void PSGD_poc::ready()
 	}
 }
 
+PSGD_poc::~PSGD_poc()
+{
+	DLOG(INFO) << "[Stat]: time-priority: " << stat_t_priority << "\ttime-grad: " << stat_t_grad;
+}
+
 std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
@@ -58,6 +65,7 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_point(
 {
 	vector<double> grad(paramWidth, 0.0);
 	// calculate all gradient and priority
+	Timer tmr;
 	vector<vector<double>> gradient_buffer;
 	gradient_buffer.reserve(pd->size());
 	vector<pair<float, int>> priority_record;
@@ -74,7 +82,9 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_point(
 		return l.first < r.first;
 	});
 	priority_record.erase(it_mid, priority_record.end());
+	stat_t_priority += tmr.elapseSd();
 	// calculate gradient
+	tmr.restart();
 	for(auto& pc : priority_record){
 		auto& g = gradient_buffer[pc.second];
 		for(size_t i = 0; i < paramWidth; ++i)
@@ -85,6 +95,7 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_point(
 		factor /= cnt;
 	for(auto& v : grad)
 		v *= factor;
+	stat_t_grad += tmr.elapseSd();
 	return make_pair(cnt, move(grad));
 }
 
@@ -92,24 +103,34 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_dim(
 	const size_t start, const size_t cnt, const bool avg)
 {
 	vector<double> grad(paramWidth, 0.0);
-	size_t nblock = min(cnt, pd->size())*paramWidth;
 	// calculate all gradient and priority
+	Timer tmr;
+	const size_t nblock = min(cnt, pd->size())*paramWidth;
 	vector<vector<double>> gradient_buffer;
 	gradient_buffer.reserve(pd->size());
-	TopKHolder<pair<int, int>> tpk(nblock);
-	vector<pair<float, int>> priority_record;
-	priority_record.reserve(pd->size());
+	//TopKHolder<pair<int, int>> tpk(nblock);
+	vector<pair<float, pair<int, int>>> priority_record;
+	priority_record.reserve(pd->size()*paramWidth);
 	for(size_t i = 0; i < pd->size(); ++i){
 		auto g = pm->gradient(pd->get(i));
 		for(size_t j = 0; j < paramWidth; ++j){
-			tpk.update(make_pair((int)i, (int)j), g[j]);
+			//tpk.update(make_pair((int)i, (int)j), abs(g[j]));
+			priority_record.emplace_back(static_cast<float>(abs(g[j])), make_pair((int)i, (int)j));
 		}
 		gradient_buffer.push_back(move(g));
 	}
+	auto it_mid = cnt >= pd->size() ? priority_record.end() : priority_record.begin() + cnt*paramWidth;
+	partial_sort(priority_record.begin(), it_mid, priority_record.end(),
+		[](const pair<float, pair<int, int>>& l, const pair<float, pair<int, int>>& r){
+		return l.first < r.first;
+	});
+	priority_record.erase(it_mid, priority_record.end());
+	stat_t_priority += tmr.elapseSd();
 	// calculate gradient
+	tmr.restart();
 	vector<int> dimCnt(paramWidth, 0);
-	for(auto& cp : tpk.data){
-		auto c = cp.first;
+	for(auto& pc : priority_record){
+		auto c = pc.second;
 		auto& g = gradient_buffer[c.first];
 		int i = c.second;
 		++dimCnt[i];
@@ -122,5 +143,6 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_dim(
 		auto& v = grad[i];
 		v *= factor / dimCnt[i];
 	}
+	stat_t_grad += tmr.elapseSd();
 	return make_pair(cnt, move(grad));
 }

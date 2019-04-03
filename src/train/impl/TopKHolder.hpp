@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <algorithm>
 #include <limits>
 
 template<class T, typename S = double>
@@ -55,16 +56,23 @@ inline bool TopKHolder<T, S>::updatable(const S s) const
 template<class T, typename S>
 bool TopKHolder<T, S>::_updateReal(T&& m, const S s)
 {
-	size_t p = find_if(data.rbegin(), data.rend(), [s](const std::pair<T, S>& p) {
+	auto target = std::make_pair(std::move(m), s);
+	auto it = std::upper_bound(data.begin(), data.end(), target, 
+		[](const std::pair<T, S>& l, const std::pair<T, S>& r){
+		return l.second < r.second;
+	});
+	size_t p = it - data.begin();
+	/*size_t p = find_if(data.rbegin(), data.rend(), [s](const std::pair<T, S>& p) {
 		return p.second >= s;
 	}) - data.rbegin();
 	p = data.size() - p; // p is the place to insert the new value
+	*/
 	if(p < k) {
 		if(data.size() < k)
 			data.resize(data.size() + 1);
 		for(size_t i = data.size() - 1; i > p; --i)
 			data[i] = std::move(data[i - 1]);
-		data[p] = std::make_pair(std::move(m), s);
+		data[p] = std::move(target);
 		return true;
 	}
 	return false;
