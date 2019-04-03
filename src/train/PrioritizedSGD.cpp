@@ -67,13 +67,13 @@ std::pair<size_t, std::vector<double>> PrioritizedSGD::batchDelta(
 	unordered_set<int> used_dpblock;
 	while(used_block++ < nblocks){
 		pair<int, int> coord = priQue.top();
-		//priQue.pop();
+		priQue.pop();
 		if(used_dpblock.find(coord.first) != used_dpblock.end()){
 			continue;
 		}
 		used_dpblock.insert(coord.first);
 		size_t i_f = coord.first*dpblock, i_l = min(coord.first*dpblock + dpblock, end);
-		//size_t j_f = coord.second*dbatch, j_l = min(coord.second*dbatch + dbatch, paramWidth);
+		//size_t j_f = coord.second*dmblock, j_l = min(coord.second*dmblock + dmblock, paramWidth);
 		vector<double> tg(paramWidth, 0.0);
 		size_t i;
 		for(i = i_f; i < i_l; ++i){
@@ -87,7 +87,11 @@ std::pair<size_t, std::vector<double>> PrioritizedSGD::batchDelta(
 			grad[j] += tg[j];
 		// update priority
 		vector<float> priority = calcPriority(tg);
-		float factor = 1.0f / (i - i_f) / (i - i_f);
+		if(i - i_f != dpblock){
+			float factor = static_cast<float>(dpblock * dpblock) / (i - i_f) / (i - i_f);
+			for(auto& v : priority)
+				v *= factor;
+		}
 		for(int j = 0; j < n_dmblock; ++j)
 			priQue.update(make_pair(coord.first, j), priority[j]);
 	}
