@@ -65,6 +65,16 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_point(
 {
 	vector<double> grad(paramWidth, 0.0);
 	// calculate all gradient and priority
+	auto maintainTopK = [](vector<pair<float, int>>& priority_record, const size_t k){
+		if(k >= priority_record.size())
+			return;
+		auto it_mid = priority_record.begin() + k;
+		partial_sort(priority_record.begin(), it_mid, priority_record.end(),
+			[](const pair<float, int>& l, const pair<float, int>& r){
+			return l.first > r.first; // the larget the better
+		});
+		priority_record.erase(it_mid, priority_record.end());
+	};
 	Timer tmr;
 	vector<vector<double>> gradient_buffer;
 	gradient_buffer.reserve(pd->size());
@@ -73,15 +83,12 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_point(
 	for(size_t i = 0; i < pd->size(); ++i){
 		auto g = pm->gradient(pd->get(i));
 		auto p = inner_product(g.begin(), g.end(), g.begin(), 1.0);
-		gradient_buffer.push_back(move(g));
+		if(i%(4*cnt) == 0)
+			maintainTopK(priority_record, cnt);
 		priority_record.emplace_back(static_cast<float>(p), static_cast<int>(i));
+		gradient_buffer.push_back(move(g));
 	}
-	auto it_mid = cnt >= pd->size() ? priority_record.end() : priority_record.begin() + cnt;
-	partial_sort(priority_record.begin(), it_mid, priority_record.end(),
-		[](const pair<float, int>& l, const pair<float, int>& r){
-		return l.first > r.first; // the larget the better
-	});
-	priority_record.erase(it_mid, priority_record.end());
+	maintainTopK(priority_record, cnt);
 	stat_t_priority += tmr.elapseSd();
 	// calculate gradient
 	tmr.restart();
@@ -104,27 +111,34 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_dim(
 {
 	vector<double> grad(paramWidth, 0.0);
 	// calculate all gradient and priority
+	auto maintainTopK = [](vector<pair<float, pair<int, int>>>& priority_record, const size_t k){
+		if(k >= priority_record.size())
+			return;
+		auto it_mid = priority_record.begin() + k;
+		partial_sort(priority_record.begin(), it_mid, priority_record.end(),
+			[](const pair<float, pair<int, int>>& l, const pair<float, pair<int, int>>& r){
+			return l.first > r.first; // the larget the better
+		});
+		priority_record.erase(it_mid, priority_record.end());
+	};
 	Timer tmr;
 	const size_t nblock = min(cnt, pd->size())*paramWidth;
 	vector<vector<double>> gradient_buffer;
 	gradient_buffer.reserve(pd->size());
 	//TopKHolder<pair<int, int>> tpk(nblock);
 	vector<pair<float, pair<int, int>>> priority_record;
-	priority_record.reserve(pd->size()*paramWidth);
+	priority_record.reserve(4*nblock);
 	for(size_t i = 0; i < pd->size(); ++i){
 		auto g = pm->gradient(pd->get(i));
+		if(i%(4*cnt) == 0)
+			maintainTopK(priority_record, nblock);
 		for(size_t j = 0; j < paramWidth; ++j){
 			//tpk.update(make_pair((int)i, (int)j), abs(g[j]));
 			priority_record.emplace_back(static_cast<float>(abs(g[j])), make_pair((int)i, (int)j));
 		}
 		gradient_buffer.push_back(move(g));
 	}
-	auto it_mid = cnt >= pd->size() ? priority_record.end() : priority_record.begin() + cnt*paramWidth;
-	partial_sort(priority_record.begin(), it_mid, priority_record.end(),
-		[](const pair<float, pair<int, int>>& l, const pair<float, pair<int, int>>& r){
-		return l.first > r.first; // the larget the better
-	});
-	priority_record.erase(it_mid, priority_record.end());
+	maintainTopK(priority_record, nblock);
 	stat_t_priority += tmr.elapseSd();
 	// calculate gradient
 	tmr.restart();
