@@ -65,6 +65,7 @@ std::pair<size_t, std::vector<double>> PrioritizedSGD::batchDelta(
 	size_t used_block = 0;
 	size_t ndp = 0;
 	unordered_set<int> used_dpblock;
+	vector<pair<pair<int, int>, float>> buffer_priority;
 	while(used_block++ < nblocks){
 		pair<int, int> coord = priQue.top();
 		priQue.pop();
@@ -82,10 +83,10 @@ std::pair<size_t, std::vector<double>> PrioritizedSGD::batchDelta(
 				tg[j] += g[j];
 			++ndp;
 		}
-		// update gradient
+		// calculate gradient
 		for(size_t j = 0; j < paramWidth; ++j)
 			grad[j] += tg[j];
-		// update priority
+		// calculate priority
 		vector<float> priority = calcPriority(tg);
 		if(i - i_f != dpblock){
 			float factor = static_cast<float>(dpblock * dpblock) / (i - i_f) / (i - i_f);
@@ -93,8 +94,12 @@ std::pair<size_t, std::vector<double>> PrioritizedSGD::batchDelta(
 				v *= factor;
 		}
 		for(int j = 0; j < n_dmblock; ++j)
-			priQue.update(make_pair(coord.first, j), priority[j]);
+			buffer_priority.emplace_back(make_pair(coord.first, j), priority[j]);
 	}
+	// update priority
+	for(auto& cp: buffer_priority)
+		priQue.update(cp.first, cp.second);
+	// update gradient
 	if(ndp != 0){
 		// this is gradient DESCENT, so rate is set to negative
 		double factor = -rate;
