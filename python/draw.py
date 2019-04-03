@@ -44,14 +44,14 @@ rng=[1, 2, 4, 8]
 #drawGroup('async', rng)
 #drawGroup('fab', rng)
 
-def drawCmp(mode1, mode2, nw, n=200):
+def drawCmp(mode1, mode2, nw, n=200, ncol=1):
     plt.figure();
     d1=pandas.read_csv(mode1+'-'+str(nw)+'.txt',skiprows=0, header=None);
     d2=pandas.read_csv(mode2+'-'+str(nw)+'.txt',skiprows=0, header=None);
     #plt.hold(True)
     plt.plot(d1[:n][0], d1[:n][1])
     plt.plot(d2[:n][0], d2[:n][1])
-    plt.legend(renameLegend([mode1, mode2]))
+    plt.legend(renameLegend([mode1, mode2]), ncol=ncol)
     plt.xlabel('time (s)')
     plt.ylabel('loss')
     plt.show()
@@ -102,7 +102,7 @@ def genFLpost(l, post):
 def genFL(pre, l, post=''):
     return [str(pre)+str(i)+post for i in l]
 
-def drawListCmp(prefix, mList1, mList2, mList3=None, n=200, save=False):
+def drawListCmp(prefix, mList1, mList2, mList3=None, n=200, ncol=1, save=False):
     assert(len(mList1) == len(mList2))
     assert(mList3 is None or len(mList3) == 0 or len(mList3) == len(mList1))
     if mList3 is None or len(mList3) == 0:
@@ -116,7 +116,7 @@ def drawListCmp(prefix, mList1, mList2, mList3=None, n=200, save=False):
         if(mList3):
             plotUnit(lgd, prefix+mList3[i]+'.txt', mList3[i], '-.', c, n)
     #plt.hold(True)
-    plt.legend(renameLegend(lgd))
+    plt.legend(renameLegend(lgd), ncol=ncol)
     plt.xlabel('time (s)')
     plt.ylabel('loss')
     if save:

@@ -23,7 +23,7 @@ def saveimg(name):
     plt.savefig(name+'.pdf')
 
 
-# LR for
+# LR
 os.chdir(r'E:\Code\FSB\score\lr\1000-10k')
 
 def LRNameBBS(bbs, i, m, lr='0.01'):
@@ -99,10 +99,11 @@ for m in lmode:
     plt.close()
 
 plt.rcParams["figure.figsize"] = [6,4.5]
-ln3=[4,12,24]
 
-drawListCmp('1000-0.001/', genFL('bsp-',ln3,''),genFL('tap-',ln3,''), genFL('aap-',ln3,''))
-saveimg(namepre+'-cmp-%s' % ','.join([str(v) for v in ln3]))
+l=[4,12,24]
+
+drawListCmp('1000-0.001/', genFL('bsp-',l,''),genFL('tap-',l,''), genFL('aap-',l,''))
+saveimg(namepre+'-cmp-%s' % ','.join([str(v) for v in l]))
 
 drawListCmp('1000-0.001/', genFL('bsp-',[24],''), genFL('tap-',[24],''), genFL('aap-',[24],''),None,120)
 saveimg(namepre+'-cmp-24')
@@ -117,4 +118,9 @@ drawListCmp('1000-0.001/', genFL('tap-',[12],''), genFL('aap-',[12],''),None,30)
 saveimg(namepre+'-cmp-12-zoomin')
 
 
+# KM
+
+os.chdir(r'E:\Code\FSB\score\km\100,500-100k')
+
+namepre='km15'
 
