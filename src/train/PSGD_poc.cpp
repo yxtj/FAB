@@ -101,10 +101,10 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_dim(
 	priority_record.reserve(pd->size());
 	for(size_t i = 0; i < pd->size(); ++i){
 		auto g = pm->gradient(pd->get(i));
-		gradient_buffer.push_back(move(g));
 		for(size_t j = 0; j < paramWidth; ++j){
 			tpk.update(make_pair((int)i, (int)j), g[j]);
 		}
+		gradient_buffer.push_back(move(g));
 	}
 	// calculate gradient
 	vector<int> dimCnt(paramWidth, 0);
