@@ -23,6 +23,7 @@ struct Option {
 	string fnOutput;
 	bool normalize = false;
 	bool binary = false;
+	bool iteration = false;
 	bool accuracy = false;
 	bool show = false;
 	size_t topk = 0;
@@ -48,7 +49,8 @@ struct Option {
 		app.add_option("--reference", fnParam, "The referenced parameter file");
 		// output
 		app.add_option("-o,--output", fnOutput, "The output file");
-		app.add_flag("--accuracy", accuracy, "Show the accuracy");
+		app.add_flag("--accuracy", accuracy, "Calculate the accuracy");
+		app.add_flag("--iteration", iteration, "Use the iteration as the first column");
 		app.add_flag("--show", show, "Show the result on STDOUT");
 
 		try {
@@ -159,10 +161,15 @@ int main(int argc, char* argv[]){
 		}
 		loss /= dh.size();
 		double accuracy = correct * accuracy_factor;
-		if(opt.show)
-			cout << time << "\t" << loss << "\t" << accuracy << "\t" << diff << "\t" << impro << endl;
-		if(write)
-			fout << time << "," << loss << "," << accuracy << "," << diff << "," << impro << "\n";
+		// TODO: change the format: iter,time,loss,accuracy,diff,impro
+		if(opt.show){
+			cout << (opt.iteration ? iter : time) << "\t" << loss
+				<< "\t" << accuracy << "\t" << diff << "\t" << impro << endl;
+		}
+		if(write){
+			fout << (opt.iteration ? iter : time) << "," << loss
+				<< "," << accuracy << "," << diff << "," << impro << "\n";
+		}
 	}
 	archiver.close();
 	fout.close();
