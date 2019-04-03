@@ -79,7 +79,7 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_point(
 	auto it_mid = cnt >= pd->size() ? priority_record.end() : priority_record.begin() + cnt;
 	partial_sort(priority_record.begin(), it_mid, priority_record.end(),
 		[](const pair<float, int>& l, const pair<float, int>& r){
-		return l.first < r.first;
+		return l.first > r.first; // the larget the better
 	});
 	priority_record.erase(it_mid, priority_record.end());
 	stat_t_priority += tmr.elapseSd();
@@ -122,7 +122,7 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_dim(
 	auto it_mid = cnt >= pd->size() ? priority_record.end() : priority_record.begin() + cnt*paramWidth;
 	partial_sort(priority_record.begin(), it_mid, priority_record.end(),
 		[](const pair<float, pair<int, int>>& l, const pair<float, pair<int, int>>& r){
-		return l.first < r.first;
+		return l.first > r.first; // the larget the better
 	});
 	priority_record.erase(it_mid, priority_record.end());
 	stat_t_priority += tmr.elapseSd();
