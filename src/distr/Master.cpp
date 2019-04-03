@@ -85,7 +85,11 @@ void Master::run()
 	LOG(INFO) << "Send worker list";
 	broadcastWorkerList();
 	LOG(INFO)<<"Waiting dataset info to initialize parameters";
-	checkDataset();
+	try{
+		checkDataset();
+	} catch(exception& e){
+		LOG(FATAL) << "Error in checking dataset: " << e.what();
+	}
 	clearAccumulatedDelta();
 	LOG(INFO) << "Got x-length: " << nx << ", y-length: " << ny << ", data points: " << nPoint;
 	if(!opt->fnOutput.empty()){
