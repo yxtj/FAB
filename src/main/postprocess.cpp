@@ -2,6 +2,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 #include "data/DataHolder.h"
 #include "util/Util.h"
 #include "model/Model.h"
@@ -50,7 +51,7 @@ struct Option {
 		// output
 		app.add_option("-o,--output", fnOutput, "The output file");
 		app.add_flag("--accuracy", accuracy, "Calculate the accuracy");
-		app.add_flag("--iteration", iteration, "Use the iteration as the first column");
+		//app.add_flag("--iteration", iteration, "Use the iteration as the first column");
 		app.add_flag("--show", show, "Show the result on STDOUT");
 
 		try {
@@ -137,7 +138,7 @@ int main(int argc, char* argv[]){
 	while(!archiver.eof() && archiver.valid()){
 		if(!archiver.load(iter, time, param))
 			continue;
-		if(idx++ % 5000 == 0)
+		if(!opt.show && idx++ % 5000 == 0)
 			cout << "  processed: " << idx << endl;
 		//if(idx++ < 500)
 		//	continue;
@@ -161,14 +162,13 @@ int main(int argc, char* argv[]){
 		}
 		loss /= dh.size();
 		double accuracy = correct * accuracy_factor;
-		// TODO: change the format: iter,time,loss,accuracy,diff,impro
 		if(opt.show){
-			cout << (opt.iteration ? iter : time) << "\t" << loss
-				<< "\t" << accuracy << "\t" << diff << "\t" << impro << endl;
+			cout << showpoint << iter << "\t" << time << "\t" << loss << "\t"
+				<< noshowpoint << accuracy << "\t" << diff << "\t" << impro << endl;
 		}
 		if(write){
-			fout << (opt.iteration ? iter : time) << "," << loss
-				<< "," << accuracy << "," << diff << "," << impro << "\n";
+			fout << showpoint << iter << "," << time << "," << loss << ","
+				<< noshowpoint << accuracy << "," << diff << "," << impro << "\n";
 		}
 	}
 	archiver.close();
