@@ -17,40 +17,35 @@ os.chdir('E:/Code/FSB/score/')
 
 USE_HEADER=True;
 
-def drawOne(mode, nw, n=None):
+
+def getIdxByVer(ver):
+    if ver == 0:
+        idx1,idx2=0,1
+    elif ver == 1:
+        idx1,idx2=1,2
+    else:
+        idx1,idx2=0,2
+    return idx1,idx2
+
+
+def drawOne(mode, nw, n=None, ver=0):
+    idx1,idx2=getIdxByVer(ver)
     d = pandas.read_csv(mode+'-'+str(nw)+'.txt',header=None);
-    plt.plot(d[:n][0], d[:n][1])
+    plt.plot(d[:n][idx1], d[:n][idx2])
     plt.legend(mode+'-'+str(nw))
     plt.show()
 
 #drawOne('sync', 1)
 #drawOne('fab', 1)
 
-def drawGroup(mode, rng, n):
-    #plt.hold(True)
-    for i in rng:
-        d = pandas.read_csv(mode+'-'+str(i)+'.txt',skiprows=0, header=None);
-        plt.plot(d[:][0], d[:][1])
-    plt.legend([str(i) for i in rng])
-    plt.title(mode)
-    plt.show()
-    #plt.hold(False)
-
-#rng=list(range(1,7))
-rng=[1, 2, 4, 8]
-
-#drawGroup('sync', rng)
-#drawGroup('fsb', rng)
-#drawGroup('async', rng)
-#drawGroup('fab', rng)
-
-def drawCmp(mode1, mode2, nw, n=200, ncol=1):
+def drawCmp(mode1, mode2, nw, n=200, ncol=1, ver=0):
     plt.figure();
     d1=pandas.read_csv(mode1+'-'+str(nw)+'.txt',skiprows=0, header=None);
     d2=pandas.read_csv(mode2+'-'+str(nw)+'.txt',skiprows=0, header=None);
     #plt.hold(True)
-    plt.plot(d1[:n][0], d1[:n][1])
-    plt.plot(d2[:n][0], d2[:n][1])
+    idx1,idx2=getIdxByVer(ver)
+    plt.plot(d1[:n][idx1], d1[:n][idx2])
+    plt.plot(d2[:n][idx1], d2[:n][idx2])
     plt.legend(renameLegend([mode1, mode2]), ncol=ncol)
     plt.xlabel('time (s)')
     plt.ylabel('loss')
@@ -60,9 +55,10 @@ def drawCmp(mode1, mode2, nw, n=200, ncol=1):
 #drawCmp('sync','fab',8,300)
 
 
-def plotUnit(legendList, fn, name, lineMarker, color, n):
+def plotUnit(legendList, fn, name, lineMarker, color, n, ver=0):
     d=pandas.read_csv(fn, skiprows=0, header=None)
-    line = plt.plot(d[:n][0], d[:n][1], lineMarker, color=color)
+    idx1,idx2=getIdxByVer(ver)
+    line = plt.plot(d[:n][idx1], d[:n][idx2], lineMarker, color=color)
     if(legendList is not None):
         legendList.append(name)
     return line[0].get_color()
@@ -75,10 +71,10 @@ def renameLegend(lgd):
         lgd[i]=s
     return lgd
 
-def drawList(prefix, mList, n=200):
+def drawList(prefix, mList, n=200, ver=0):
     plt.figure();
     for m in mList:
-        plotUnit(None, prefix+m+'.txt', m, '-', None, n)
+        plotUnit(None, prefix+m+'.txt', m, '-', None, n, ver)
     #plt.hold(True)
     plt.legend(renameLegend(mList))
     plt.xlabel('time (s)')
@@ -102,7 +98,7 @@ def genFLpost(l, post):
 def genFL(pre, l, post=''):
     return [str(pre)+str(i)+post for i in l]
 
-def drawListCmp(prefix, mList1, mList2, mList3=None, n=200, ncol=1, save=False):
+def drawListCmp(prefix, mList1, mList2, mList3=None, n=200, ncol=1, ver=0, save=False):
     assert(len(mList1) == len(mList2))
     assert(mList3 is None or len(mList3) == 0 or len(mList3) == len(mList1))
     if mList3 is None or len(mList3) == 0:
@@ -111,10 +107,11 @@ def drawListCmp(prefix, mList1, mList2, mList3=None, n=200, ncol=1, save=False):
     l=len(mList1)
     lgd=[]
     for i in range(l):
-        c=plotUnit(lgd, prefix+mList1[i]+'.txt', mList1[i], '-', None, n)
-        c=plotUnit(lgd, prefix+mList2[i]+'.txt', mList2[i], '--', c, n)
-        if(mList3):
-            plotUnit(lgd, prefix+mList3[i]+'.txt', mList3[i], '-.', c, n)
+        c=plotUnit(lgd, prefix+mList1[i]+'.txt', mList1[i], '-', None, n, ver)
+        if mList2:
+            plotUnit(lgd, prefix+mList2[i]+'.txt', mList2[i], '--', c, n, ver)
+        if mList3:
+            plotUnit(lgd, prefix+mList3[i]+'.txt', mList3[i], '-.', c, n, ver)
     #plt.hold(True)
     plt.legend(renameLegend(lgd), ncol=ncol)
     plt.xlabel('time (s)')
