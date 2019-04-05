@@ -17,6 +17,16 @@ size_t DataHolder::ylength() const{
 	return ny;
 }
 
+size_t DataHolder::partid() const
+{
+	return pid;
+}
+
+size_t DataHolder::nparts() const
+{
+	return npart;
+}
+
 void DataHolder::load(const std::string& fpath, const std::string& sepper,
 	const std::vector<int> skips, const std::vector<int>& yIds,
 	const bool header, const bool onlyLocalPart, const size_t topk)

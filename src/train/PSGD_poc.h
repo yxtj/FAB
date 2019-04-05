@@ -1,11 +1,14 @@
 #pragma once
 #include "Trainer.h"
+#include <fstream>
 
 class PSGD_poc : public Trainer
 {
 	double rate = 1.0;
 	bool mergeDim;
 	size_t paramWidth; // parameter width
+	std::string fname;
+	std::ofstream fout; // log of gradient
 
 public:
 	double stat_t_priority = 0, stat_t_grad = 0;

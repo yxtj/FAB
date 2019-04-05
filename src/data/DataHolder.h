@@ -17,6 +17,8 @@ public:
 	DataHolder(const bool appOne = true, const size_t nparts = 1, const size_t localid = 0);
 	size_t xlength() const;
 	size_t ylength() const;
+	size_t nparts() const;
+	size_t partid() const;
 
 	// give the column id of y and the skipped ones, the rest are x. id starts from 0
 	// throw exceptions if something wrong

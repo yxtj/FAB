@@ -13,6 +13,7 @@ void PSGD_poc::init(const std::vector<std::string>& param)
 	try{
 		rate = stod(param[0]);
 		mergeDim = param.size() > 1 ? param[1] == "1" : true;
+		fname = param.size() > 2 ? param[2] : "";
 	} catch(exception& e){
 		throw invalid_argument("Cannot parse parameters for GD\n" + string(e.what()));
 	}
@@ -37,6 +38,8 @@ void PSGD_poc::ready()
 				pd->get(i).x, pm->getParameter().weights, pd->get(i).y, nullptr);
 		}
 	}
+	if(!fname.empty())
+		fout.open(fname + "-" + to_string(pd->partid()), ios::binary);
 }
 
 PSGD_poc::~PSGD_poc()
@@ -90,6 +93,11 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_point(
 	}
 	maintainTopK(priority_record, cnt);
 	stat_t_priority += tmr.elapseSd();
+	// dump gradient
+	if(fout.is_open()){
+		for(auto& line : gradient_buffer)
+			fout.write((const char*)line.data(), line.size() * sizeof(double));
+	}
 	// calculate gradient
 	tmr.restart();
 	for(auto& pc : priority_record){
@@ -125,7 +133,6 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_dim(
 	const size_t nblock = min(cnt, pd->size())*paramWidth;
 	vector<vector<double>> gradient_buffer;
 	gradient_buffer.reserve(pd->size());
-	//TopKHolder<pair<int, int>> tpk(nblock);
 	vector<pair<float, pair<int, int>>> priority_record;
 	priority_record.reserve(4*nblock);
 	for(size_t i = 0; i < pd->size(); ++i){
@@ -133,13 +140,40 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_dim(
 		if(i%(4*cnt) == 0)
 			maintainTopK(priority_record, nblock);
 		for(size_t j = 0; j < paramWidth; ++j){
-			//tpk.update(make_pair((int)i, (int)j), abs(g[j]));
 			priority_record.emplace_back(static_cast<float>(abs(g[j])), make_pair((int)i, (int)j));
 		}
 		gradient_buffer.push_back(move(g));
 	}
+	/*vector<pair<double, pair<int, int>>> heap;
+	heap.reserve(nblock+1);
+	int end = static_cast<int>(min(cnt, pd->size()));
+	for(int i = 0; i < end; ++i){
+		for(int j = 0; j < static_cast<int>(paramWidth); ++j){
+			heap.emplace_back(abs(gradient_buffer[i][j]), make_pair(i, j));
+		}
+	}
+	make_heap(heap.begin(), heap.begin() + nblock,
+		[](const pair<double, pair<int, int>>& l, const pair<double, pair<int, int>>& r){
+		return l.first > r.first;
+	}); // small top heap
+	// heap[0] gives the smallest gradient
+	for(int i = end; i < static_cast<int>(pd->size()); ++i){
+		for(int j = 0; j < static_cast<int>(paramWidth); ++j){
+			if(abs(gradient_buffer[i][j]) > heap[0].first){
+				pop_heap(heap.begin(), heap.end());
+				heap.pop_back();
+				heap.emplace_back(abs(gradient_buffer[i][j]), make_pair(i, j));
+				push_heap(heap.begin(), heap.end());
+			}
+		}
+	}*/
 	maintainTopK(priority_record, nblock);
 	stat_t_priority += tmr.elapseSd();
+	// dump gradient
+	if(fout.is_open()){
+		for(auto& line : gradient_buffer)
+			fout.write((const char*)line.data(), line.size() * sizeof(double));
+	}
 	// calculate gradient
 	tmr.restart();
 	vector<int> dimCnt(paramWidth, 0);
