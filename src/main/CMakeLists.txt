@@ -7,6 +7,7 @@ set(SOURCES
 	func.cpp
 	ParameterIO.cpp
 )
+
 # exe: main
 add_executable(main main.cpp
 	${HEADERS} ${SOURCES})
@@ -15,6 +16,7 @@ target_link_libraries(main
 	distr #driver logging network 
 	#${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
+
 # exe: postprocess
 add_executable(postprocess postprocess.cpp
 	${HEADERS} ${SOURCES})
@@ -26,4 +28,11 @@ add_executable(generate generate.cpp
 	${HEADERS} ${SOURCES})
 target_link_libraries(generate
 	model util
+)
+
+# exe: calcgradient
+add_executable(calcgradient calcgradient.cpp
+	${HEADERS} ${SOURCES})
+target_link_libraries(calcgradient
+	data model util
 )
