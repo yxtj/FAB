@@ -44,7 +44,9 @@ void PSGD_poc::ready()
 
 PSGD_poc::~PSGD_poc()
 {
-	DLOG(INFO) << "[Stat]: time-priority: " << stat_t_priority << "\ttime-grad: " << stat_t_grad;
+	LOG(INFO) << "[Stat]: time-priority: " << stat_t_priority
+		<< "\ttime-archive: " << stat_t_archive
+		<< "\ttime-grad: " << stat_t_grad;
 }
 
 std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta(
@@ -94,10 +96,9 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_point(
 	maintainTopK(priority_record, cnt);
 	stat_t_priority += tmr.elapseSd();
 	// dump gradient
-	if(fout.is_open()){
-		for(auto& line : gradient_buffer)
-			fout.write((const char*)line.data(), line.size() * sizeof(double));
-	}
+	tmr.restart();
+	dumpGradient(gradient);
+	stat_t_archive += tmr.elapseSd();
 	// calculate gradient
 	tmr.restart();
 	for(auto& pc : priority_record){
@@ -105,6 +106,7 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_point(
 		for(size_t i = 0; i < paramWidth; ++i)
 			grad[i] += g[i];
 	}
+	gradient = move(gradient_buffer);
 	double factor = -rate;
 	if(avg)
 		factor /= cnt;
@@ -170,10 +172,9 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_dim(
 	maintainTopK(priority_record, nblock);
 	stat_t_priority += tmr.elapseSd();
 	// dump gradient
-	if(fout.is_open()){
-		for(auto& line : gradient_buffer)
-			fout.write((const char*)line.data(), line.size() * sizeof(double));
-	}
+	tmr.restart();
+	dumpGradient(gradient);
+	stat_t_archive += tmr.elapseSd();
 	// calculate gradient
 	tmr.restart();
 	vector<int> dimCnt(paramWidth, 0);
@@ -184,6 +185,7 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_dim(
 		++dimCnt[i];
 		grad[i] += g[i];
 	}
+	gradient = move(gradient_buffer);
 	double factor = -rate;
 	if(!avg)
 		factor *= cnt;
@@ -193,4 +195,17 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_dim(
 	}
 	stat_t_grad += tmr.elapseSd();
 	return make_pair(cnt, move(grad));
+}
+
+void PSGD_poc::dumpGradient(const std::vector<std::vector<double>>& gradient)
+{
+	if(fout.is_open()){
+		for(auto& line : gradient){
+			//fout.write((const char*)line.data(), line.size() * sizeof(double));
+			for(auto& v : line){
+				float f = static_cast<float>(v);
+				fout.write((const char*)&f, sizeof(float));
+			}
+		}
+	}
 }

@@ -9,9 +9,10 @@ class PSGD_poc : public Trainer
 	size_t paramWidth; // parameter width
 	std::string fname;
 	std::ofstream fout; // log of gradient
+	std::vector<std::vector<double>> gradient;
 
 public:
-	double stat_t_priority = 0, stat_t_grad = 0;
+	double stat_t_priority = 0, stat_t_archive = 0, stat_t_grad = 0;
 
 public:
 	virtual void init(const std::vector<std::string>& param);
@@ -28,4 +29,6 @@ private:
 		const size_t start, const size_t cnt, const bool avg);
 	std::pair<size_t, std::vector<double>> batchDelta_dim(
 		const size_t start, const size_t cnt, const bool avg);
+
+	void dumpGradient(const std::vector<std::vector<double>>& gradient);
 };
