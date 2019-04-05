@@ -48,7 +48,7 @@ void PrioritizedSGD::ready()
 	mt19937 gen(1);
 #else
 	random_device rdv;
-	mt19937 gen(rdv);
+	mt19937 gen(rdv());
 #endif
 	for(size_t i = 0; i < n_dpblock; ++i)
 		for(size_t j = 0; j < n_dmblock; ++j)
