@@ -39,6 +39,7 @@ struct Option {
 		app.add_option("-p,--parameter", algParam,
 			"The parameter of the algorithm, usually the shape of the algorithm")->required();
 		app.add_option("-r,--record", fnRecord, "The file of the parameter record")->required();
+		app.add_flag("-b,--binary", binary, "Whether the record file is binary");
 		// data-file
 		app.add_option("-d,--data", fnData, "The data file")->required();
 		app.add_option("--skip", tmp_s, "The columns to skip in the data file. "
@@ -46,7 +47,6 @@ struct Option {
 		app.add_option("-y,--ylist", tmp_y, "The columns to be used as y in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)");
 		app.add_flag("-n,--normalize", normalize, "Whether to do data normalization");
-		app.add_flag("-b,--binary", binary, "Whether to do data normalization");
 		app.add_option("-k,--topk", topk, "Only use the top-k data points");
 		//
 		app.add_option("--reference", fnParam, "The referenced parameter file");
