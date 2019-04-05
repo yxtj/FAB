@@ -14,6 +14,7 @@
 using namespace std;
 
 struct Option {
+	int nthread = 1;
 	string alg;
 	string algParam;
 	string fnRecord;
@@ -33,6 +34,7 @@ struct Option {
 
 	bool parse(int argc, char* argv[]){
 		string tmp_s, tmp_y;
+		app.add_option("-w,--thread", nthread, "Number of thread");
 		app.add_option("-a,--algorithm", alg, "The algorithm to run")->required();
 		app.add_option("-p,--parameter", algParam,
 			"The parameter of the algorithm, usually the shape of the algorithm")->required();
@@ -68,6 +70,36 @@ struct Option {
 		cout << app.help() << endl;
 	}
 };
+
+struct TaskResult{
+	double loss;
+	double diff;
+	size_t correct;
+};
+
+TaskResult evaluateOne(Parameter& param, Model& m,
+	const bool withRef, const bool doAccuracy,
+	const DataHolder& dh, const vector<double>& ref)
+{
+	double diff = 0.0;
+	if(withRef)
+		diff = vectorDifference(ref, param.weights);
+	m.setParameter(param);
+	double loss = 0.0;
+	size_t correct = 0;
+	for(size_t i = 0; i < dh.size(); ++i){
+		auto& d = dh.get(i);
+		auto p = m.predict(d);
+		loss += m.loss(p, d.y);
+		if(!doAccuracy)
+			continue;
+		for(size_t j = 0; j < p.size(); ++j)
+			if(m.classify(p[j]) == d.y[j])
+				++correct;
+	}
+	loss /= dh.size();
+	return TaskResult{ loss, diff, correct };
+}
 
 int main(int argc, char* argv[]){
 	Option opt;
@@ -142,33 +174,17 @@ int main(int argc, char* argv[]){
 			cout << "  processed: " << idx << endl;
 		//if(idx++ < 500)
 		//	continue;
-		double diff = 0.0;
-		if(withRef)
-			diff = vectorDifference(ref, param.weights);
+		TaskResult tr = evaluateOne(param, m, withRef, doAccuracy, dh, ref);
 		double impro = vectorDifference(last, param.weights);
-		m.setParameter(param);
 		last = move(param.weights);
-		double loss = 0.0;
-		size_t correct = 0;
-		for(size_t i = 0; i < dh.size(); ++i){
-			auto& d = dh.get(i);
-			auto p = m.predict(d);
-			loss += m.loss(p, d.y);
-			if(!doAccuracy)
-				continue;
-			for(size_t j = 0; j < p.size(); ++j)
-				if(m.classify(p[j]) == d.y[j])
-					++correct;
-		}
-		loss /= dh.size();
-		double accuracy = correct * accuracy_factor;
+		double accuracy = tr.correct * accuracy_factor;
 		if(opt.show){
-			cout << showpoint << iter << "\t" << time << "\t" << loss << "\t"
-				<< noshowpoint << accuracy << "\t" << diff << "\t" << impro << endl;
+			cout << showpoint << iter << "\t" << time << "\t" << tr.loss << "\t"
+				<< noshowpoint << accuracy << "\t" << tr.diff << "\t" << impro << endl;
 		}
 		if(write){
-			fout << showpoint << iter << "," << time << "," << loss << ","
-				<< noshowpoint << accuracy << "," << diff << "," << impro << "\n";
+			fout << showpoint << iter << "," << time << "," << tr.loss << ","
+				<< noshowpoint << accuracy << "," << tr.diff << "," << impro << "\n";
 		}
 	}
 	archiver.close();
