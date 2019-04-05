@@ -163,7 +163,7 @@ int main(int argc, char* argv[]){
 		return 6;
 	}
 
-	cout << "# of data points: " << dh.size() << ", # of parameters: " << m.paramWidth();
+	cout << "# of data points: " << dh.size() << ", # of parameters: " << m.paramWidth() << endl;
 
 	int iter;
 	double time;
