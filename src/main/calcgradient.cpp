@@ -80,7 +80,7 @@ struct GradientDumper{
 		} else{
 			pf = &GradientDumper::dumpCSV;
 		}
-		int f = ios::out;
+		ios_base::openmode f = ios::out;
 		if(obinary)
 			f |= ios::binary;
 		fout.open(fname, f);
