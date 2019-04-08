@@ -6,7 +6,6 @@ class PSGD_poc : public Trainer
 {
 	double rate = 1.0;
 	bool mergeDim;
-	bool fullUpdate;
 	size_t paramWidth; // parameter width
 	std::string fname;
 	std::ofstream fout; // log of gradient

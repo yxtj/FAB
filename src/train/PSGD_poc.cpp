@@ -14,8 +14,8 @@ void PSGD_poc::init(const std::vector<std::string>& param)
 	try{
 		rate = stod(param[0]);
 		mergeDim = param.size() > 1 ? beTrueOption(param[1]) : true;
-		fullUpdate = param.size() > 2 ? beTrueOption(param[2]) : true;
-		fname = param.size() > 3 ? param[3] : "";
+		//fullUpdate = param.size() > 2 ? beTrueOption(param[2]) : true;
+		fname = param.size() > 2 ? param[2] : "";
 	} catch(exception& e){
 		throw invalid_argument("Cannot parse parameters for GD\n" + string(e.what()));
 	}
@@ -57,10 +57,10 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
 	size_t f = start, c = cnt;
-	if(fullUpdate){
+/*	if(fullUpdate){
 		f = 0;
 		c = pd->size();
-	}
+	}*/
 	if(mergeDim){
 		return batchDelta_point(f, c, avg);
 	} else{
