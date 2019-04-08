@@ -3,6 +3,7 @@
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <algorithm>
 #include "data/DataHolder.h"
 #include "util/Util.h"
 #include "model/Model.h"
@@ -25,10 +26,11 @@ struct Option {
 	string fnOutput;
 	bool normalize = false;
 	bool binary = false;
-	bool iteration = false;
+	//bool iteration = false;
 	bool accuracy = false;
 	bool show = false;
-	size_t topk = 0;
+	size_t topk_data = 0;
+	size_t topk_param = 0;
 
 	CLI::App app;
 
@@ -40,6 +42,7 @@ struct Option {
 			"The parameter of the algorithm, usually the shape of the algorithm")->required();
 		app.add_option("-r,--record", fnRecord, "The file of the parameter record")->required();
 		app.add_flag("-b,--binary", binary, "Whether the record file is binary");
+		app.add_option("--top-param", topk_data, "Only use the top-k parameters");
 		// data-file
 		app.add_option("-d,--data", fnData, "The data file")->required();
 		app.add_option("--skip", tmp_s, "The columns to skip in the data file. "
@@ -47,7 +50,7 @@ struct Option {
 		app.add_option("-y,--ylist", tmp_y, "The columns to be used as y in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)");
 		app.add_flag("-n,--normalize", normalize, "Whether to do data normalization");
-		app.add_option("-k,--topk", topk, "Only use the top-k data points");
+		app.add_option("--top-data", topk_data, "Only use the top-k data points");
 		//
 		app.add_option("--reference", fnParam, "The referenced parameter file");
 		// output
@@ -60,6 +63,10 @@ struct Option {
 			app.parse(argc, argv);
 			idSkip = getIntListByRange(tmp_s);
 			idY = getIntListByRange(tmp_y);
+			auto it = remove_if(idY.begin(), idY.end(), [](const int v){
+				return v < 0;
+			});
+			idY.erase(it, idY.end());
 		} catch(const CLI::ParseError &e) {
 			cout << e.what() << endl;
 			return false;
@@ -126,7 +133,7 @@ int main(int argc, char* argv[]){
 		}
 		algParam = tmp;
 	}
-	const bool doAccuracy = opt.accuracy && opt.alg != "km";
+	const bool doAccuracy = opt.accuracy && !opt.idY.empty();
 
 	ofstream fout(opt.fnOutput);
 	if(!opt.fnOutput.empty() && fout.fail()){
@@ -136,7 +143,7 @@ int main(int argc, char* argv[]){
 	const bool write = !opt.fnOutput.empty();
 
 	DataHolder dh(false, 1, 0);
-	dh.load(opt.fnData, ",", opt.idSkip, opt.idY, false, true, opt.topk);
+	dh.load(opt.fnData, ",", opt.idSkip, opt.idY, false, true, opt.topk_data);
 	if(opt.normalize)
 		dh.normalize(false);
 	double accuracy_factor = 0.0;
@@ -170,10 +177,11 @@ int main(int argc, char* argv[]){
 	while(!archiver.eof() && archiver.valid()){
 		if(!archiver.load(iter, time, param))
 			continue;
-		if(!opt.show && idx++ % 5000 == 0)
+		if(!opt.show && idx % 500 == 0)
 			cout << "  processed: " << idx << endl;
-		//if(idx++ < 500)
-		//	continue;
+		if(opt.topk_param != 0 && idx >= opt.topk_param)
+			break;
+		++idx;
 		TaskResult tr = evaluateOne(param, m, withRef, doAccuracy, dh, ref);
 		double impro = vectorDifference(last, param.weights);
 		last = move(param.weights);
