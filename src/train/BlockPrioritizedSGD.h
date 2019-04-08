@@ -3,7 +3,7 @@
 #include "impl/PrioritizedHolder.hpp"
 #include <unordered_map>
 
-class PrioritizedSGD : public Trainer
+class BlockPrioritizedSGD : public Trainer
 {
 	double rate = 1.0;
 	size_t dpblock, n_dpblock; // k-data-point batch (for priority)

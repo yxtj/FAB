@@ -4,7 +4,7 @@ set(HEADERS
 	EM.h
 	EM_KMeans.h
 	PSGD_poc.h
-	PrioritizedSGD.h
+	BlockPrioritizedSGD.h
 	TrainerFactory.h
 )
 set(SOURCES
@@ -13,7 +13,7 @@ set(SOURCES
 	EM.cpp
 	EM_KMeans.cpp
 	PSGD_poc.cpp
-	PrioritizedSGD.cpp
+	BlockPrioritizedSGD.cpp
 	TrainerFactory.cpp
 )
 set(IMPL_FILES

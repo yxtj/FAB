@@ -2,7 +2,7 @@
 #include "GD.h"
 #include "EM.h"
 #include "EM_KMeans.h"
-#include "PrioritizedSGD.h"
+#include "BlockPrioritizedSGD.h"
 #include "PSGD_poc.h"
 
 Trainer * TrainerFactory::generate(
@@ -16,7 +16,7 @@ Trainer * TrainerFactory::generate(
 	} else if(name == "kmeans"){
 		p = new EM_KMeans();
 	} else if(name == "psgd"){
-		p = new PrioritizedSGD();
+		p = new BlockPrioritizedSGD();
 	} else if(name == "psgd_poc"){
 		p = new PSGD_poc();
 	}
