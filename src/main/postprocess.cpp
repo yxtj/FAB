@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iomanip>
 #include <algorithm>
+#include <future>
 #include "data/DataHolder.h"
 #include "util/Util.h"
 #include "model/Model.h"
@@ -61,6 +62,8 @@ struct Option {
 
 		try {
 			app.parse(argc, argv);
+			if(nthread <= 0)
+				nthread = 1;
 			idSkip = getIntListByRange(tmp_s);
 			idY = getIntListByRange(tmp_y);
 			auto it = remove_if(idY.begin(), idY.end(), [](const int v){
@@ -152,49 +155,94 @@ int main(int argc, char* argv[]){
 
 	Model m;
 	try{
-		m.init(opt.alg, algParam, 123456U);
+		m.init(opt.alg, algParam);
+		m.checkData(dh.xlength(), dh.ylength());
 	} catch(exception& e){
 		cerr << "Error in initialize model" << endl;
 		cerr << e.what() << endl;
 		return 3;
 	}
-	if(!m.checkData(dh.xlength(), dh.ylength())){
-		cerr << "data size does not match model" << endl;
-		return 4;
-	}
 
 	ParamArchiver archiver;
 	if(!archiver.init_read(opt.fnRecord, m.paramWidth(), opt.binary)){
 		cerr << "cannot open record file: " << opt.fnRecord << endl;
-		return 5;
+		return 4;
 	}
 
-	vector<double> last(dh.xlength(), 0.0);
-	int iter;
-	double time;
-	Parameter param;
-	int idx = 0;
-	while(!archiver.eof() && archiver.valid()){
-		if(!archiver.load(iter, time, param))
-			continue;
-		if(!opt.show && idx % 500 == 0)
-			cout << "  processed: " << idx << endl;
-		if(opt.topk_param != 0 && idx >= opt.topk_param)
-			break;
-		++idx;
-		TaskResult tr = evaluateOne(param, m, withRef, doAccuracy, dh, ref);
-		double impro = vectorDifference(last, param.weights);
-		last = move(param.weights);
-		double accuracy = tr.correct * accuracy_factor;
-		if(opt.show){
-			cout << showpoint << iter << "\t" << time << "\t" << tr.loss << "\t"
-				<< noshowpoint << accuracy << "\t" << tr.diff << "\t" << impro << endl;
+	if(opt.nthread == 1){ // 1-thread
+		vector<double> last(dh.xlength(), 0.0);
+		int iter;
+		double time;
+		Parameter param;
+		int idx = 0;
+		while(!archiver.eof() && archiver.valid()){
+			if(!archiver.load(iter, time, param))
+				continue;
+			if(!opt.show && idx % 500 == 0)
+				cout << "  processed: " << idx << endl;
+			if(opt.topk_param != 0 && idx >= opt.topk_param)
+				break;
+			++idx;
+			TaskResult tr = evaluateOne(param, m, withRef, doAccuracy, dh, ref);
+			double impro = vectorDifference(last, param.weights);
+			last = move(param.weights);
+			double accuracy = tr.correct * accuracy_factor;
+			if(opt.show){
+				cout << showpoint << iter << "\t" << time << "\t" << tr.loss << "\t"
+					<< noshowpoint << accuracy << "\t" << tr.diff << "\t" << impro << endl;
+			}
+			if(write){
+				fout << showpoint << iter << "," << time << "," << tr.loss << ","
+					<< noshowpoint << accuracy << "," << tr.diff << "," << impro << "\n";
+			}
 		}
-		if(write){
-			fout << showpoint << iter << "," << time << "," << tr.loss << ","
-				<< noshowpoint << accuracy << "," << tr.diff << "," << impro << "\n";
+	} else{ // n-thread
+		vector<double> last(dh.xlength(), 0.0);
+		vector<Model> models(opt.nthread);
+		for(size_t i = 0; i < opt.nthread; ++i)
+			models[i].init(opt.alg, opt.algParam);
+		vector<tuple<int, double, Parameter>> data(opt.nthread);
+		vector<double> improvements(opt.nthread);
+		int idx = 0;
+		while(!archiver.eof() && archiver.valid()){
+			vector<future<TaskResult>> handlers;
+			int i = 0;
+			while(i < opt.nthread && !archiver.eof() && archiver.valid()){
+				if(!archiver.load(get<0>(data[i]), get<1>(data[i]), get<2>(data[i])))
+					continue;
+				if(!opt.show && idx % 500 == 0)
+					cout << "  processed: " << idx << endl;
+				if(opt.topk_param != 0 && idx >= opt.topk_param)
+					break;
+				auto& p = get<2>(data[i]);
+				handlers.push_back(async(evaluateOne, p, models[i], withRef, doAccuracy, dh, ref));
+				++idx;
+				++i;
+			}
+			for(size_t i = 0; i < handlers.size(); ++i){
+				auto& p = get<2>(data[i]);
+				improvements[i] = vectorDifference(last, p.weights);
+				last = p.weights;
+			}
+			for(size_t i = 0; i < handlers.size(); ++i){
+				int iter = get<0>(data[i]);
+				double time = get<1>(data[i]);
+				TaskResult tr = handlers[i].get();
+				double accuracy = tr.correct * accuracy_factor;
+				if(opt.show){
+					cout << showpoint << iter << "\t" << time << "\t" << tr.loss << "\t"
+						<< noshowpoint << accuracy << "\t" << tr.diff << "\t" << improvements[i] << endl;
+				}
+				if(write){
+					fout << showpoint << iter << "," << time << "," << tr.loss << ","
+						<< noshowpoint << accuracy << "," << tr.diff << "," << improvements[i] << "\n";
+				}
+			}
 		}
+		for(size_t i = 0; i < opt.nthread; ++i)
+			models[i].clear();
 	}
+	m.clear();
 	archiver.close();
 	fout.close();
 	return 0;
