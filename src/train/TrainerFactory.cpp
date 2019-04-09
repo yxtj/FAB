@@ -2,6 +2,7 @@
 #include "GD.h"
 #include "EM.h"
 #include "EM_KMeans.h"
+#include "PSGD.h"
 #include "BlockPSGD.h"
 #include "psgd_poc/PSGD_point.h"
 #include "psgd_poc/PSGD_dim.h"
@@ -16,6 +17,8 @@ Trainer * TrainerFactory::generate(
 		p = new EM();
 	} else if(name == "kmeans"){
 		p = new EM_KMeans();
+	} else if(name == "psgd"){
+		p = new PSGD();
 	} else if(name == "bpsgd"){
 		p = new BlockPSGD();
 	} else if(name == "psgd_poc_point"){

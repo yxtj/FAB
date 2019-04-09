@@ -47,7 +47,8 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		("batch_size,s", value(&tmp_bs)->required(), "The global batch size. Support suffix: k, m, g")
 		//("learning_rate,l", value(&lrate)->required(), "The learning rate")
 		("optimizer,o", value(&optimizer)->required()->default_value("gd:0.01"),
-			"The optimizer to train. Support: gd:<lr>, em:<lr>, kmeans, psgd:<lr>:<point-bs>:<dim-bs>.")
+			"The optimizer to train. Support: gd:<lr>, em:<lr>, kmeans, "
+			"psgd:<lr>:<k-ratio>, bpsgd:<lr>:<k-ratio>:<point-bs>:<dim-bs>.")
 		// file - input
 		("data_file,d", value(&fnData)->required(), "The file name of the input data")
 		("header", bool_switch(&header)->default_value(false), 

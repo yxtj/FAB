@@ -6,6 +6,7 @@
 class BlockPSGD : public Trainer
 {
 	double rate = 1.0;
+	double kratio;
 	size_t dpblock, n_dpblock; // k-data-point batch (for priority)
 	size_t dmblock, n_dmblock; // k-dimension batch (for priority)
 	size_t paramWidth; // parameter width

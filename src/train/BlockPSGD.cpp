@@ -9,10 +9,11 @@ void BlockPSGD::init(const std::vector<std::string>& param)
 {
 	try{
 		rate = stod(param[0]);
-		dpblock = param.size() > 1 ? stoi(param[1]) : 1; // default: single data point
-		dmblock = param.size() > 2 ? stoi(param[2]) : 0; // default: all dimension
+		kratio = stod(param[1]);
+		dpblock = param.size() > 2 ? stoi(param[2]) : 1; // default: single data point
+		dmblock = param.size() > 3 ? stoi(param[3]) : 0; // default: all dimension
 	} catch(exception& e){
-		throw invalid_argument("Cannot parse parameters for GD\n" + string(e.what()));
+		throw invalid_argument("Cannot parse parameters for BPSGD\n" + string(e.what()));
 	}
 }
 
