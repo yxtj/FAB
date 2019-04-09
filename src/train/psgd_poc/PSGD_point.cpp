@@ -19,7 +19,7 @@ std::string PSGD_point::name() const
 void PSGD_point::ready()
 {
 	PSGD_poc::ready();
-	priority.reserve(pd->size());
+	priority.resize(pd->size());
 }
 
 std::pair<size_t, std::vector<double>> PSGD_point::batchDelta(
@@ -36,6 +36,11 @@ std::pair<size_t, std::vector<double>> PSGD_point::batchDelta(
 	stat_t_grad_archive += tmr.elapseSd();
 	// update priority and pick top-k
 	tmr.restart();
+	for(size_t i = 0; i < pd->size(); ++i){
+		auto& g = gradient[i];
+		auto p = inner_product(g.begin(), g.end(), g.begin(), 1.0);
+		priority[i] = static_cast<float>(p);
+	}
 	vector<int> topk = getTopK(start, end, static_cast<size_t>(topRatio*cnt));
 	stat_t_priority += tmr.elapseSd();
 	// calculate delta to report

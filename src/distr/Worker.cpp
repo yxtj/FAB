@@ -74,10 +74,11 @@ void Worker::run()
 	sendDatasetInfo();
 	DLOG(INFO) << "initialize parameter";
 	trainer->bindModel(&model);
-	trainer->ready();
+	trainer->prepare();
 	initializeParameter();
 	DLOG(INFO) << "got init parameter";
 	applyBufferParameter();
+	trainer->ready();
 
 	DLOG(INFO) << "start training with mode: " << opt->mode << ", local batch size: " << localBatchSize;
 	iter = 1;

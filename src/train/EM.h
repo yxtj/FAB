@@ -11,7 +11,7 @@ public:
 	virtual std::string name() const;
 	void setRate(const double rate);
 	double getRate() const;
-	virtual void ready();
+	virtual void prepare();
 
 	virtual std::pair<size_t, std::vector<double>> batchDelta(
 		const size_t start, const size_t cnt, const bool avg = true);

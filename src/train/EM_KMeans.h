@@ -10,7 +10,7 @@ public:
 	virtual void init(const std::vector<std::string>& param);
 	virtual std::string name() const;
 	virtual bool needAveragedDelta() const;
-	virtual void ready();
+	virtual void prepare();
 
 	// special proecss on the <n> part of weight
 	virtual std::pair<size_t, std::vector<double>> batchDelta(

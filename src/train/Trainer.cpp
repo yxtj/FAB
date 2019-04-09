@@ -9,6 +9,10 @@ void Trainer::bindDataset(const DataHolder* pd){
 	this->pd = pd;
 }
 
+void Trainer::prepare()
+{
+}
+
 void Trainer::ready()
 {
 }

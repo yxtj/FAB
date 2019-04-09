@@ -23,6 +23,7 @@ class BlockPSGD : public Trainer
 public:
 	virtual void init(const std::vector<std::string>& param);
 	virtual std::string name() const;
+	virtual void prepare();
 	virtual void ready();
 
 	virtual std::pair<size_t, std::vector<double>> batchDelta(

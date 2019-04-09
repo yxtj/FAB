@@ -16,6 +16,7 @@ public:
 public:
 	virtual void init(const std::vector<std::string>& param);
 	virtual std::string name() const;
+	virtual void prepare();
 	virtual void ready();
 	virtual ~PSGD();
 
@@ -24,6 +25,7 @@ public:
 	virtual std::pair<size_t, std::vector<double>> batchDelta(
 		std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg = true);
 private:
+	float calcPriority(const std::vector<double>& g);
 	std::vector<int> PSGD::getTopK(const size_t first, const size_t last, const size_t k);
 	void updateGnP(const std::vector<int>& topk);
 };

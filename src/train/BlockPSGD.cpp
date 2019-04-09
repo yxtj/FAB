@@ -22,7 +22,7 @@ std::string BlockPSGD::name() const
 	return "psgd";
 }
 
-void BlockPSGD::ready()
+void BlockPSGD::prepare()
 {
 	// initialize parameter by data
 	paramWidth = pm->paramWidth();
@@ -43,7 +43,12 @@ void BlockPSGD::ready()
 	if(dmblock == 0 || dmblock > paramWidth)
 		dmblock = paramWidth;
 	n_dmblock = (paramWidth + dmblock - 1) / dmblock;
+}
+
+void BlockPSGD::ready()
+{
 	// intialize priority - priority queue
+	// TODO: change to gradient based
 	uniform_real_distribution<float> dist(0.0, 1.0);
 #if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
 	mt19937 gen(1);

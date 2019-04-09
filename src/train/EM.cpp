@@ -29,7 +29,7 @@ double EM::getRate() const {
 	return rate;
 }
 
-void EM::ready()
+void EM::prepare()
 {
 	// initialize hidden variable
 	int nh = pm->getKernel()->lengthHidden();

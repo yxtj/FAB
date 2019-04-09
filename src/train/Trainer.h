@@ -8,8 +8,8 @@
 class Trainer
 {
 public:
-	Model* pm;
-	const DataHolder* pd;
+	Model* pm =nullptr;
+	const DataHolder* pd = nullptr;
 public:
 	virtual void init(const std::vector<std::string>& param) = 0;
 	virtual std::string name() const = 0;
@@ -18,6 +18,8 @@ public:
 
 	void bindModel(Model* pm);
 	void bindDataset(const DataHolder* pd);
+	// called after bind model and dataset (without parameter)
+	virtual void prepare();
 	// last step before running
 	virtual void ready();
 

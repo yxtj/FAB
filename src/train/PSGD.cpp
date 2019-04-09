@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <numeric>
 #include <cmath>
+//#include <random>
 
 using namespace std;
 
@@ -22,7 +23,7 @@ std::string PSGD::name() const
 	return "psgd";
 }
 
-void PSGD::ready()
+void PSGD::prepare()
 {
 	// initialize parameter by data
 	paramWidth = pm->paramWidth();
@@ -36,10 +37,23 @@ void PSGD::ready()
 				pd->get(i).x, pm->getParameter().weights, pd->get(i).y, nullptr);
 		}
 	}
+}
+
+void PSGD::ready()
+{
 	// prepare gradient
-	gradient.resize(pd->size(), vector<double>(paramWidth));
+	gradient.reserve(pd->size());
+	for(size_t i = 0; i < pd->size(); ++i){
+		gradient.push_back(pm->gradient(pd->get(i)));
+	}
 	// prepare priority
-	priority.reserve(pd->size());
+	//uniform_real_distribution<float> dist(0.0f, 1.0f);
+	//mt19937 gen(1);
+	priority.resize(pd->size());
+	for(size_t i = 0; i < pd->size(); ++i){
+		priority[i] = calcPriority(gradient[i]);
+		//priority[i] = dist(gen);
+	}
 }
 
 PSGD::~PSGD()
@@ -83,6 +97,12 @@ std::pair<size_t, std::vector<double>> PSGD::batchDelta(
 	return batchDelta(start, cnt, avg);
 }
 
+float PSGD::calcPriority(const std::vector<double>& g)
+{
+	auto p = inner_product(g.begin(), g.end(), g.begin(), 1.0);
+	return static_cast<float>(p);
+}
+
 std::vector<int> PSGD::getTopK(const size_t first, const size_t last, const size_t k)
 {
 	std::vector<int> res;
@@ -103,8 +123,7 @@ void PSGD::updateGnP(const std::vector<int>& topk)
 {
 	for(auto i : topk){
 		auto&& g = pm->gradient(pd->get(i));
-		auto p = inner_product(g.begin(), g.end(), g.end(), 1.0);
-		priority[i] = static_cast<float>(p);
+		priority[i] = calcPriority(g);
 		gradient[i] = move(g);
 	}
 }

@@ -16,7 +16,7 @@ bool EM_KMeans::needAveragedDelta() const
 	return false;
 }
 
-void EM_KMeans::ready()
+void EM_KMeans::prepare()
 {
 	// initialize hidden variable
 	int nh = pm->getKernel()->lengthHidden();
