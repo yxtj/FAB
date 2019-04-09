@@ -1,8 +1,5 @@
 #include "PSGD_dim.h"
-#include "impl/TopKHolder.hpp"
 #include "util/Timer.h"
-#include "util/Util.h"
-#include "logging/logging.h"
 #include <algorithm>
 #include <numeric>
 #include <cmath>
@@ -80,7 +77,7 @@ std::vector<std::pair<int, int>> PSGD_dim::getTopK(
 	auto it = res.begin() + k;
 	partial_sort(res.begin(), it, res.end(), 
 		[&](const pair<int, int>& l, const pair<int, int>& r){
-		return gradient[l.first][l.second] > gradient[r.first][r.second]; // pick the largest k
+		return abs(gradient[l.first][l.second]) > abs(gradient[r.first][r.second]); // pick the largest k
 	});
 	res.erase(it, res.end());
 	return res;

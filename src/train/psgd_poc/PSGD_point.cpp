@@ -1,8 +1,5 @@
 #include "PSGD_point.h"
-#include "impl/TopKHolder.hpp"
 #include "util/Timer.h"
-#include "util/Util.h"
-#include "logging/logging.h"
 #include <algorithm>
 #include <numeric>
 #include <cmath>
