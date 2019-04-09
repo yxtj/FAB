@@ -1,5 +1,6 @@
 #include "PSGD.h"
 #include "util/Timer.h"
+#include "logging/logging.h"
 #include <algorithm>
 #include <numeric>
 #include <cmath>
@@ -54,7 +55,7 @@ std::pair<size_t, std::vector<double>> PSGD::batchDelta(
 	size_t end = min(start + cnt, pd->size());
 	Timer tmr;
 	// update priority and pick top-k
-	vector<int> topk = getTopK(start, end, static_cast<size_t>(top_p*cnt));
+	vector<int> topk = getTopK(start, end, static_cast<size_t>(topRatio*cnt));
 	stat_t_priority += tmr.elapseSd();
 	// calculate gradient of data-points
 	tmr.restart();
@@ -86,8 +87,8 @@ std::vector<int> PSGD::getTopK(const size_t first, const size_t last, const size
 {
 	std::vector<int> res;
 	res.reserve(last - first);
-	for(auto i = first; i < last; ++i)
-		res.push_back(i);
+	for(size_t i = first; i < last; ++i)
+		res.push_back(static_cast<int>(i));
 	if(res.size() <= k)
 		return res;
 	auto it = res.begin() + k;
