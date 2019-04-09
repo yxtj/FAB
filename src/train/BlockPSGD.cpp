@@ -1,11 +1,11 @@
-#include "BlockPrioritizedSGD.h"
+#include "BlockPSGD.h"
 #include <algorithm>
 #include <random>
 #include <numeric>
 
 using namespace std;
 
-void BlockPrioritizedSGD::init(const std::vector<std::string>& param)
+void BlockPSGD::init(const std::vector<std::string>& param)
 {
 	try{
 		rate = stod(param[0]);
@@ -16,12 +16,12 @@ void BlockPrioritizedSGD::init(const std::vector<std::string>& param)
 	}
 }
 
-std::string BlockPrioritizedSGD::name() const
+std::string BlockPSGD::name() const
 {
 	return "psgd";
 }
 
-void BlockPrioritizedSGD::ready()
+void BlockPSGD::ready()
 {
 	// initialize parameter by data
 	paramWidth = pm->paramWidth();
@@ -55,7 +55,7 @@ void BlockPrioritizedSGD::ready()
 			priQue.update(make_pair((int)i, (int)j), dist(gen));
 }
 
-std::pair<size_t, std::vector<double>> BlockPrioritizedSGD::batchDelta(
+std::pair<size_t, std::vector<double>> BlockPSGD::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
 	const size_t end = pd->size();
@@ -113,7 +113,7 @@ std::pair<size_t, std::vector<double>> BlockPrioritizedSGD::batchDelta(
 	return make_pair(cnt, move(grad));
 }
 
-std::pair<size_t, std::vector<double>> BlockPrioritizedSGD::batchDelta(
+std::pair<size_t, std::vector<double>> BlockPSGD::batchDelta(
 	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
 {
 	const size_t end = pd->size();
@@ -169,7 +169,7 @@ std::pair<size_t, std::vector<double>> BlockPrioritizedSGD::batchDelta(
 	return make_pair(ndp, move(grad));
 }
 
-std::vector<float> BlockPrioritizedSGD::calcPriority(const std::vector<double>& grad)
+std::vector<float> BlockPSGD::calcPriority(const std::vector<double>& grad)
 {
 	vector<float> priority;
 	size_t i = 0;
@@ -184,7 +184,7 @@ std::vector<float> BlockPrioritizedSGD::calcPriority(const std::vector<double>& 
 	return priority;
 }
 
-std::unordered_map<int, std::vector<int>> BlockPrioritizedSGD::mergeSelected(
+std::unordered_map<int, std::vector<int>> BlockPSGD::mergeSelected(
 	const std::vector<std::pair<int, int>>& pick)
 {
 	std::unordered_map<int, std::vector<int>> res;

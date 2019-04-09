@@ -175,9 +175,9 @@ bool Option::processOptimizer()
 			ch += 'a' - 'A';
 	}
 	vector<string> t = getStringList(optimizer, ":-, ");
-	vector<string> supported = { "gd", "em", "kmeans", "psgd", "psgd_poc" };
+	vector<string> supported = { "gd", "em", "kmeans", "psgd", "bpsgd" };
 	auto it = find(supported.begin(), supported.end(), t[0]);
-	if(it == supported.end())
+	if(it == supported.end() && t[0].find("_poc_") == string::npos)
 		return false;
 	optimizer = t[0];
 	for(size_t i = 1; i < t.size(); ++i)

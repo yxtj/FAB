@@ -3,8 +3,7 @@ set(HEADERS
 	GD.h
 	EM.h
 	EM_KMeans.h
-	PSGD_poc.h
-	BlockPrioritizedSGD.h
+	BlockPSGD.h
 	TrainerFactory.h
 )
 set(SOURCES
@@ -12,13 +11,18 @@ set(SOURCES
 	GD.cpp
 	EM.cpp
 	EM_KMeans.cpp
-	PSGD_poc.cpp
-	BlockPrioritizedSGD.cpp
+	BlockPSGD.cpp
 	TrainerFactory.cpp
 )
 set(IMPL_FILES
 	impl/PrioritizedHolder.hpp
 	impl/TopKHolder.hpp
 )
+set(PSGD_POC_FILES
+	psgd_poc/PSGD_poc.cpp
+	psgd_poc/PSGD_point.cpp
+	psgd_poc/PSGD_dim.cpp
+	psgd_poc/PSGD_sw.cpp
+)
 add_library(train
-	${HEADERS} ${SOURCES} ${IMPL_FILES})
+	${HEADERS} ${SOURCES} ${IMPL_FILES} ${PSGD_POC_FILES})

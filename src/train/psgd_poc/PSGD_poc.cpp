@@ -13,11 +13,12 @@ void PSGD_poc::init(const std::vector<std::string>& param)
 {
 	try{
 		rate = stod(param[0]);
-		mergeDim = param.size() > 1 ? beTrueOption(param[1]) : true;
+		top_p = stod(param[1]);
+		//mergeDim = param.size() > 1 ? beTrueOption(param[1]) : true;
 		//fullUpdate = param.size() > 2 ? beTrueOption(param[2]) : true;
 		fname = param.size() > 2 ? param[2] : "";
 	} catch(exception& e){
-		throw invalid_argument("Cannot parse parameters for GD\n" + string(e.what()));
+		throw invalid_argument("Cannot parse parameters for PSGD\n" + string(e.what()));
 	}
 }
 
@@ -40,7 +41,7 @@ void PSGD_poc::ready()
 				pd->get(i).x, pm->getParameter().weights, pd->get(i).y, nullptr);
 		}
 	}
-	gradient.reserve(pd->size());
+	gradient.resize(pd->size(), vector<double>(paramWidth));
 	if(!fname.empty())
 		fout.open(fname + "-" + to_string(pd->partid()), ios::binary);
 }
@@ -53,26 +54,6 @@ PSGD_poc::~PSGD_poc()
 		<< "\ttime-grad-update: " << stat_t_grad_update;
 }
 
-std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta(
-	const size_t start, const size_t cnt, const bool avg)
-{
-	size_t f = start, c = cnt;
-/*	if(fullUpdate){
-		f = 0;
-		c = pd->size();
-	}*/
-	if(mergeDim){
-		return batchDelta_point(f, c, avg);
-	} else{
-		return batchDelta_dim(f, c, avg);
-	}
-}
-
-std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta(
-	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
-{
-	return batchDelta(start, cnt, avg);
-}
 
 std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_point(
 	const size_t start, const size_t cnt, const bool avg)
@@ -176,21 +157,13 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_dim(
 
 void PSGD_poc::updateGradient(const size_t start, const size_t end)
 {
-	Timer tmr;
-	// calculate gradient of data-points
-	gradient.clear();
 	for(size_t i = start; i < end; ++i){
 		auto g = pm->gradient(pd->get(i));
-		gradient.push_back(move(g));
+		gradient[i] = move(g);
 	}
-	stat_t_grad_calc += tmr.elapseSd();
-	// dump gradient
-	tmr.restart();
-	dumpGradient(gradient);
-	stat_t_grad_archive += tmr.elapseSd();
 }
 
-void PSGD_poc::dumpGradient(const std::vector<std::vector<double>>& gradient)
+void PSGD_poc::dumpGradient()
 {
 	if(fout.is_open()){
 		for(auto& line : gradient){
