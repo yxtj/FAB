@@ -104,6 +104,8 @@ void Worker::run()
 
 	DLOG(INFO) << "finish training";
 	sendClosed();
+	delete trainer;
+	trainer = nullptr;
 	finishStat();
 	showStat();
 	stopMsgLoop();

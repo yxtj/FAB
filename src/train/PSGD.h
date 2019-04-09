@@ -26,6 +26,6 @@ public:
 		std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg = true);
 private:
 	float calcPriority(const std::vector<double>& g);
-	std::vector<int> PSGD::getTopK(const size_t first, const size_t last, const size_t k);
+	std::vector<int> getTopK(const size_t first, const size_t last, const size_t k);
 	void updateGnP(const std::vector<int>& topk);
 };

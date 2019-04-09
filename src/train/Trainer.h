@@ -22,6 +22,7 @@ public:
 	virtual void prepare();
 	// last step before running
 	virtual void ready();
+	virtual ~Trainer(){}
 
 	double loss(const size_t topn = 0) const;
 
