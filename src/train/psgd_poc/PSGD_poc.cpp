@@ -13,7 +13,7 @@ void PSGD_poc::init(const std::vector<std::string>& param)
 {
 	try{
 		rate = stod(param[0]);
-		top_p = stod(param[1]);
+		topRatio = stod(param[1]);
 		//mergeDim = param.size() > 1 ? beTrueOption(param[1]) : true;
 		//fullUpdate = param.size() > 2 ? beTrueOption(param[2]) : true;
 		fname = param.size() > 2 ? param[2] : "";

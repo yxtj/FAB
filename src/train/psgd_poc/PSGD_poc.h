@@ -6,7 +6,7 @@ class PSGD_poc : public Trainer
 {
 protected:
 	double rate = 1.0;
-	double top_p = 1.0;
+	double topRatio = 1.0;
 	size_t paramWidth; // parameter width
 	std::string fname;
 	std::ofstream fout; // log of gradient

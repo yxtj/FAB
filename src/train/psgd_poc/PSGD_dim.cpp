@@ -35,7 +35,7 @@ std::pair<size_t, std::vector<double>> PSGD_dim::batchDelta(
 	stat_t_grad_archive += tmr.elapseSd();
 	// update priority and pick top-k
 	tmr.restart();
-	vector<pair<int, int>> topk = getTopK(start, end, static_cast<size_t>(top_p*cnt*paramWidth));
+	vector<pair<int, int>> topk = getTopK(start, end, static_cast<size_t>(topRatio*cnt*paramWidth));
 	stat_t_priority += tmr.elapseSd();
 	// calculate delta to report
 	tmr.restart();
