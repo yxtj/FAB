@@ -120,7 +120,7 @@ int main(int argc, char* argv[]){
 	ios_base::sync_with_stdio(false);
 
 	string algParam = opt.algParam;
-	vector<double> ref;
+	vector<double> reference;
 	const bool withRef = !opt.fnParam.empty();
 	if(withRef){
 		ifstream finr(opt.fnParam);
@@ -130,7 +130,7 @@ int main(int argc, char* argv[]){
 		}
 		ParameterIO io(opt.alg, "");
 		string tmp;
-		tie(tmp, ref) = io.load(finr);
+		tie(tmp, reference) = io.load(finr);
 		if(tmp != algParam){
 			cerr << "Warning: given parameter does not match the one read from parameter file" << endl;
 		}
@@ -183,7 +183,7 @@ int main(int argc, char* argv[]){
 			if(opt.topk_param != 0 && idx >= opt.topk_param)
 				break;
 			++idx;
-			TaskResult tr = evaluateOne(param, m, withRef, doAccuracy, dh, ref);
+			TaskResult tr = evaluateOne(param, m, withRef, doAccuracy, dh, reference);
 			double impro = vectorDifference(last, param.weights);
 			last = move(param.weights);
 			double accuracy = tr.correct * accuracy_factor;
@@ -215,7 +215,8 @@ int main(int argc, char* argv[]){
 				if(opt.topk_param != 0 && idx >= opt.topk_param)
 					break;
 				auto& p = get<2>(data[i]);
-				handlers.push_back(async(evaluateOne, p, models[i], withRef, doAccuracy, dh, ref));
+				handlers.push_back(async(launch::async, &evaluateOne,
+					ref(p), ref(models[i]), withRef, doAccuracy, cref(dh), cref(reference)));
 				++idx;
 				++i;
 			}

@@ -355,7 +355,7 @@ void Master::archiveProgress(const bool force)
 //		archiver.dump(iter, tmrTrain.elapseSd(), model.getParameter());
 		archDoing = false;
 		stat.t_archive += t.elapseSd();
-	}, iter, tmrTrain.elapseSd(), model.getParameter());
+	}, iter, tmrTrain.elapseSd(), ref(model.getParameter()));
 }
 
 void Master::broadcastWorkerList()
