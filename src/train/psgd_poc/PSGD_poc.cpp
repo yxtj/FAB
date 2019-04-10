@@ -51,7 +51,7 @@ PSGD_poc::~PSGD_poc()
 	LOG(INFO) << "[Stat]: time-priority: " << stat_t_priority
 		<< "\ttime-grad-calc: " << stat_t_grad_calc
 		<< "\ttime-grad-archive: " << stat_t_grad_archive
-		<< "\ttime-grad-update: " << stat_t_grad_update;
+		<< "\ttime-grad-aggr: " << stat_t_grad_aggr;
 }
 
 
@@ -97,7 +97,7 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_point(
 		factor /= cnt;
 	for(auto& v : grad)
 		v *= factor;
-	stat_t_grad_update += tmr.elapseSd();
+	stat_t_grad_aggr += tmr.elapseSd();
 	return make_pair(cnt, move(grad));
 }
 
@@ -151,7 +151,7 @@ std::pair<size_t, std::vector<double>> PSGD_poc::batchDelta_dim(
 		auto& v = grad[i];
 		v *= factor / dimCnt[i];
 	}
-	stat_t_grad_update += tmr.elapseSd();
+	stat_t_grad_aggr += tmr.elapseSd();
 	return make_pair(cnt, move(grad));
 }
 

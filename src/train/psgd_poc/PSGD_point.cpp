@@ -41,7 +41,8 @@ std::pair<size_t, std::vector<double>> PSGD_point::batchDelta(
 		auto p = inner_product(g.begin(), g.end(), g.begin(), 1.0);
 		priority[i] = static_cast<float>(p);
 	}
-	vector<int> topk = getTopK(start, end, static_cast<size_t>(topRatio*cnt));
+	size_t k = static_cast<size_t>(topRatio*cnt);
+	vector<int> topk = getTopK(start, end, k);
 	stat_t_priority += tmr.elapseSd();
 	// calculate delta to report
 	tmr.restart();
@@ -52,10 +53,12 @@ std::pair<size_t, std::vector<double>> PSGD_point::batchDelta(
 	}
 	double factor = -rate;
 	if(avg)
-		factor /= cnt;
+		factor /= k;
+	else
+		factor *= static_cast<double>(cnt) / k;
 	for(auto& v : grad)
 		v *= factor;
-	stat_t_grad_update += tmr.elapseSd();
+	stat_t_grad_aggr += tmr.elapseSd();
 	return make_pair(cnt, move(grad));
 }
 
@@ -74,7 +77,9 @@ std::vector<int> PSGD_point::getTopK(const size_t first, const size_t last, cons
 	if(res.size() <= k)
 		return res;
 	auto it = res.begin() + k;
-	partial_sort(res.begin(), it, res.end(), [&](const int l, const int r){
+	//partial_sort(res.begin(), it, res.end(),
+	nth_element(res.begin(), it, res.end(),
+		[&](const int l, const int r){
 		return priority[l] > priority[r]; // pick the largest k
 	});
 	res.erase(it, res.end());

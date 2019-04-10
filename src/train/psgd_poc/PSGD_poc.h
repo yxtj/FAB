@@ -13,7 +13,7 @@ protected:
 	std::vector<std::vector<double>> gradient;
 
 public:
-	double stat_t_grad_calc = 0, stat_t_grad_update = 0, stat_t_grad_archive = 0;
+	double stat_t_grad_calc = 0, stat_t_grad_aggr = 0, stat_t_grad_archive = 0;
 	double stat_t_priority = 0;
 
 public:

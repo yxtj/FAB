@@ -35,7 +35,8 @@ std::pair<size_t, std::vector<double>> PSGD_dim::batchDelta(
 	stat_t_grad_archive += tmr.elapseSd();
 	// update priority and pick top-k
 	tmr.restart();
-	vector<pair<int, int>> topk = getTopK(start, end, static_cast<size_t>(topRatio*cnt*paramWidth));
+	size_t k = static_cast<size_t>(topRatio*cnt*paramWidth);
+	vector<pair<int, int>> topk = getTopK(start, end, k);
 	stat_t_priority += tmr.elapseSd();
 	// calculate delta to report
 	tmr.restart();
@@ -49,12 +50,12 @@ std::pair<size_t, std::vector<double>> PSGD_dim::batchDelta(
 	}
 	double factor = -rate;
 	if(!avg)
-		factor *= cnt;
+		factor *= static_cast<double>(cnt);
 	for(size_t i = 0; i < paramWidth; ++i){
 		auto& v = grad[i];
 		v *= factor / dimCnt[i];
 	}
-	stat_t_grad_update += tmr.elapseSd();
+	stat_t_grad_aggr += tmr.elapseSd();
 	return make_pair(cnt, move(grad));
 }
 
@@ -75,7 +76,8 @@ std::vector<std::pair<int, int>> PSGD_dim::getTopK(
 	if(res.size() <= k)
 		return res;
 	auto it = res.begin() + k;
-	partial_sort(res.begin(), it, res.end(), 
+	//partial_sort(res.begin(), it, res.end(), 
+	nth_element(res.begin(), it, res.end(),
 		[&](const pair<int, int>& l, const pair<int, int>& r){
 		return abs(gradient[l.first][l.second]) > abs(gradient[r.first][r.second]); // pick the largest k
 	});
