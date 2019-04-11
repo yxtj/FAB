@@ -82,33 +82,35 @@ void Runner::showStat() const
 	ostringstream oss;
 	string head = "[Stat-" + logName + "] ";
 	oss << "Statistics:\n"
-		<< head << "num-net-send: " << stat.n_net_send << "\tbyte-net-send: " << stat.b_net_send
-		<< "\ttime-net-send: " << stat.t_net_send << "\ttime-data-serialize: " << stat.t_data_serial
+		<< head << "Network-send: num: " << stat.n_net_send << "\tbyte: " << stat.b_net_send
+		<< "\ttime-net: " << stat.t_net_send << "\ttime-serialize: " << stat.t_data_serial
 		<< "\n"
-		<< head << "num-net-recv: " << stat.n_net_recv << "\tbyte-net-recv: " << stat.b_net_recv
-		<< "\ttime-net-recv: " << stat.t_net_recv << "\ttime-data-deserialize: " << stat.t_data_deserial
+		<< head << "Network-recv: num: " << stat.n_net_recv << "\tbyte: " << stat.b_net_recv
+		<< "\ttime-net: " << stat.t_net_recv << "\ttime-deserialize: " << stat.t_data_deserial
 		<< "\n"
-		<< head << "num-dlt-send: " << stat.n_dlt_send << "\tnum-dlt-recv: " << stat.n_dlt_recv
-		<< "\ttime-dlt-calc: " << stat.t_dlt_calc << "\ttime-dlt-wait: " << stat.t_dlt_wait
+		<< head << "Gradient:  num-send: " << stat.n_dlt_send << "\tnum-recv: " << stat.n_dlt_recv
+		<< "\ttime-calc: " << stat.t_dlt_calc << "\ttime-wait: " << stat.t_dlt_wait
 		<< "\n"
-		<< head << "num-par-send: " << stat.n_par_send << "\tnum-par-recv: " << stat.n_par_recv
-		<< "\ttime-par-calc: " << stat.t_par_calc << "\ttime-par-wait: " << stat.t_par_wait
-		<< "\n"
-		<< head << "num-iteration: " << stat.n_iter << "\tnum-data-point: " << stat.n_point
-		<< "\ttime-total-work: " << stat.t_smy_work << "\ttime-total-wait: " << stat.t_smy_wait
+		<< head << "Parameter: num-send: " << stat.n_par_send << "\tnum-recv: " << stat.n_par_recv
+		<< "\ttime-calc: " << stat.t_par_calc << "\ttime-wait: " << stat.t_par_wait
 		<< "\n";
 	if(logName.find("M") != logName.npos){ // master
-		oss << head << "num-archive: " << stat.n_archive << "\ttime-archive: " << stat.t_archive
-			<< "\ttime-per-1k-archive: " << stat.t_archive / stat.n_archive * 1000
+		oss << head << "Archive: num: " << stat.n_archive << "\ttime: " << stat.t_archive
+			<< "\ttime-1k: " << stat.t_archive / stat.n_archive * 1000
 			<< "\n"
-			<< head << "time-per-1k-delta(c): " << stat.t_smy_work / stat.n_dlt_recv * 1000
-			<< "\ttime-per-1k-delta(d): " << stat.t_data_deserial / stat.n_dlt_recv * 1000
-			<< "\ttime-per-1k-delta: " << (stat.t_smy_work + stat.t_data_deserial) / stat.n_dlt_recv * 1000;
+			<< head << "Merge: time-1k-delta(c): " << stat.t_smy_work / stat.n_dlt_recv * 1000
+			<< "\ttime-1k-delta(d): " << stat.t_data_deserial / stat.n_dlt_recv * 1000
+			<< "\ttime-1k-delta: " << (stat.t_smy_work + stat.t_data_deserial) / stat.n_dlt_recv * 1000
+			<< "\n";
 	} else{ // worker
-		oss << head << "time-per-1k-point(c): " << stat.t_dlt_calc / stat.n_point * 1000
-			<< "\ttime-per-1k-delta(s): " << stat.t_data_serial / stat.n_dlt_send * 1000
-			<< "\tpoint-per-delta: " << (stat.t_data_serial / stat.n_dlt_send) / (stat.t_dlt_calc / stat.n_point);
-	}	
+		oss << head << "Calculate: time-1k-point(c): " << stat.t_dlt_calc / stat.n_point * 1000
+			<< "\ttime-1k-delta(s): " << stat.t_data_serial / stat.n_dlt_send * 1000
+			<< "\tpoint-per-delta: " << (stat.t_data_serial / stat.n_dlt_send) / (stat.t_dlt_calc / stat.n_point)
+			<< "\n";
+	}
+	oss << head << "Summary: iteration: " << stat.n_iter << "\tdata-point: " << stat.n_point
+		<< "\ttime-work: " << stat.t_smy_work << "\ttime-wait: " << stat.t_smy_wait
+		<< "\ttime-1k-iteration: " << (stat.t_smy_work + stat.t_smy_wait) / stat.n_iter * 1000;
 	LOG(INFO) << oss.str();
 }
 
