@@ -23,9 +23,11 @@ def getIdxByVer(ver):
         idx1,idx2=0,1
     elif ver == 1:
         idx1,idx2=1,2
-    else:
+    elif ver == 2:
         idx1,idx2=0,2
-    return idx1,idx2
+    else:
+        return ver[0], ver[1]
+    return idx1, idx2
 
 
 def drawOne(mode, nw, n=None, ver=0):
@@ -38,7 +40,7 @@ def drawOne(mode, nw, n=None, ver=0):
 #drawOne('sync', 1)
 #drawOne('fab', 1)
 
-def drawCmp(mode1, mode2, nw, n=200, ncol=1, ver=0):
+def drawCmp(mode1, mode2, nw, n=None, ncol=1, ver=0, xlbl=None, ylbl=None):
     plt.figure();
     d1=pandas.read_csv(mode1+'-'+str(nw)+'.txt',skiprows=0, header=None);
     d2=pandas.read_csv(mode2+'-'+str(nw)+'.txt',skiprows=0, header=None);
@@ -47,8 +49,11 @@ def drawCmp(mode1, mode2, nw, n=200, ncol=1, ver=0):
     plt.plot(d1[:n][idx1], d1[:n][idx2])
     plt.plot(d2[:n][idx1], d2[:n][idx2])
     plt.legend(renameLegend([mode1, mode2]), ncol=ncol)
-    plt.xlabel('time (s)')
-    plt.ylabel('loss')
+    xlbl=xlbl if xlbl is not None else 'time (s)'
+    ylbl=ylbl if ylbl is not None else 'loss'
+    plt.xlabel(xlbl)
+    plt.ylabel(ylbl)
+    plt.tight_layout()
     plt.show()
 
 #drawCmp('async','fsb',8)
@@ -71,14 +76,16 @@ def renameLegend(lgd):
         lgd[i]=s
     return lgd
 
-def drawList(prefix, mList, n=200, ver=0):
+def drawList(prefix, mList, n=None, ver=0, xlbl=None, ylbl=None):
     plt.figure();
     for m in mList:
         plotUnit(None, prefix+m+'.txt', m, '-', None, n, ver)
     #plt.hold(True)
     plt.legend(renameLegend(mList))
-    plt.xlabel('time (s)')
-    plt.ylabel('loss')
+    xlbl=xlbl if xlbl is not None else 'time (s)'
+    ylbl=ylbl if ylbl is not None else 'loss'
+    plt.xlabel(xlbl)
+    plt.ylabel(ylbl)
     plt.tight_layout()
     plt.show()
 
@@ -98,11 +105,15 @@ def genFLpost(l, post):
 def genFL(pre, l, post=''):
     return [str(pre)+str(i)+post for i in l]
 
-def drawListCmp(prefix, mList1, mList2, mList3=None, n=200, ncol=1, ver=0, save=False):
-    assert(len(mList1) == len(mList2))
-    assert(mList3 is None or len(mList3) == 0 or len(mList3) == len(mList1))
+def drawListCmp(prefix, mList1, mList2, mList3=None, n=None, ncol=1, ver=0, xlbl=None, ylbl=None, save=False):
+    if mList2 is None or len(mList2) == 0:
+        mList2=None
+    else:
+        assert(len(mList1) == len(mList2))
     if mList3 is None or len(mList3) == 0:
         mList3=None
+    else:
+        assert(len(mList1) == len(mList3))
     plt.figure()
     l=len(mList1)
     lgd=[]
@@ -114,8 +125,10 @@ def drawListCmp(prefix, mList1, mList2, mList3=None, n=200, ncol=1, ver=0, save=
             plotUnit(lgd, prefix+mList3[i]+'.txt', mList3[i], '-.', c, n, ver)
     #plt.hold(True)
     plt.legend(renameLegend(lgd), ncol=ncol)
-    plt.xlabel('time (s)')
-    plt.ylabel('loss')
+    xlbl=xlbl if xlbl is not None else 'time (s)'
+    ylbl=ylbl if ylbl is not None else 'loss'
+    plt.xlabel(xlbl)
+    plt.ylabel(ylbl)
     if save:
         gfn=re.sub('^../','',prefix)
         gfn=re.sub('/$','',gfn)
