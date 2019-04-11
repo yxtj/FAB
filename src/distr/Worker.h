@@ -28,7 +28,7 @@ private:
 	void aapProcess();
 	//void generalProcess();
 
-	void updatePointer(const size_t used);
+	void updatePointer(const size_t scan, const size_t report);
 	void sendOnline();
 	void waitWorkerList();
 	void sendDatasetInfo();

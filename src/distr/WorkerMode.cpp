@@ -25,7 +25,7 @@ void Worker::bspProcess()
 		do{
 			Trainer::DeltaResult dr = trainer->batchDelta(dataPointer, left, false);
 			accumulateDelta(dr.delta);
-			updatePointer(dr.n_scanned);
+			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
 		} while(left > 0);
@@ -72,7 +72,7 @@ void Worker::tapProcess()
 		do{
 			Trainer::DeltaResult dr = trainer->batchDelta(dataPointer, left, false);
 			accumulateDelta(dr.delta);
-			updatePointer(dr.n_scanned);
+			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
 		} while(left > 0);
@@ -116,7 +116,7 @@ void Worker::sspProcess()
 		do{
 			Trainer::DeltaResult dr = trainer->batchDelta(dataPointer, left, false);
 			accumulateDelta(dr.delta);
-			updatePointer(dr.n_scanned);
+			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
 		} while(left > 0);
@@ -166,7 +166,7 @@ void Worker::sapProcess()
 		do{
 			Trainer::DeltaResult dr = trainer->batchDelta(dataPointer, left, false);
 			accumulateDelta(dr.delta);
-			updatePointer(dr.n_scanned);
+			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
 		} while(left > 0);
@@ -213,7 +213,7 @@ void Worker::fspProcess()
 		while(exitTrain == false && allowTrain && left != 0) {
 			Trainer::DeltaResult dr = trainer->batchDelta(dataPointer, left, false);
 			accumulateDelta(dr.delta);
-			updatePointer(dr.n_scanned);
+			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
 		}
@@ -267,7 +267,7 @@ void Worker::aapProcess()
 			tmr.restart();
 			resumeTrain();
 			Trainer::DeltaResult dr = trainer->batchDelta(dataPointer, left, false);
-			updatePointer(dr.n_scanned);
+			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
 			//DVLOG(3) <<"tmp: "<< tmp;

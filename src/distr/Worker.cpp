@@ -117,13 +117,13 @@ Worker::callback_t Worker::localCBBinder(
 	return bind(fp, this, placeholders::_1, placeholders::_2);
 }
 
-void Worker::updatePointer(const size_t used)
+void Worker::updatePointer(const size_t scan, const size_t report)
 {
-	DVLOG(3) << "update pointer from " << dataPointer << " by " << used;
-	dataPointer += used;
+	DVLOG(3) << "update pointer from " << dataPointer << " by " << scan;
+	dataPointer += scan;
 	if(dataPointer >= trainer->pd->size())
 		dataPointer = 0;
-	stat.n_point += used;
+	stat.n_point += report;
 }
 
 void Worker::sendOnline()
@@ -260,12 +260,11 @@ void Worker::handleReply(const std::string& data, const RPCInfo& info) {
 
 void Worker::handleWorkerList(const std::string & data, const RPCInfo & info)
 {
-	DLOG(INFO) << "receive worker list";
 	Timer tmr;
 	auto res = deserialize<vector<pair<int, int>>>(data);
+	DLOG(INFO) << "register worker (nid, lid) pairs: " << res;
 	stat.t_data_deserial += tmr.elapseSd();
 	for(auto& p : res){
-		DLOG(INFO)<<"register nid "<<p.first<<" with lid "<<p.second;
 		wm.registerID(p.first, p.second);
 	}
 	//rph.input(MType::CWorkers, info.source);
