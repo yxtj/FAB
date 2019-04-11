@@ -10,8 +10,8 @@ class PSGD : public Trainer
 	std::vector<float> priority;
 
 public:
-	double stat_t_grad_calc = 0, stat_t_grad_aggr = 0;
-	double stat_t_priority = 0;
+	double stat_t_grad_calc = 0, stat_t_grad_post = 0;
+	double stat_t_prio_pick = 0, stat_t_prio_update;
 
 public:
 	virtual void init(const std::vector<std::string>& param);
@@ -20,12 +20,11 @@ public:
 	virtual void ready();
 	virtual ~PSGD();
 
-	virtual std::pair<size_t, std::vector<double>> batchDelta(
+	virtual DeltaResult batchDelta(
 		const size_t start, const size_t cnt, const bool avg = true);
-	virtual std::pair<size_t, std::vector<double>> batchDelta(
-		std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg = true);
+	virtual DeltaResult batchDelta(std::atomic<bool>& cond,
+		const size_t start, const size_t cnt, const bool avg = true);
 private:
 	float calcPriority(const std::vector<double>& g);
 	std::vector<int> getTopK(const size_t first, const size_t last, const size_t k);
-	void updateGnP(const std::vector<int>& topk);
 };

@@ -13,8 +13,9 @@ protected:
 	std::vector<std::vector<double>> gradient;
 
 public:
-	double stat_t_grad_calc = 0, stat_t_grad_aggr = 0, stat_t_grad_archive = 0;
-	double stat_t_priority = 0;
+	double stat_t_grad_calc = 0, stat_t_grad_post = 0;
+	double stat_t_grad_archive = 0;
+	double stat_t_prio_pick = 0, stat_t_prio_update;
 
 public:
 	virtual void init(const std::vector<std::string>& param);
@@ -23,11 +24,6 @@ public:
 	virtual ~PSGD_poc();
 
 protected:
-	std::pair<size_t, std::vector<double>> batchDelta_point(
-		const size_t start, const size_t cnt, const bool avg);
-	std::pair<size_t, std::vector<double>> batchDelta_dim(
-		const size_t start, const size_t cnt, const bool avg);
-
 	void updateGradient(const size_t start, const size_t end);
 	void dumpGradient();
 };

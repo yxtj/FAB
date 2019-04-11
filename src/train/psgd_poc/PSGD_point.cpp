@@ -22,7 +22,7 @@ void PSGD_point::ready()
 	priority.resize(pd->size());
 }
 
-std::pair<size_t, std::vector<double>> PSGD_point::batchDelta(
+Trainer::DeltaResult PSGD_point::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
 	size_t end = min(start + cnt, pd->size());
@@ -34,16 +34,19 @@ std::pair<size_t, std::vector<double>> PSGD_point::batchDelta(
 	tmr.restart();
 	dumpGradient();
 	stat_t_grad_archive += tmr.elapseSd();
-	// update priority and pick top-k
+	// update priority
 	tmr.restart();
 	for(size_t i = 0; i < pd->size(); ++i){
 		auto& g = gradient[i];
 		auto p = inner_product(g.begin(), g.end(), g.begin(), 1.0);
 		priority[i] = static_cast<float>(p);
 	}
+	stat_t_prio_update += tmr.elapseSd();
+	// pick top-k
+	tmr.restart();
 	size_t k = static_cast<size_t>(topRatio*cnt);
 	vector<int> topk = getTopK(start, end, k);
-	stat_t_priority += tmr.elapseSd();
+	stat_t_prio_pick += tmr.elapseSd();
 	// calculate delta to report
 	tmr.restart();
 	vector<double> grad(paramWidth, 0.0);
@@ -58,11 +61,11 @@ std::pair<size_t, std::vector<double>> PSGD_point::batchDelta(
 		factor *= static_cast<double>(cnt) / k;
 	for(auto& v : grad)
 		v *= factor;
-	stat_t_grad_aggr += tmr.elapseSd();
-	return make_pair(cnt, move(grad));
+	stat_t_grad_post += tmr.elapseSd();
+	return { cnt, topk.size(), move(grad) };
 }
 
-std::pair<size_t, std::vector<double>> PSGD_point::batchDelta(
+Trainer::DeltaResult PSGD_point::batchDelta(
 	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
 {
 	return batchDelta(start, cnt, avg);

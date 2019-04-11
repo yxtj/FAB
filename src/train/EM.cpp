@@ -47,7 +47,7 @@ void EM::prepare()
 	}
 }
 
-std::pair<size_t, std::vector<double>> EM::batchDelta(
+Trainer::DeltaResult EM::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
 	size_t end = start + cnt;
@@ -69,10 +69,10 @@ std::pair<size_t, std::vector<double>> EM::batchDelta(
 		for(auto& v : grad)
 			v *= factor;
 	}
-	return make_pair(i - start, move(grad));
+	return { i - start, i - start, move(grad) };
 }
 
-std::pair<size_t, std::vector<double>> EM::batchDelta(
+Trainer::DeltaResult EM::batchDelta(
 	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
 {
 	size_t end = start + cnt;
@@ -94,6 +94,6 @@ std::pair<size_t, std::vector<double>> EM::batchDelta(
 		for(auto& v : grad)
 			v *= factor;
 	}
-	return make_pair(i - start, move(grad));
+	return { i - start, i - start, move(grad) };
 }
 

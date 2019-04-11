@@ -61,7 +61,7 @@ void BlockPSGD::ready()
 			priQue.update(make_pair((int)i, (int)j), dist(gen));
 }
 
-std::pair<size_t, std::vector<double>> BlockPSGD::batchDelta(
+Trainer::DeltaResult BlockPSGD::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
 	const size_t end = pd->size();
@@ -116,10 +116,10 @@ std::pair<size_t, std::vector<double>> BlockPSGD::batchDelta(
 		for(auto& v : grad)
 			v *= factor;
 	}
-	return make_pair(cnt, move(grad));
+	return { cnt, cnt, move(grad) };
 }
 
-std::pair<size_t, std::vector<double>> BlockPSGD::batchDelta(
+Trainer::DeltaResult BlockPSGD::batchDelta(
 	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
 {
 	const size_t end = pd->size();
@@ -172,7 +172,7 @@ std::pair<size_t, std::vector<double>> BlockPSGD::batchDelta(
 		for(auto& v : grad)
 			v *= factor;
 	}
-	return make_pair(ndp, move(grad));
+	return { cnt, cnt, move(grad) };
 }
 
 std::vector<float> BlockPSGD::calcPriority(const std::vector<double>& grad)

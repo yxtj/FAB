@@ -13,10 +13,10 @@ public:
 	virtual void prepare();
 
 	// special proecss on the <n> part of weight
-	virtual std::pair<size_t, std::vector<double>> batchDelta(
+	virtual DeltaResult batchDelta(
 		const size_t start, const size_t cnt, const bool avg = true);
-	virtual std::pair<size_t, std::vector<double>> batchDelta(
-		std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg = true);
+	virtual DeltaResult batchDelta(std::atomic<bool>& cond,
+		const size_t start, const size_t cnt, const bool avg = true);
 
 };
 

@@ -21,7 +21,7 @@ void PSGD_dim::ready()
 	PSGD_poc::ready();
 }
 
-std::pair<size_t, std::vector<double>> PSGD_dim::batchDelta(
+Trainer::DeltaResult PSGD_dim::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
 	size_t end = min(start + cnt, pd->size());
@@ -37,7 +37,7 @@ std::pair<size_t, std::vector<double>> PSGD_dim::batchDelta(
 	tmr.restart();
 	size_t k = static_cast<size_t>(topRatio*cnt*paramWidth);
 	vector<pair<int, int>> topk = getTopK(start, end, k);
-	stat_t_priority += tmr.elapseSd();
+	stat_t_prio_pick += tmr.elapseSd();
 	// calculate delta to report
 	tmr.restart();
 	vector<double> grad(paramWidth, 0.0);
@@ -55,11 +55,11 @@ std::pair<size_t, std::vector<double>> PSGD_dim::batchDelta(
 		auto& v = grad[i];
 		v *= factor / dimCnt[i];
 	}
-	stat_t_grad_aggr += tmr.elapseSd();
-	return make_pair(cnt, move(grad));
+	stat_t_grad_post += tmr.elapseSd();
+	return { cnt, topk.size(), move(grad) };
 }
 
-std::pair<size_t, std::vector<double>> PSGD_dim::batchDelta(
+Trainer::DeltaResult PSGD_dim::batchDelta(
 	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
 {
 	return batchDelta(start, cnt, avg);

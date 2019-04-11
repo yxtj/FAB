@@ -26,10 +26,10 @@ public:
 	virtual void prepare();
 	virtual void ready();
 
-	virtual std::pair<size_t, std::vector<double>> batchDelta(
+	virtual DeltaResult batchDelta(
 		const size_t start, const size_t cnt, const bool avg = true);
-	virtual std::pair<size_t, std::vector<double>> batchDelta(
-		std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg = true);
+	virtual DeltaResult batchDelta(std::atomic<bool>& cond,
+		const size_t start, const size_t cnt, const bool avg = true);
 private:
 	std::vector<float> calcPriority(const std::vector<double>& grad);
 	std::unordered_map<int, std::vector<int>> mergeSelected(const std::vector<std::pair<int, int>>& pick);

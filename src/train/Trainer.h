@@ -10,6 +10,12 @@ class Trainer
 public:
 	Model* pm =nullptr;
 	const DataHolder* pd = nullptr;
+
+	struct DeltaResult {
+		size_t n_scanned;
+		size_t n_reported;
+		std::vector<double> delta;
+	};
 public:
 	virtual void init(const std::vector<std::string>& param) = 0;
 	virtual std::string name() const = 0;
@@ -29,13 +35,13 @@ public:
 	// calculate the delta values to update the model parameter
 	// <cnt> = 0 means use all the data points.
 	// <avg> is set to true by default. Note that it may not be used for some models
-	virtual std::pair<size_t, std::vector<double>> batchDelta(
+	virtual DeltaResult batchDelta(
 		const size_t start, const size_t cnt, const bool avg = true) = 0;
 	// try to use all data points in given range, unless the condition is set to false before finish.
 	// <cond> is the continue condition, it can be changed in another thread.
 	// return the number of used data points.
-	virtual std::pair<size_t, std::vector<double>> batchDelta(
-		std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg = true) = 0;
+	virtual DeltaResult batchDelta(std::atomic<bool>& cond,
+		const size_t start, const size_t cnt, const bool avg = true) = 0;
 
 	// apply the delta values to the model parameter, parameter += delat*factor
 	virtual void applyDelta(const std::vector<double>& delta, const double factor = 1.0);

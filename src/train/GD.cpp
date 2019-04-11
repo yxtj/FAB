@@ -1,4 +1,6 @@
 #include "GD.h"
+#include "util/Timer.h"
+#include "logging/logging.h"
 #include <exception>
 using namespace std;
 
@@ -29,7 +31,7 @@ double GD::getRate() const {
 	return rate;
 }
 
-void GD::ready()
+void GD::prepare()
 {
 	if(!pm->getKernel()->needInitParameterByData())
 		return;
@@ -43,9 +45,16 @@ void GD::ready()
 	}
 }
 
-std::pair<size_t, std::vector<double>> GD::batchDelta(
+GD::~GD()
+{
+	LOG(INFO) << "[Stat] time-grad-calc: " << stat_t_grad_calc
+		<< " time-grad-post: " << stat_t_grad_post;
+}
+
+Trainer::DeltaResult GD::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
+	Timer tmr;
 	size_t end = start + cnt;
 	if(end > pd->size())
 		end = pd->size();
@@ -57,6 +66,8 @@ std::pair<size_t, std::vector<double>> GD::batchDelta(
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
 	}
+	stat_t_grad_calc += tmr.elapseSd();
+	tmr.restart();
 	if(start != end){
 		// this is gradient DESCENT, so rate is set to negative
 		double factor = -rate;
@@ -65,12 +76,14 @@ std::pair<size_t, std::vector<double>> GD::batchDelta(
 		for(auto& v : grad)
 			v *= factor;
 	}
-	return make_pair(i - start, move(grad));
+	stat_t_grad_post += tmr.elapseSd();
+	return { i - start, i - start, move(grad) };
 }
 
-std::pair<size_t, std::vector<double>> GD::batchDelta(
-	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
+Trainer::DeltaResult GD::batchDelta(std::atomic<bool>& cond,
+	const size_t start, const size_t cnt, const bool avg)
 {
+	Timer tmr;
 	size_t end = start + cnt;
 	if(end > pd->size())
 		end = pd->size();
@@ -82,6 +95,8 @@ std::pair<size_t, std::vector<double>> GD::batchDelta(
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
 	}
+	stat_t_grad_calc += tmr.elapseSd();
+	tmr.restart();
 	if(i != start){
 		// this is gradient DESCENT, so rate is set to negative
 		double factor = -rate;
@@ -90,5 +105,6 @@ std::pair<size_t, std::vector<double>> GD::batchDelta(
 		for(auto& v : grad)
 			v *= factor;
 	}
-	return make_pair(i - start, move(grad));
+	stat_t_grad_post += tmr.elapseSd();
+	return { i - start, i - start, move(grad) };
 }

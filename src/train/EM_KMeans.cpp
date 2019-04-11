@@ -34,7 +34,7 @@ void EM_KMeans::prepare()
 	}
 }
 
-std::pair<size_t, std::vector<double>> EM_KMeans::batchDelta(
+Trainer::DeltaResult EM_KMeans::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
 	size_t end = start + cnt;
@@ -48,10 +48,10 @@ std::pair<size_t, std::vector<double>> EM_KMeans::batchDelta(
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
 	}
-	return make_pair(i - start, move(grad));
+	return { i - start, i - start, move(grad) };
 }
 
-std::pair<size_t, std::vector<double>> EM_KMeans::batchDelta(
+Trainer::DeltaResult EM_KMeans::batchDelta(
 	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
 {
 	size_t end = start + cnt;
@@ -65,6 +65,6 @@ std::pair<size_t, std::vector<double>> EM_KMeans::batchDelta(
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
 	}
-	return make_pair(i - start, move(grad));
+	return { i - start, i - start, move(grad) };
 }
 
