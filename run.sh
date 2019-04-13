@@ -36,6 +36,9 @@ ITER=100k
 TIME=60
 
 function set_dir(){
+  { test $ALG && test $PARAM && test $DSIZE; } || { echo "alg or param or dsize is not set"; return; }
+  { test $bs && test $lr; } || { echo "bs or lr is not set"; return; }
+  # continue here only if they are set
   export RESDIR=$RESBASEDIR/$ALG/$PARAM-$DSIZE/$bs-$lr
   export SCRDIR=$SCRBASEDIR/$ALG/$PARAM-$DSIZE/$bs-$lr
   export LOGDIR=$LOGBASEDIR/$ALG/$PARAM-$DSIZE/$bs-$lr
@@ -62,17 +65,31 @@ done done
 done
 
 # evaluate
-PATH=$PATH:/home/tzhou/Code/FSB/FAB/build/Release/src/main
-
 for i in 1 2 4 8; do for m in $MODE; do echo $i-$m -- $(date);
-postprocess -a $ALG -p $PARAM -r $RESDIR/$m-$i.csv -d $DATADIR/$ALG-$PARAM-$DSIZE-d.csv -y $YLIST --reference $DATADIR/$ALG-$PARAM-$DSIZE-p.txt -o $SCRDIR/$m-$i.txt
+src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$m-$i.csv -d $DATADIR/$ALG-$PARAM-$DSIZE-d.csv -y $YLIST --reference $DATADIR/$ALG-$PARAM-$DSIZE-p.txt -o $SCRDIR/$m-$i.txt
 done done
 
-# calculate and evaluation (in background)
-PARAM=10,4r3,1;bs=3000;lr=0.1;
+# calculate and evaluation (using 6 thread)
+ALG=rnn;PARAM=10,4r3,1;bs=3000;lr=0.1;
 for i in 1 2 4 8; do for m in $MODE; do echo $i-$m -- $(date); set_dir
 mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d $DATADIR/$ALG-$PARAM-$DSIZE-d.csv -r $RESDIR/$m-$i.csv -y $YLIST -o gd:$lr -s $bs --term_iter $ITER --term_time $TIME --arch_iter 1000 --arch_time 0.5 --log_iter 200 --v=1 > $LOGDIR/$m-$i;
 echo "  postprocess";
-postprocess -a $ALG -p $PARAM -r $RESDIR/$m-$i.csv -d $DATADIR/$ALG-$PARAM-$DSIZE-d.csv -y $YLIST --reference $DATADIR/$ALG-$PARAM-$DSIZE-p.txt -o $SCRDIR/$m-$i.txt &
+src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$m-$i.csv -d $DATADIR/$ALG-$PARAM-$DSIZE-d.csv -y $YLIST --reference $DATADIR/$ALG-$PARAM-$DSIZE-p.txt -o $SCRDIR/$m-$i.txt -w 6;
+done done
+
+# priority
+mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d $DATADIR/$ALG-$PARAM-$DSIZE-d.csv -r $RESDIR/$m-$i-p$k.csv -y $YLIST -o psgd:$lr:$k -s $bs -b --term_iter $ITER --term_time $TIME --arch_iter 10 --arch_time 20 --log_iter 100 --v=1 > $LOGDIR/$m-$i-p$k;
+
+
+# batch of priority and benchmark
+bs0=60000; set_dir; for k0 in 0.01 0.05 0.1 0.2; do for i in 4; do 
+# benchmark - change bs
+bs=$(echo $bs0*$k0/1 | bc); echo bench-$bs-$m-$i - $(date);
+mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d /var/tzhou/data/mnist/mnist_train.csv -r $RESDIR/$m-$i.csv -y $YLIST -o gd:$lr -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time 20 --log_iter 10 --v=1 > $LOGDIR/$m-$i;
+src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$m-$i.csv -d /var/tzhou/data/mnist/mnist_train.csv -y $YLIST -b -o $SCRDIR/$m-$i.txt -w 6;
+# priority - change k
+bs=bs0;k=$(echo $k0/$i | bc); echo bench-$bs-$m-$i - $(date);
+mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d /var/tzhou/data/mnist/mnist_train.csv -r $RESDIR/$m-$i-p$k.csv -y $YLIST -o psgd:$lr:$k -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time 20 --log_iter 10 --v=1 > $LOGDIR/$m-$i-p$k;
+src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$m-$i-p$k.csv -d /var/tzhou/data/mnist/mnist_train.csv -y $YLIST -b -o $SCRDIR/$m-$i-p$k.txt -w 6;
 done done
 
