@@ -82,14 +82,15 @@ mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d $DATADIR/$ALG-$PARAM
 
 
 # batch of priority and benchmark
-bs0=60000; set_dir; for k0 in 0.01 0.05 0.1 0.2; do for i in 4; do 
+ITER=10k; TIME=600;
+bs0=60000; for k0 in 0.01 0.05 0.1 0.2; do for i in 4; do 
 # benchmark - change bs
-bs=$(echo $bs0*$k0/1 | bc); echo bench-$bs-$m-$i - $(date);
-mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d /var/tzhou/data/mnist/mnist_train.csv -r $RESDIR/$m-$i.csv -y $YLIST -o gd:$lr -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time 20 --log_iter 10 --v=1 > $LOGDIR/$m-$i;
+bs=$(echo $bs0*$k0/1 | bc); echo bench-$bs-$m-$i - $(date); set_dir;
+mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d /var/tzhou/data/mnist/mnist_train.csv -r $RESDIR/$m-$i.csv -y $YLIST -o gd:$lr -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time 20 --log_iter 100 --v=2 > $LOGDIR/$m-$i;
 src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$m-$i.csv -d /var/tzhou/data/mnist/mnist_train.csv -y $YLIST -b -o $SCRDIR/$m-$i.txt -w 6;
 # priority - change k
-bs=bs0;k=$(echo $k0/$i | bc); echo bench-$bs-$m-$i - $(date);
-mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d /var/tzhou/data/mnist/mnist_train.csv -r $RESDIR/$m-$i-p$k.csv -y $YLIST -o psgd:$lr:$k -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time 20 --log_iter 10 --v=1 > $LOGDIR/$m-$i-p$k;
+bs=$bs0; k=$(echo $k0/$i | bc -l | sed 's/0\+$//'); echo bench-$bs-$m-$i-$k - $(date); set_dir;
+mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d /var/tzhou/data/mnist/mnist_train.csv -r $RESDIR/$m-$i-p$k.csv -y $YLIST -o psgd:$lr:$k -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time 20 --log_iter 100 --v=2 > $LOGDIR/$m-$i-p$k;
 src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$m-$i-p$k.csv -d /var/tzhou/data/mnist/mnist_train.csv -y $YLIST -b -o $SCRDIR/$m-$i-p$k.txt -w 6;
 done done
 
