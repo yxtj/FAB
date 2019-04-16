@@ -120,6 +120,7 @@ void Master::run()
 	} else if(opt->mode == "aap"){
 		aapProcess();
 	}
+	--iter;
 	double t = tmrTrain.elapseSd();
 	LOG(INFO) << "Finish training. Time cost: " << t << ". Iterations: " << iter
 		<< ". Average iteration time: " << t / iter;
