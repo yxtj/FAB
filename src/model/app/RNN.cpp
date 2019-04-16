@@ -40,7 +40,7 @@ bool RNN::checkData(const size_t nx, const size_t ny)
 	if(nx != net.lenFeatureLayer[0])
 		throw invalid_argument("The dataset does not match the input layer of the network");
 	// check output layer size
-	if(ny != 0 && ny != net.lenFeatureLayer.back())
+	if(ny != 0 && ny != net.lenFeatureLayer.back()*net.numFeatureLayer.back())
 		throw invalid_argument("The dataset does not match the output layer of the network");
 	return true;
 }

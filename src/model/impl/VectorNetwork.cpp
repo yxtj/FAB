@@ -334,6 +334,9 @@ void VectorNetwork::createLayerPool(const size_t i, const std::string& type, con
 
 void VectorNetwork::createLayerFC(const size_t i, const int n){
 	coreCreateLayer(i, NodeType::FC, n, { numFeatureLayer[i - 1], lenFeatureLayer[i - 1] });
+	numFeatureLayer[i] = n;
+	shpFeatureLayer[i] = { 1 };
+	lenFeatureLayer[i] = getSize(shpFeatureLayer[i]);
 }
 
 void VectorNetwork::coreCreateLayer(const size_t i,
