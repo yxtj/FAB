@@ -79,7 +79,8 @@ std::vector<std::pair<int, int>> PSGD_dim::getTopK(
 	//partial_sort(res.begin(), it, res.end(), 
 	nth_element(res.begin(), it, res.end(),
 		[&](const pair<int, int>& l, const pair<int, int>& r){
-		return abs(gradient[l.first][l.second]) > abs(gradient[r.first][r.second]); // pick the largest k
+		return abs(gradient[l.first][l.second] * sumGrad[l.second]) > 
+			abs(gradient[r.first][r.second] * sumGrad[r.second]); // pick the largest k
 	});
 	res.erase(it, res.end());
 	return res;

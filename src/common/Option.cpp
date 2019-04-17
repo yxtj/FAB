@@ -35,7 +35,7 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		// parallel - fsp
 		("flex_interval", value(&tmp_interval)->default_value("portion:0.05"),
 			"The method to decide update interval for FSP. "
-			"Supports: interval:x(x is in seconds), portion : x(x in 0~1), "
+			"Supports: interval:x(x is in seconds), portion:x(x in 0~1), "
 			"improve:x,t (x: avg. imporovement, t: max waiting time), balance:w (num. of windows)")
 		// app - algorithm
 		("algorithm,a", value(&algorighm)->required(), "The algorithm to run. "

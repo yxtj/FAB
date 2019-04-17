@@ -14,9 +14,8 @@ void PSGD_poc::init(const std::vector<std::string>& param)
 	try{
 		rate = stod(param[0]);
 		topRatio = stod(param[1]);
-		//mergeDim = param.size() > 1 ? beTrueOption(param[1]) : true;
-		//fullUpdate = param.size() > 2 ? beTrueOption(param[2]) : true;
-		fname = param.size() > 2 ? param[2] : "";
+		global = param.size() > 2 ? param[2] == "global" : false; // true->global (gi*avg(g)), false->self (gi*gi)
+		fname = param.size() > 3 ? param[3] : "";
 	} catch(exception& e){
 		throw invalid_argument("Cannot parse parameters for PSGD\n" + string(e.what()));
 	}
@@ -42,6 +41,8 @@ void PSGD_poc::ready()
 		}
 	}
 	gradient.resize(pd->size(), vector<double>(paramWidth));
+	if(global)
+		sumGrad.resize(paramWidth, 0.0);
 	if(!fname.empty())
 		fout.open(fname + "-" + to_string(pd->partid()), ios::binary);
 }
@@ -59,7 +60,15 @@ void PSGD_poc::updateGradient(const size_t start, const size_t end)
 {
 	for(size_t i = start; i < end; ++i){
 		auto g = pm->gradient(pd->get(i));
+		if(global)
+			updateSumGrad(i, g);
 		gradient[i] = move(g);
+	}
+}
+
+void PSGD_poc::updateSumGrad(const int i, const std::vector<double>& g){
+	for(size_t j = 0; j < g.size(); ++j){
+		sumGrad[j] += g[j] - gradient[i][j];
 	}
 }
 

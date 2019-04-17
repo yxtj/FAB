@@ -7,10 +7,12 @@ class PSGD_poc : public Trainer
 protected:
 	double rate = 1.0;
 	double topRatio = 1.0;
+	bool global = false; // true->global (gi*avg(g)), false->self (gi*gi)
 	size_t paramWidth; // parameter width
 	std::string fname;
 	std::ofstream fout; // log of gradient
 	std::vector<std::vector<double>> gradient;
+	std::vector<double> sumGrad;
 
 public:
 	double stat_t_grad_calc = 0, stat_t_grad_post = 0;
@@ -25,5 +27,6 @@ public:
 
 protected:
 	void updateGradient(const size_t start, const size_t end);
+	void updateSumGrad(const int i, const std::vector<double>& g);
 	void dumpGradient();
 };

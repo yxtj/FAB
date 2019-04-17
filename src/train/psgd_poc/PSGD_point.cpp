@@ -38,7 +38,12 @@ Trainer::DeltaResult PSGD_point::batchDelta(
 	tmr.restart();
 	for(size_t i = 0; i < pd->size(); ++i){
 		auto& g = gradient[i];
-		auto p = inner_product(g.begin(), g.end(), g.begin(), 1.0);
+		double p;
+		if(global){
+			p = inner_product(g.begin(), g.end(), sumGrad.begin(), 0.0);
+		} else{
+			p = inner_product(g.begin(), g.end(), g.begin(), 0.0);
+		}
 		priority[i] = static_cast<float>(p);
 	}
 	stat_t_prio_update += tmr.elapseSd();
@@ -76,7 +81,7 @@ std::vector<int> PSGD_point::getTopK(const size_t first, const size_t last, cons
 	std::vector<int> res;
 	res.reserve(last - first);
 	for(auto i = first; i < last; ++i)
-		res.push_back(i);
+		res.push_back(static_cast<int>(i));
 	if(res.size() <= k)
 		return res;
 	auto it = res.begin() + k;
