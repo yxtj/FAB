@@ -19,9 +19,12 @@ private:
 	// MLP
 	void writeMLP(std::ostream& os, const std::vector<double>& w);
 	std::pair<std::string, std::vector<double>> loadMLP(std::istream& is);
-	// VectorNetwork
-	void writeNN(std::ostream& os, const std::vector<double>& w);
-	std::pair<std::string, std::vector<double>> loadNN(std::istream& is);
+	// CNN
+	void writeCNN(std::ostream& os, const std::vector<double>& w);
+	std::pair<std::string, std::vector<double>> loadCNN(std::istream& is);
+	// RNN
+	void writeRNN(std::ostream& os, const std::vector<double>& w);
+	std::pair<std::string, std::vector<double>> loadRNN(std::istream& is);
 	// KMeans
 	void writeKM(std::ostream& os, const std::vector<double>& w);
 	std::pair<std::string, std::vector<double>> loadKM(std::istream& is);

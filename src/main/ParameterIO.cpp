@@ -1,6 +1,8 @@
 #include "ParameterIO.h"
 #include "util/Util.h"
 #include "model/impl/VectorNetwork.h"
+#include "model/app/CNN.h"
+#include "model/app/RNN.h"
 #include <stdexcept>
 using namespace std;
 
@@ -30,8 +32,10 @@ void ParameterIO::write(std::ostream & os, const std::vector<double>& w)
 		return writeLR(os, w);
 	} else if(name == "mlp"){
 		return writeMLP(os, w);
-	} else if(name == "cnn" || name == "rnn"){
-		return writeNN(os, w);
+	} else if(name == "cnn"){
+		return writeCNN(os, w);
+	}else if(name == "rnn"){
+		return writeRNN(os, w);
 	} else if(name == "km"){
 		return writeKM(os, w);
 	}
@@ -43,8 +47,10 @@ std::pair<std::string, std::vector<double>> ParameterIO::load(std::istream & is)
 		return loadLR(is);
 	} else if(name == "mlp"){
 		return loadMLP(is);
-	} else if(name == "cnn" || name == "rnn"){
-		return loadNN(is);
+	} else if(name == "cnn"){
+		return loadCNN(is);
+	}else if(name == "rnn"){
+		return loadRNN(is);
 	} else if(name == "km"){
 		return loadKM(is);
 	}
@@ -105,11 +111,13 @@ std::pair<std::string, std::vector<double>> ParameterIO::loadMLP(std::istream & 
 
 // -------- CNN --------
 
-void ParameterIO::writeNN(std::ostream & os, const std::vector<double>& w)
+void ParameterIO::writeCNN(std::ostream & os, const std::vector<double>& w)
 {
 	os << param << "\n";
+	CNN dummy;
+	auto param2 = dummy.preprocessParam(param);
 	VectorNetwork p;
-	p.init(param);
+	p.init(param2);
 	vector<int> nWeightOffset = p.weightOffsetLayer;
 	for(size_t l = 1; l < nWeightOffset.size() - 1; ++l){
 		if(p.nWeightNode[l] == 0)
@@ -122,13 +130,56 @@ void ParameterIO::writeNN(std::ostream & os, const std::vector<double>& w)
 	os.flush();
 }
 
-std::pair<std::string, std::vector<double>> ParameterIO::loadNN(std::istream & is)
+std::pair<std::string, std::vector<double>> ParameterIO::loadCNN(std::istream & is)
 {
 	string line;
 	getline(is, line);
 	string param = line;
+	CNN dummy;
+	auto param2 = dummy.preprocessParam(param);
 	VectorNetwork p;
-	p.init(param);
+	p.init(param2);
+	vector<double> vec;
+	for(size_t i = 0; i < p.nLayer; ++i){
+		if(p.nWeightNode[i] == 0)
+			continue;
+		getline(is, line);
+		vector<double> temp = getDoubleList(line);
+		vec.insert(vec.end(), temp.begin(), temp.end());
+	}
+	return make_pair(move(param), move(vec));
+}
+
+// -------- RNN --------
+
+void ParameterIO::writeRNN(std::ostream & os, const std::vector<double>& w)
+{
+	os << param << "\n";
+	RNN dummy;
+	auto param2 = dummy.preprocessParam(param);
+	VectorNetwork p;
+	p.init(param2);
+	vector<int> nWeightOffset = p.weightOffsetLayer;
+	for(size_t l = 1; l < nWeightOffset.size() - 1; ++l){
+		if(p.nWeightNode[l] == 0)
+			continue;
+		for(int i = nWeightOffset[l]; i < nWeightOffset[l + 1] - 1; ++i){
+			os << w[i] << ",";
+		}
+		os << w[nWeightOffset[l + 1] - 1] << "\n";
+	}
+	os.flush();
+}
+
+std::pair<std::string, std::vector<double>> ParameterIO::loadRNN(std::istream & is)
+{
+	string line;
+	getline(is, line);
+	string param = line;
+	RNN dummy;
+	auto param2 = dummy.preprocessParam(param);
+	VectorNetwork p;
+	p.init(param2);
 	vector<double> vec;
 	for(size_t i = 0; i < p.nLayer; ++i){
 		if(p.nWeightNode[i] == 0)

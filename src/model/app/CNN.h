@@ -20,9 +20,10 @@ public:
 
 	std::vector<double> gradient(const std::vector<double>& x,
 		const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph = nullptr) const;
-private:
+	
 	// make the cnn param into the general format for network
 	std::string preprocessParam(const std::string& param);
+private:
 	// i.e. 5cp2*2 -> 4:c:2*2,sigmoid,max:2*2
 	// i.e. 5crp2*2 -> 4:c:2*2,relu,max:2*2
 	std::string procUnitCPx(const std::string& param);

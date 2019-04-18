@@ -173,7 +173,7 @@ std::string CNN::procUnitPx(const std::string & param)
 	string srSep = net.getRegSep() + "?";
 	// -p3 -> -max:3
 	// p3 -> -max:3
-	regex runit_p(srSep + "p" + srShape); // the sep is important (eg. 3c5p3p2)
+	regex runit_p(srSep + "(\\d+)?p" + srShape); // the sep is important (eg. 3c5p3p2)
 
 	string res;
 	string buf = param;
@@ -182,7 +182,10 @@ std::string CNN::procUnitPx(const std::string & param)
 	std::smatch sm;
 	while(regex_search(first, last, sm, runit_p)) {
 		first = sm[0].second; // the last matched position
-		res += sm.prefix().str() + "-max:" + sm[1].str();
+		string n = "1";
+		if(sm[1].matched)
+			n = sm[1].str();
+		res += sm.prefix().str() + "-" + n + ":max:" + sm[2].str();
 	}
 	res += string(first, last);
 

@@ -20,7 +20,8 @@ public:
 
 	std::vector<double> gradient(const std::vector<double>& x,
 		const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph = nullptr) const;
-private:
+
 	// make param into general format for network
 	std::string preprocessParam(const std::string& param);
+private:
 };
