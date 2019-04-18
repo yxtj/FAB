@@ -76,6 +76,7 @@ PSGDwR::~PSGDwR()
 	LOG(INFO) << "[Stat]: time-prio-pick: " << stat_t_prio_pick
 		<< "\ttime-prio-update: " << stat_t_prio_update
 		<< "\ttime-grad-calc: " << stat_t_grad_calc
+		<< "\ttime-grad-renew: " << stat_t_grad_renew
 		<< "\ttime-grad-post: " << stat_t_grad_post;
 }
 
