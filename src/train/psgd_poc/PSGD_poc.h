@@ -17,7 +17,7 @@ protected:
 public:
 	double stat_t_grad_calc = 0, stat_t_grad_post = 0;
 	double stat_t_grad_archive = 0;
-	double stat_t_prio_pick = 0, stat_t_prio_update;
+	double stat_t_prio_pick = 0, stat_t_prio_update = 0;
 
 public:
 	virtual void init(const std::vector<std::string>& param);
