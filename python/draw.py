@@ -15,9 +15,6 @@ os.chdir('E:/Code/FSB/score/')
 #os.chdir('E:/Code/FSB/score/lr/10-100k/1000-0.1')
 #os.chdir('E:/Code/FSB/score/mlp/10,15,1-100k/1000-0.1')
 
-USE_HEADER=True;
-
-
 def getIdxByVer(ver):
     if ver == 0:
         idx1,idx2=0,1
@@ -29,45 +26,18 @@ def getIdxByVer(ver):
         return ver[0], ver[1]
     return idx1, idx2
 
-
-def drawOne(mode, nw, n=None, ver=0):
-    idx1,idx2=getIdxByVer(ver)
-    d = pandas.read_csv(mode+'-'+str(nw)+'.txt',header=None);
-    plt.plot(d[:n][idx1], d[:n][idx2])
-    plt.legend(mode+'-'+str(nw))
-    plt.show()
-
-#drawOne('sync', 1)
-#drawOne('fab', 1)
-
-def drawCmp(mode1, mode2, nw, n=None, ncol=1, ver=0, xlbl=None, ylbl=None):
-    plt.figure();
-    d1=pandas.read_csv(mode1+'-'+str(nw)+'.txt',skiprows=0, header=None);
-    d2=pandas.read_csv(mode2+'-'+str(nw)+'.txt',skiprows=0, header=None);
-    #plt.hold(True)
-    idx1,idx2=getIdxByVer(ver)
-    plt.plot(d1[:n][idx1], d1[:n][idx2])
-    plt.plot(d2[:n][idx1], d2[:n][idx2])
-    plt.legend(renameLegend([mode1, mode2]), ncol=ncol)
-    xlbl=xlbl if xlbl is not None else 'time (s)'
-    ylbl=ylbl if ylbl is not None else 'loss'
-    plt.xlabel(xlbl)
-    plt.ylabel(ylbl)
-    plt.tight_layout()
-    plt.show()
-
-#drawCmp('async','fsb',8)
-#drawCmp('sync','fab',8,300)
-
-
-def plotUnit(legendList, fn, name, lineMarker, color, n, ver=0):
-    d=pandas.read_csv(fn, skiprows=0, header=None)
-    idx1,idx2=getIdxByVer(ver)
-    line = plt.plot(d[:n][idx1], d[:n][idx2], lineMarker, color=color)
-    if(legendList is not None):
-        legendList.append(name)
-    return line[0].get_color()
-
+__HEADER4__=['time', 'loss', 'difference', 'delta']
+__HEADER5__=['time', 'loss', 'accuracy', 'difference', 'delta']
+__HEADER6__=['iteration', 'time', 'loss', 'accuracy', 'difference', 'delta']
+def getxyLabel(idx1, idx2, ncol):
+    if ncol == 4 and idx1 < 4 and idx2 < 4:
+        return __HEADER4__[idx1], __HEADER4__[idx2]
+    elif ncol == 5 and idx1 < 5 and idx2 < 5:
+        return __HEADER5__[idx1], __HEADER5__[idx2]
+    elif ncol == 6 and idx1 < 6 and idx2 < 6:
+        return __HEADER6__[idx1], __HEADER6__[idx2]
+    return None, None
+        
 def renameLegend(lgd):
     for i in range(len(lgd)):
         s=lgd[i]
@@ -76,14 +46,44 @@ def renameLegend(lgd):
         lgd[i]=s
     return lgd
 
+
+def drawOne(fn, n=None, ver=0, xlbl=None, ylbl=None):
+    if fn.endswith('.txt'):
+        d = pandas.read_csv(fn,header=None);
+        lgd = fn.replace('.txt','')
+    else:
+        d = pandas.read_csv(fn+'.txt',header=None);
+        lgd = fn
+    idx1,idx2=getIdxByVer(ver)
+    xr,yr = getxyLabel(idx1, idx2, d.shape[1])
+    plt.plot(d[:n][idx1], d[:n][idx2])
+    xlbl=xlbl if xlbl is not None else xr
+    ylbl=ylbl if ylbl is not None else yr  
+    plt.xlabel(xlbl)
+    plt.ylabel(ylbl)
+    plt.legend(lgd)
+    plt.show()
+
+#drawOne('sync', 1)
+#drawOne('fab', 1)
+
+def plotUnit(legendList, fn, name, lineMarker, color, n, idx1, idx2):
+    d=pandas.read_csv(fn, skiprows=0, header=None)
+    line = plt.plot(d[:n][idx1], d[:n][idx2], lineMarker, color=color)
+    if(legendList is not None):
+        legendList.append(name)
+    return line[0].get_color(), d.shape[1]
+
 def drawList(prefix, mList, n=None, ver=0, xlbl=None, ylbl=None):
     plt.figure();
+    idx1,idx2=getIdxByVer(ver)
     for m in mList:
-        plotUnit(None, prefix+m+'.txt', m, '-', None, n, ver)
+        _, nc = plotUnit(None, prefix+m+'.txt', m, '-', None, n, idx1, idx2)
     #plt.hold(True)
     plt.legend(renameLegend(mList))
-    xlbl=xlbl if xlbl is not None else 'time (s)'
-    ylbl=ylbl if ylbl is not None else 'loss'
+    xr,yr = getxyLabel(idx1, idx2, nc)
+    xlbl=xlbl if xlbl is not None else xr
+    ylbl=ylbl if ylbl is not None else yr  
     plt.xlabel(xlbl)
     plt.ylabel(ylbl)
     plt.tight_layout()
@@ -117,16 +117,18 @@ def drawListCmp(prefix, mList1, mList2, mList3=None, n=None, ncol=1, ver=0, xlbl
     plt.figure()
     l=len(mList1)
     lgd=[]
+    idx1,idx2=getIdxByVer(ver)
     for i in range(l):
-        c=plotUnit(lgd, prefix+mList1[i]+'.txt', mList1[i], '-', None, n, ver)
+        c,nc=plotUnit(lgd, prefix+mList1[i]+'.txt', mList1[i], '-', None, n, idx1, idx2)
         if mList2:
-            plotUnit(lgd, prefix+mList2[i]+'.txt', mList2[i], '--', c, n, ver)
+            plotUnit(lgd, prefix+mList2[i]+'.txt', mList2[i], '--', c, n, idx1, idx2)
         if mList3:
-            plotUnit(lgd, prefix+mList3[i]+'.txt', mList3[i], '-.', c, n, ver)
+            plotUnit(lgd, prefix+mList3[i]+'.txt', mList3[i], '-.', c, n, idx1, idx2)
     #plt.hold(True)
     plt.legend(renameLegend(lgd), ncol=ncol)
-    xlbl=xlbl if xlbl is not None else 'time (s)'
-    ylbl=ylbl if ylbl is not None else 'loss'
+    xr,yr = getxyLabel(idx1, idx2, nc)
+    xlbl=xlbl if xlbl is not None else xr
+    ylbl=ylbl if ylbl is not None else yr
     plt.xlabel(xlbl)
     plt.ylabel(ylbl)
     if save:

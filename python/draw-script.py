@@ -18,12 +18,17 @@ ln2=[4,8,12,16,20,24]
 lmode=['bsp','tap','aap']
 lmode_=['bsp-','tap-','aap-']
 
+def prio2bs(bs0, p0, n=None):
+    if n:
+        return int(bs0 * p0 * n);
+    return int(bs0*p0);
+
 def saveimg(name):
     plt.savefig(name+'.png')
     plt.savefig(name+'.pdf')
 
 
-# LR
+# ---- LR ----
 os.chdir(r'E:\Code\FSB\score\lr\1000-10k')
 
 def LRNameBBS(bbs, i, m, lr='0.01'):
@@ -64,8 +69,13 @@ plt.ylim(0)
 plt.tight_layout()
 saveimg('lr-scale-aap-bbs-10')
 
+# priority of LR
+l=[0.01, 0.025, 0.05, 0.075, 0.1]
+fnl0=genFL('',[prio2bs(10000,v,4) for v in l],'-0.01/bsp-4')
+drawListCmp('',fnl0,genFL('10000-0.01/bsp-4-p',l),n=None,ver=1)
+drawListCmp('',fnl0,genFL('10000-0.01/bsp-4-p',l),genFL('10000-0.01/bsp-4-pg',l),n=None,ver=1)
 
-#MLP
+# ---- MLP ----
 os.chdir(r'E:\Code\FSB\score\mlp\784,300,10-60k')
 
 namepre='mnist-m300'
@@ -86,7 +96,7 @@ l=[1,2,4,8,12]
 drawListCmp('1000-0.01/', genFL('bsp-',l),genFL('tap-',l), genFL('aap-',l))
 saveimg(namepre+'-cmp-%s' % ','.join([str(v) for v in l]))
 
-# CNN
+# ---- CNN ----
 os.chdir(r'E:\Code\FSB\score\cnn\28x28,4c5x5p2x2,3c5x5p2x2,10f-60k')
 os.chdir(r'E:\Code\FSB\score\cnn\28x28,12c5x5p4x4,10f-60k')
 
@@ -118,8 +128,7 @@ drawListCmp('1000-0.001/', genFL('tap-',[12],''), genFL('aap-',[12],''),None,30)
 saveimg(namepre+'-cmp-12-zoomin')
 
 
-# KM
-
+# ---- KM ----
 os.chdir(r'E:\Code\FSB\score\km\100,500-100k')
 
 namepre='km15'
