@@ -27,6 +27,5 @@ public:
 
 protected:
 	void updateGradient(const size_t start, const size_t end);
-	void updateSumGrad(const int i, const std::vector<double>& g);
 	void dumpGradient();
 };

@@ -13,9 +13,14 @@ void PSGD::init(const std::vector<std::string>& param)
 	try{
 		rate = stod(param[0]);
 		topRatio = stod(param[1]);
+		global = param.size() > 2 ? param[2] == "global" : false; // true->global (gi*avg(g)), false->self (gi*gi)
 	} catch(exception& e){
 		throw invalid_argument("Cannot parse parameters for PSGD\n" + string(e.what()));
 	}
+	if(global)
+		fp_cp = &PSGD::calcPriorityGlobal;
+	else
+		fp_cp = &PSGD::calcPrioritySelf;
 }
 
 std::string PSGD::name() const
@@ -37,6 +42,8 @@ void PSGD::prepare()
 				pd->get(i).x, pm->getParameter().weights, pd->get(i).y, nullptr);
 		}
 	}
+	if(global)
+		sumGrad.resize(paramWidth, 0.0);
 }
 
 void PSGD::ready()
@@ -44,7 +51,12 @@ void PSGD::ready()
 	// prepare gradient
 	gradient.reserve(pd->size());
 	for(size_t i = 0; i < pd->size(); ++i){
-		gradient.push_back(pm->gradient(pd->get(i)));
+		auto g = pm->gradient(pd->get(i));
+		if(global){
+			for(size_t j = 0; j < paramWidth; ++j)
+				sumGrad[j] += g[j];
+		}
+		gradient.push_back(move(g));
 	}
 	// prepare priority
 	//uniform_real_distribution<float> dist(0.0f, 1.0f);
@@ -81,6 +93,8 @@ Trainer::DeltaResult PSGD::batchDelta(
 		auto&& g = pm->gradient(pd->get(i));
 		for(size_t j = 0; j < paramWidth; ++j)
 			grad[j] += g[j];
+		if(global)
+			updateSumGrad(i, g);
 		//priority[i] = calcPriority(g);
 		gradient[i] = move(g);
 		// priority
@@ -118,7 +132,18 @@ Trainer::DeltaResult PSGD::batchDelta(
 
 float PSGD::calcPriority(const std::vector<double>& g)
 {
-	auto p = inner_product(g.begin(), g.end(), g.begin(), 1.0);
+	return (this->*fp_cp)(g);
+}
+
+float PSGD::calcPriorityGlobal(const std::vector<double>& g)
+{
+	auto p = inner_product(g.begin(), g.end(), sumGrad.begin(), 0.0);
+	return static_cast<float>(p);
+}
+
+float PSGD::calcPrioritySelf(const std::vector<double>& g)
+{
+	auto p = inner_product(g.begin(), g.end(), g.begin(), 0.0);
 	return static_cast<float>(p);
 }
 
@@ -138,4 +163,10 @@ std::vector<int> PSGD::getTopK(const size_t first, const size_t last, const size
 	});
 	res.erase(it, res.end());
 	return res;
+}
+
+void PSGD::updateSumGrad(const int i, const std::vector<double>& g){
+	for(size_t j = 0; j < paramWidth; ++j){
+		sumGrad[j] += g[j] - gradient[i][j];
+	}
 }

@@ -58,17 +58,15 @@ PSGD_poc::~PSGD_poc()
 
 void PSGD_poc::updateGradient(const size_t start, const size_t end)
 {
+	if(global)
+		sumGrad.assign(paramWidth, 0.0);
 	for(size_t i = start; i < end; ++i){
 		auto g = pm->gradient(pd->get(i));
-		if(global)
-			updateSumGrad(i, g);
+		if(global){
+			for(size_t j = 0; j < paramWidth; ++j)
+				sumGrad[j] += g[j];
+		}
 		gradient[i] = move(g);
-	}
-}
-
-void PSGD_poc::updateSumGrad(const int i, const std::vector<double>& g){
-	for(size_t j = 0; j < g.size(); ++j){
-		sumGrad[j] += g[j] - gradient[i][j];
 	}
 }
 
