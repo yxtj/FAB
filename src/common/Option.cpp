@@ -48,7 +48,8 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		//("learning_rate,l", value(&lrate)->required(), "The learning rate")
 		("optimizer,o", value(&optimizer)->required()->default_value("gd:0.01"),
 			"The optimizer to train. Support: gd:<lr>, em:<lr>, kmeans, "
-			"psgd:<lr>:<k-ratio>, bpsgd:<lr>:<k-ratio>:<point-bs>:<dim-bs>.")
+			"psgd:<lr>:<k-ratio>:<global/self>, psgdr:<lr>:<k-ratio>:<global/self>:<r-ratio>, "
+			"bpsgd:<lr>:<k-ratio>:<point-bs>:<dim-bs>.")
 		// file - input
 		("data_file,d", value(&fnData)->required(), "The file name of the input data")
 		("header", bool_switch(&header)->default_value(false), 
@@ -176,7 +177,7 @@ bool Option::processOptimizer()
 			ch += 'a' - 'A';
 	}
 	vector<string> t = getStringList(optimizer, ":-, ");
-	vector<string> supported = { "gd", "em", "kmeans", "psgd", "bpsgd" };
+	vector<string> supported = { "gd", "em", "kmeans", "psgd", "psgdr", "bpsgd" };
 	auto it = find(supported.begin(), supported.end(), t[0]);
 	if(it == supported.end() && t[0].find("_poc_") == string::npos)
 		return false;

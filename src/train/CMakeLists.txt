@@ -4,6 +4,7 @@ set(HEADERS
 	EM.h
 	EM_KMeans.h
 	PSGD.h
+	PSGDwR.h
 	BlockPSGD.h
 	TrainerFactory.h
 )
@@ -13,6 +14,7 @@ set(SOURCES
 	EM.cpp
 	EM_KMeans.cpp
 	PSGD.cpp
+	PSGDwR.cpp
 	BlockPSGD.cpp
 	TrainerFactory.cpp
 )
