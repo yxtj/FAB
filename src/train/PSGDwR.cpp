@@ -27,7 +27,7 @@ void PSGDwR::init(const std::vector<std::string>& param)
 
 std::string PSGDwR::name() const
 {
-	return "PSGDwR";
+	return "psgdr";
 }
 
 void PSGDwR::prepare()
