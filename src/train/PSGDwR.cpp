@@ -73,7 +73,7 @@ void PSGDwR::ready()
 
 PSGDwR::~PSGDwR()
 {
-	LOG(INFO) << "[Stat]: time-prio-pick: " << stat_t_prio_pick
+	LOG(INFO) << "[Stat-Trainer]: time-prio-pick: " << stat_t_prio_pick
 		<< "\ttime-prio-update: " << stat_t_prio_update
 		<< "\ttime-grad-calc: " << stat_t_grad_calc
 		<< "\ttime-grad-renew: " << stat_t_grad_renew
@@ -91,6 +91,7 @@ Trainer::DeltaResult PSGDwR::batchDelta(
 		auto&& g = pm->gradient(pd->get(renewPointer));
 		if(global)
 			updateSumGrad(renewPointer, g);
+		priority[renewPointer] = calcPriority(g);
 		gradient[renewPointer] = move(g);
 		renewPointer = (renewPointer + 1) % pd->size();
 	}
