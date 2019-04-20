@@ -90,8 +90,9 @@ void Master::run()
 	} catch(exception& e){
 		LOG(FATAL) << "Error in checking dataset: " << e.what();
 	}
-	clearAccumulatedDelta();
 	LOG(INFO) << "Got x-length: " << nx << ", y-length: " << ny << ", data points: " << nPoint;
+	LOG(INFO) << "Model parameter length: " << model.paramWidth();
+	clearAccumulatedDelta();
 	if(!opt->fnOutput.empty()){
 		doArchive = true;
 		archiver.init_write(opt->fnOutput, model.paramWidth(), false, opt->binary);
