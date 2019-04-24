@@ -1,4 +1,7 @@
 #include "BlockPSGD.h"
+#include "logging/logging.h"
+#include "util/Util.h"
+#include "util/Timer.h"
 #include <algorithm>
 #include <random>
 #include <numeric>
@@ -9,9 +12,10 @@ void BlockPSGD::init(const std::vector<std::string>& param)
 {
 	try{
 		rate = stod(param[0]);
-		kratio = stod(param[1]);
-		dpblock = param.size() > 2 ? stoi(param[2]) : 1; // default: single data point
-		dmblock = param.size() > 3 ? stoi(param[3]) : 0; // default: all dimension
+		topRatio = stod(param[1]);
+		dpblock = stoi(param[2]);
+		renewRatio = param.size() > 3 ? stod(param[3]) : 0.01;
+		useRenewGrad = param.size() > 4 ? beTrueOption(param[4]) : false;
 	} catch(exception& e){
 		throw invalid_argument("Cannot parse parameters for BPSGD\n" + string(e.what()));
 	}
@@ -19,7 +23,7 @@ void BlockPSGD::init(const std::vector<std::string>& param)
 
 std::string BlockPSGD::name() const
 {
-	return "psgd";
+	return "bpsgd";
 }
 
 void BlockPSGD::prepare()
@@ -36,166 +40,172 @@ void BlockPSGD::prepare()
 				pd->get(i).x, pm->getParameter().weights, pd->get(i).y, nullptr);
 		}
 	}
-	// intialize priority - batch parameter
+	// intialize block parameter
 	if(dpblock == 0 || dpblock > pd->size())
 		dpblock = pd->size();
 	n_dpblock = (pd->size() + dpblock - 1) / dpblock;
-	if(dmblock == 0 || dmblock > paramWidth)
-		dmblock = paramWidth;
-	n_dmblock = (paramWidth + dmblock - 1) / dmblock;
+	// intialize priority related parameter
+	sumGrad.resize(paramWidth, 0.0);
+	renewSize = static_cast<size_t>(pd->size() * renewRatio);
+	renewPointer = 0;
 }
 
 void BlockPSGD::ready()
 {
-	// intialize priority - priority queue
-	// TODO: change to gradient based
-	uniform_real_distribution<float> dist(0.0, 1.0);
-#if !defined(NDEBUG) || defined(_DEBUG) || defined(DEBUG)
-	mt19937 gen(1);
-#else
-	random_device rdv;
-	mt19937 gen(rdv());
-#endif
-	for(size_t i = 0; i < n_dpblock; ++i)
-		for(size_t j = 0; j < n_dmblock; ++j)
-			priQue.update(make_pair((int)i, (int)j), dist(gen));
+	// prepare gradient and priority
+	// (Because we do not want to calculate gradient twice)
+	gradient.reserve(n_dpblock);
+	priority.resize(pd->size());
+	vector<double> gblock(paramWidth, 0.0);
+	for(size_t i = 0; i < pd->size(); ++i){
+		if(i != 0 && i % dpblock == 0){
+			for(auto& v : gblock)
+				v /= static_cast<double>(dpblock);
+			gradient.push_back(move(gblock));
+			gblock.assign(paramWidth, 0.0);
+		}
+		auto g = pm->gradient(pd->get(i));
+		for(size_t j = 0; j < paramWidth; ++j){
+			sumGrad[j] += g[j]; // approximate
+			gblock[j] += g[j];
+		}
+		float factor = static_cast<float>(n_dpblock) / i; // rectify the priority
+		float p0 = calcPriority(g); // using current sumGrad
+		priority[i] = p0 * factor;
+	}
+	// rectify sumGrad
+	const double factor = static_cast<double>(n_dpblock) / pd->size();
+	for(auto& v : sumGrad)
+		v *= factor;
+	// process the last block
+	size_t nlast = pd->size() - (n_dpblock - 1)*dpblock;
+	for(auto& v : gblock)
+		v /= static_cast<double>(nlast);
+	gradient.push_back(move(gblock));
+}
+
+BlockPSGD::~BlockPSGD()
+{
+	LOG(INFO) << "[Stat-Trainer]: time-prio-pick: " << stat_t_prio_pick
+		<< "\ttime-prio-update: " << stat_t_prio_update
+		<< "\ttime-grad-calc: " << stat_t_grad_calc
+		<< "\ttime-grad-renew: " << stat_t_grad_renew
+		<< "\ttime-grad-post: " << stat_t_grad_post;
 }
 
 Trainer::DeltaResult BlockPSGD::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
-	const size_t end = pd->size();
+	size_t end = min(start + cnt, pd->size());
+	Timer tmr;
 	vector<double> grad(paramWidth, 0.0);
-	const size_t nblocks = cnt * n_dmblock / dpblock;
-	// update
-	size_t used_block = 0;
-	size_t ndp = 0;
-	unordered_set<int> used_dpblock;
-	vector<pair<pair<int, int>, float>> buffer_priority;
-	//unordered_map<int, vector<int>> picked;
-	while(used_block++ < nblocks){
-		pair<int, int> coord = priQue.top();
-		//picked[coord.first].push_back(coord.second);
-		priQue.pop();
-		if(used_dpblock.find(coord.first) != used_dpblock.end()){
-			continue;
-		}
-		used_dpblock.insert(coord.first);
-		size_t i_f = coord.first*dpblock, i_l = min(coord.first*dpblock + dpblock, end);
-		//size_t j_f = coord.second*dbatch, j_l = min(coord.second*dbatch + dbatch, paramWidth);
-		vector<double> tg(paramWidth, 0.0);
-		size_t i;
-		for(i = i_f; i < i_l; ++i){
-			auto g = pm->gradient(pd->get(i));
+	// force renew the gradient of some data points
+	vector<double> gbuf(paramWidth, 0.0);
+	size_t bid_last = n_dpblock;
+	int buf_cnt = 0;
+	size_t rcnt = renewSize + 1;
+	while(--rcnt > 0){
+		auto&& g = pm->gradient(pd->get(renewPointer));
+		priority[renewPointer] = calcPriority(g);
+		if(useRenewGrad){
 			for(size_t j = 0; j < paramWidth; ++j)
-				tg[j] += g[j];
-			++ndp;
+				grad[j] += g[j];
 		}
+		size_t bid = id2block(renewPointer);
+		if(bid == bid_last){
+			for(size_t j = 0; j < paramWidth; ++j)
+				gbuf[j] += g[j];
+			++buf_cnt;
+		} else if(buf_cnt != 0){
+			updateGrad(bid_last, gbuf, buf_cnt);
+			bid_last = bid;
+			gbuf = move(g);
+			buf_cnt = 1;
+		}
+		renewPointer = (renewPointer + 1) % pd->size();
+	}
+	if(buf_cnt != 0){
+		updateGrad(bid_last, gbuf, buf_cnt);
+	}
+	stat_t_grad_renew += tmr.elapseSd();
+	// pick top-k
+	tmr.restart();
+	size_t k = static_cast<size_t>(round(topRatio*cnt));
+	vector<int> topk = getTopK(start, end, k);
+	stat_t_prio_pick += tmr.elapseSd();
+	// update gradient and priority of data-points
+	tmr.restart();
+	for(auto i : topk){
 		// calculate gradient
+		auto&& g = pm->gradient(pd->get(i));
+		stat_t_grad_calc += tmr.elapseSd();
+		// calcualte priority
+		tmr.restart();
+		priority[i] = calcPriority(g);
+		updateGrad(id2block(i), g, 1);
+		stat_t_prio_update += tmr.elapseSd();
+		// accumulate gradient result
+		tmr.restart();
 		for(size_t j = 0; j < paramWidth; ++j)
-			grad[j] += tg[j];
-		// calculate priority
-		vector<float> priority = calcPriority(tg);
-		if(i - i_f != dpblock){
-			float factor = static_cast<float>(dpblock * dpblock) / (i - i_f) / (i - i_f);
-			for(auto& v : priority)
-				v *= factor;
-		}
-		for(int j = 0; j < n_dmblock; ++j)
-			buffer_priority.emplace_back(make_pair(coord.first, j), priority[j]);
+			grad[j] += g[j];
+		stat_t_grad_post += tmr.elapseSd();
+		// final
+		tmr.restart();
 	}
-	// update priority
-	for(auto& cp : buffer_priority)
-		priQue.update(cp.first, cp.second);
-	// update gradient
-	if(ndp != 0){
-		// this is gradient DESCENT, so rate is set to negative
-		double factor = -rate;
-		if(avg)
-			factor /= ndp;
-		for(auto& v : grad)
-			v *= factor;
-	}
-	return { cnt, cnt, move(grad) };
+	// calculate delta to report
+	tmr.restart();
+	double factor = -rate;
+	if(avg)
+		factor /= k;
+	else
+		factor *= static_cast<double>(cnt) / k;
+	for(auto& v : grad)
+		v *= factor;
+	stat_t_grad_post += tmr.elapseSd();
+	return { cnt, topk.size(), move(grad) };
 }
 
 Trainer::DeltaResult BlockPSGD::batchDelta(
 	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
 {
-	const size_t end = pd->size();
-	vector<double> grad(paramWidth, 0.0);
-	const size_t nblocks = cnt * n_dmblock / dpblock;
-	// update
-	size_t used_block = 0;
-	size_t ndp = 0;
-	unordered_set<int> used_dpblock;
-	vector<pair<pair<int, int>, float>> buffer_priority;
-	while(cond.load() && used_block++ < nblocks){
-		pair<int, int> coord = priQue.top();
-		//priQue.pop();
-		if(used_dpblock.find(coord.first) != used_dpblock.end()){
-			continue;
-		}
-		used_dpblock.insert(coord.first);
-		size_t i_f = coord.first*dpblock, i_l = min(coord.first*dpblock + dpblock, end);
-		//size_t j_f = coord.second*dbatch, j_l = min(coord.second*dbatch + dbatch, paramWidth);
-		vector<double> tg(paramWidth, 0.0);
-		size_t i;
-		for(i = i_f; cond.load() && i < i_l; ++i){
-			auto g = pm->gradient(pd->get(i));
-			for(size_t j = 0; j < paramWidth; ++j)
-				tg[j] += g[j];
-			++ndp;
-		}
-		// calculate gradient
-		for(size_t j = 0; j < paramWidth; ++j)
-			grad[j] += tg[j];
-		// calculate priority
-		vector<float> priority = calcPriority(tg);
-		if(i - i_f != dpblock){
-			float factor = static_cast<float>(dpblock * dpblock) / (i - i_f) / (i - i_f);
-			for(auto& v : priority)
-				v *= factor;
-		}
-		for(int j = 0; j < n_dmblock; ++j)
-			buffer_priority.emplace_back(make_pair(coord.first, j), priority[j]);
-	}
-	// update priority
-	for(auto& cp : buffer_priority)
-		priQue.update(cp.first, cp.second);
-	// update gradient
-	if(ndp != 0){
-		// this is gradient DESCENT, so rate is set to negative
-		double factor = -rate;
-		if(avg)
-			factor /= ndp;
-		for(auto& v : grad)
-			v *= factor;
-	}
-	return { cnt, cnt, move(grad) };
+	return batchDelta(start, cnt, avg);
 }
 
-std::vector<float> BlockPSGD::calcPriority(const std::vector<double>& grad)
+size_t BlockPSGD::id2block(size_t i) const
 {
-	vector<float> priority;
-	size_t i = 0;
-	while(i < paramWidth){
-		double tp = 0.0;
-		for(size_t j = 0; i<paramWidth && j < dmblock; ++j){
-			tp += grad[i] * grad[i];
-			++i;
-		}
-		priority.push_back(static_cast<float>(tp));
-	}
-	return priority;
+	return i / dpblock;
 }
 
-std::unordered_map<int, std::vector<int>> BlockPSGD::mergeSelected(
-	const std::vector<std::pair<int, int>>& pick)
+float BlockPSGD::calcPriority(const std::vector<double>& g)
 {
-	std::unordered_map<int, std::vector<int>> res;
-	for(auto& p : pick){
-		res[p.first].push_back(p.second);
-	}
+	auto p = inner_product(g.begin(), g.end(), sumGrad.begin(), 0.0);
+	return static_cast<float>(p);
+}
+
+std::vector<int> BlockPSGD::getTopK(const size_t first, const size_t last, const size_t k)
+{
+	std::vector<int> res;
+	res.reserve(last - first);
+	for(size_t i = first; i < last; ++i)
+		res.push_back(static_cast<int>(i));
+	if(res.size() <= k)
+		return res;
+	auto it = res.begin() + k;
+	//partial_sort(res.begin(), it, res.end(),
+	nth_element(res.begin(), it, res.end(),
+		[&](const int l, const int r){
+		return priority[l] > priority[r]; // pick the largest k
+	});
+	res.erase(it, res.end());
 	return res;
+}
+
+void BlockPSGD::updateGrad(const size_t bid, const std::vector<double>& g, const int cnt){
+	auto& go = gradient[bid];
+	double factor = static_cast<double>(cnt) / dpblock;
+	for(size_t j = 0; j < paramWidth; ++j){
+		sumGrad[j] -= go[j];
+		go[j] = go[j] * (1.0 - factor) + g[j] * factor;
+		sumGrad[j] += go[j];
+	}
 }
