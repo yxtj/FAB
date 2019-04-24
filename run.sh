@@ -88,10 +88,39 @@ bs0=60000; for k in 0.01 0.05 0.1 0.15 0.2; do for i in 4; do
 # benchmark - change bs
 bs=$(echo $bs0*$k/1 | bc); echo bench-$bs-$m-$i - $(date); set_dir;
 mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d /var/tzhou/data/mnist/mnist_train.csv -r $RESDIR/$m-$i.csv -y $YLIST -o gd:$lr -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time 20 --log_iter 100 --v=2 > $LOGDIR/$m-$i;
-src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$m-$i.csv -d /var/tzhou/data/mnist/mnist_train.csv -y $YLIST -b -o $SCRDIR/$m-$i.txt -w 6;
+src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$m-$i.csv -d /var/tzhou/data/mnist/mnist_test.csv -y $YLIST -b -o $SCRDIR/$m-$i.txt -w 6;
 # priority - change k
 bs=$bs0; echo priority-$bs-$m-$i-$k - $(date); set_dir;
-mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d /var/tzhou/data/mnist/mnist_train.csv -r $RESDIR/$m-$i-p$k.csv -y $YLIST -o psgd:$lr:$k -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time 20 --log_iter 100 --v=2 > $LOGDIR/$m-$i-p$k;
-src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$m-$i-p$k.csv -d /var/tzhou/data/mnist/mnist_train.csv -y $YLIST -b -o $SCRDIR/$m-$i-p$k.txt -w 6;
+fn=$m-$i-p$k;
+mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d /var/tzhou/data/mnist/mnist_train.csv -r $RESDIR/$fn.csv -y $YLIST -o psgd:$lr:$k -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time 20 --log_iter 100 --v=2 > $LOGDIR/$fn;
+src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$fn.csv -d /var/tzhou/data/mnist/mnist_test.csv -y $YLIST -b -o $SCRDIR/$fn.txt -w 6;
 done done
 
+ARVTIME=20;
+DATA_TRAIN=/var/tzhou/data/mnist/mnist_train.csv;
+DATA_TEST=/var/tzhou/data/mnist/mnist_test.csv;
+
+DO_ACCURACY="--accuracy"
+
+bs0=60000;
+for k in 0.01 0.05 0.1 0.15 0.2; do 
+bs=$(echo $bs0*$k/1 | bc);
+echo bench-$bs-$m-$i - $(date); set_dir; fn=$m-$i;
+mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d $DATA_TRAIN -r $RESDIR/$fn.csv -y $YLIST -o gd:$lr -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time $ARVTIME --log_iter 100 --v=2 > $LOGDIR/$fn; killall main;
+src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$fn.csv -d $DATA_TEST -y $YLIST -b -o $SCRDIR/$fn.txt $DO_ACCURACY -w 6;
+bs=$bs0; set_dir;
+echo priority-$bs-$m-$i-$k - global - $(date); fn=$m-$i-pgo$k;
+mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d $DATA_TRAIN -r $RESDIR/$fn.csv -y $YLIST -o psgd:$lr:$k:global:$r -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time $ARVTIME --log_iter 100 --v=2 > $LOGDIR/$fn; killall main;
+src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$fn.csv -d $DATA_TEST -y $YLIST -b -o $SCRDIR/$fn.txt $DO_ACCURACY -w 6;
+echo priority-$bs-$m-$i-$k - self - $(date); fn=$m-$i-pso$k;
+mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d $DATA_TRAIN -r $RESDIR/$fn.csv -y $YLIST -o psgd:$lr:$k:self -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time $ARVTIME --log_iter 100 --v=2 > $LOGDIR/$fn; killall main;
+src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$fn.csv -d $DATA_TEST -y $YLIST -b -o $SCRDIR/$fn.txt $DO_ACCURACY -w 6;
+for r in 0.001 0.01 0.05; do
+echo priority-$bs-$m-$i-$k-$r - global- $(date); fn=$m-$i-pgr$k-$r;
+mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d $DATA_TRAIN -r $RESDIR/$fn.csv -y $YLIST -o psgdr:$lr:$k:global:$r -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time $ARVTIME --log_iter 100 --v=2 > $LOGDIR/$fn; killall main;
+src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$fn.csv -d $DATA_TEST -y $YLIST -b -o $SCRDIR/$fn.txt $DO_ACCURACY -w 6;
+echo priority-$bs-$m-$i-$k-$r - self - $(date); fn=$m-$i-psr$k-$r;
+mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d $DATA_TRAIN -r $RESDIR/$fn.csv -y $YLIST -o psgdr:$lr:$k:self:$r -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time $ARVTIME --log_iter 100 --v=2 > $LOGDIR/$fn; killall main;
+src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$fn.csv -d $DATA_TEST -y $YLIST -b -o $SCRDIR/$fn.txt $DO_ACCURACY -w 6;
+done
+done
