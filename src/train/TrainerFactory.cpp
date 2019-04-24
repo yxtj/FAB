@@ -3,8 +3,8 @@
 #include "EM.h"
 #include "EM_KMeans.h"
 #include "PSGD.h"
-#include "PSGDwR.h"
-#include "BlockPSGD.h"
+#include "PSGDBlock.h"
+#include "PSGDDecay.h"
 #include "psgd_poc/PSGD_point.h"
 #include "psgd_poc/PSGD_dim.h"
 
@@ -20,10 +20,10 @@ Trainer * TrainerFactory::generate(
 		p = new EM_KMeans();
 	} else if(name == "psgd"){
 		p = new PSGD();
-	} else if(name == "psgdr"){
-		p = new PSGDwR();
-	} else if(name == "bpsgd"){
-		p = new BlockPSGD();
+	} else if(name == "psgdb"){
+		p = new PSGDBlock();
+	} else if(name == "psgdd"){
+		p = new PSGDDecay();
 	} else if(name == "psgd_poc_point"){
 		p = new PSGD_point();
 	} else if(name == "psgd_poc_dim"){

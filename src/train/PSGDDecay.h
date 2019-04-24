@@ -1,18 +1,16 @@
 #pragma once
 #include "Trainer.h"
 
-// PSGD with renew
-class PSGDwR : public Trainer
+class PSGDDecay : public Trainer
 {
 	double rate = 1.0;
 	double topRatio = 1.0;
-	bool global = true; // true->global (pi=gi*avg(g)), false->self (pi=gi*gi)
-	double renewPortion = 0.01;
+	double decay = 0.1;
+	double renewRatio = 0.01;
 	bool useRenewGrad = false;
 
 	size_t paramWidth; // parameter width
-	std::vector<std::vector<double>> gradient;
-	std::vector<double> sumGrad;
+	std::vector<double> avgGrad;
 	std::vector<float> priority;
 	size_t renewSize;
 	size_t renewPointer;
@@ -26,7 +24,7 @@ public:
 	virtual std::string name() const;
 	virtual void prepare();
 	virtual void ready();
-	virtual ~PSGDwR();
+	virtual ~PSGDDecay();
 
 	virtual DeltaResult batchDelta(
 		const size_t start, const size_t cnt, const bool avg = true);
@@ -34,12 +32,8 @@ public:
 		const size_t start, const size_t cnt, const bool avg = true);
 private:
 	float calcPriority(const std::vector<double>& g);
-	float calcPriorityGlobal(const std::vector<double>& g);
-	float calcPrioritySelf(const std::vector<double>& g);
-
-	using fp_cp_t = decltype(&PSGDwR::calcPriority);
-	fp_cp_t fp_cp;
 
 	std::vector<int> getTopK(const size_t first, const size_t last, const size_t k);
-	void updateSumGrad(const int i, const std::vector<double>& g);
+	void updateAvgGrad(const std::vector<double>& g);
+	void updateAvgGrad(const std::vector<double>& g, const double f);
 };

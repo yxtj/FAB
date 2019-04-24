@@ -1,14 +1,14 @@
-#include "BlockPSGD.h"
-#include "logging/logging.h"
+#include "PSGDBlock.h"
 #include "util/Util.h"
 #include "util/Timer.h"
+#include "logging/logging.h"
 #include <algorithm>
 #include <random>
 #include <numeric>
 
 using namespace std;
 
-void BlockPSGD::init(const std::vector<std::string>& param)
+void PSGDBlock::init(const std::vector<std::string>& param)
 {
 	try{
 		rate = stod(param[0]);
@@ -21,12 +21,12 @@ void BlockPSGD::init(const std::vector<std::string>& param)
 	}
 }
 
-std::string BlockPSGD::name() const
+std::string PSGDBlock::name() const
 {
 	return "bpsgd";
 }
 
-void BlockPSGD::prepare()
+void PSGDBlock::prepare()
 {
 	// initialize parameter by data
 	paramWidth = pm->paramWidth();
@@ -50,7 +50,7 @@ void BlockPSGD::prepare()
 	renewPointer = 0;
 }
 
-void BlockPSGD::ready()
+void PSGDBlock::ready()
 {
 	// prepare gradient and priority
 	// (Because we do not want to calculate gradient twice)
@@ -71,7 +71,7 @@ void BlockPSGD::ready()
 		}
 		float factor = static_cast<float>(n_dpblock) / i; // rectify the priority
 		float p0 = calcPriority(g); // using current sumGrad
-		priority[i] = p0 * factor;
+		priority[i] = p0 * factor * factor;
 	}
 	// rectify sumGrad
 	const double factor = static_cast<double>(n_dpblock) / pd->size();
@@ -84,7 +84,7 @@ void BlockPSGD::ready()
 	gradient.push_back(move(gblock));
 }
 
-BlockPSGD::~BlockPSGD()
+PSGDBlock::~PSGDBlock()
 {
 	LOG(INFO) << "[Stat-Trainer]: time-prio-pick: " << stat_t_prio_pick
 		<< "\ttime-prio-update: " << stat_t_prio_update
@@ -93,45 +93,48 @@ BlockPSGD::~BlockPSGD()
 		<< "\ttime-grad-post: " << stat_t_grad_post;
 }
 
-Trainer::DeltaResult BlockPSGD::batchDelta(
+Trainer::DeltaResult PSGDBlock::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
 	size_t end = min(start + cnt, pd->size());
 	Timer tmr;
 	vector<double> grad(paramWidth, 0.0);
 	// force renew the gradient of some data points
-	vector<double> gbuf(paramWidth, 0.0);
-	size_t bid_last = n_dpblock;
-	int buf_cnt = 0;
-	size_t rcnt = renewSize + 1;
-	while(--rcnt > 0){
-		auto&& g = pm->gradient(pd->get(renewPointer));
-		priority[renewPointer] = calcPriority(g);
-		if(useRenewGrad){
-			for(size_t j = 0; j < paramWidth; ++j)
-				grad[j] += g[j];
+	{
+		vector<double> gbuf(paramWidth, 0.0);
+		size_t bid_last = n_dpblock;
+		int buf_cnt = 0;
+		size_t rcnt = renewSize + 1;
+		while(--rcnt > 0){
+			auto&& g = pm->gradient(pd->get(renewPointer));
+			priority[renewPointer] = calcPriority(g);
+			if(useRenewGrad){
+				for(size_t j = 0; j < paramWidth; ++j)
+					grad[j] += g[j];
+			}
+			size_t bid = id2block(renewPointer);
+			if(bid == bid_last){
+				for(size_t j = 0; j < paramWidth; ++j)
+					gbuf[j] += g[j];
+				++buf_cnt;
+			} else if(buf_cnt != 0){
+				updateGrad(bid_last, gbuf, buf_cnt);
+				bid_last = bid;
+				gbuf = move(g);
+				buf_cnt = 1;
+			}
+			renewPointer = (renewPointer + 1) % pd->size();
 		}
-		size_t bid = id2block(renewPointer);
-		if(bid == bid_last){
-			for(size_t j = 0; j < paramWidth; ++j)
-				gbuf[j] += g[j];
-			++buf_cnt;
-		} else if(buf_cnt != 0){
+		if(buf_cnt != 0){
 			updateGrad(bid_last, gbuf, buf_cnt);
-			bid_last = bid;
-			gbuf = move(g);
-			buf_cnt = 1;
 		}
-		renewPointer = (renewPointer + 1) % pd->size();
-	}
-	if(buf_cnt != 0){
-		updateGrad(bid_last, gbuf, buf_cnt);
 	}
 	stat_t_grad_renew += tmr.elapseSd();
 	// pick top-k
 	tmr.restart();
 	size_t k = static_cast<size_t>(round(topRatio*cnt));
 	vector<int> topk = getTopK(start, end, k);
+	k = topk.size();
 	stat_t_prio_pick += tmr.elapseSd();
 	// update gradient and priority of data-points
 	tmr.restart();
@@ -165,24 +168,24 @@ Trainer::DeltaResult BlockPSGD::batchDelta(
 	return { cnt, topk.size(), move(grad) };
 }
 
-Trainer::DeltaResult BlockPSGD::batchDelta(
+Trainer::DeltaResult PSGDBlock::batchDelta(
 	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
 {
 	return batchDelta(start, cnt, avg);
 }
 
-size_t BlockPSGD::id2block(size_t i) const
+size_t PSGDBlock::id2block(size_t i) const
 {
 	return i / dpblock;
 }
 
-float BlockPSGD::calcPriority(const std::vector<double>& g)
+float PSGDBlock::calcPriority(const std::vector<double>& g)
 {
 	auto p = inner_product(g.begin(), g.end(), sumGrad.begin(), 0.0);
 	return static_cast<float>(p);
 }
 
-std::vector<int> BlockPSGD::getTopK(const size_t first, const size_t last, const size_t k)
+std::vector<int> PSGDBlock::getTopK(const size_t first, const size_t last, const size_t k)
 {
 	std::vector<int> res;
 	res.reserve(last - first);
@@ -200,7 +203,7 @@ std::vector<int> BlockPSGD::getTopK(const size_t first, const size_t last, const
 	return res;
 }
 
-void BlockPSGD::updateGrad(const size_t bid, const std::vector<double>& g, const int cnt){
+void PSGDBlock::updateGrad(const size_t bid, const std::vector<double>& g, const int cnt){
 	auto& go = gradient[bid];
 	double factor = static_cast<double>(cnt) / dpblock;
 	for(size_t j = 0; j < paramWidth; ++j){

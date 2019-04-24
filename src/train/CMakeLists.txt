@@ -4,8 +4,8 @@ set(HEADERS
 	EM.h
 	EM_KMeans.h
 	PSGD.h
-	PSGDwR.h
-	BlockPSGD.h
+	PSGDBlock.h
+	PSGDDecay.h
 	TrainerFactory.h
 )
 set(SOURCES
@@ -14,8 +14,8 @@ set(SOURCES
 	EM.cpp
 	EM_KMeans.cpp
 	PSGD.cpp
-	PSGDwR.cpp
-	BlockPSGD.cpp
+	PSGDBlock.cpp
+	PSGDDecay.cpp
 	TrainerFactory.cpp
 )
 set(IMPL_FILES

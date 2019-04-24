@@ -1,10 +1,9 @@
 #include "PSGD.h"
 #include "util/Timer.h"
+#include "util/Util.h"
 #include "logging/logging.h"
 #include <algorithm>
 #include <numeric>
-#include <cmath>
-//#include <random>
 
 using namespace std;
 
@@ -14,6 +13,8 @@ void PSGD::init(const std::vector<std::string>& param)
 		rate = stod(param[0]);
 		topRatio = stod(param[1]);
 		global = param.size() > 2 ? param[2] == "global" : false; // true->global (gi*avg(g)), false->self (gi*gi)
+		renewRatio= param.size() > 3 ? stod(param[3]) : 0.01;
+		useRenewGrad = param.size() > 4 ? beTrueOption(param[4]) : false;
 	} catch(exception& e){
 		throw invalid_argument("Cannot parse parameters for PSGD\n" + string(e.what()));
 	}
@@ -42,29 +43,34 @@ void PSGD::prepare()
 				pd->get(i).x, pm->getParameter().weights, pd->get(i).y, nullptr);
 		}
 	}
-	if(global)
+	if(global){
 		sumGrad.resize(paramWidth, 0.0);
+	}
+	renewSize = static_cast<size_t>(pd->size() * renewRatio);
+	renewPointer = 0;
 }
 
 void PSGD::ready()
 {
-	// prepare gradient
-	gradient.reserve(pd->size());
+	// prepare gradient and priority
+	if(global)
+		gradient.reserve(pd->size());
+	priority.resize(pd->size());
 	for(size_t i = 0; i < pd->size(); ++i){
 		auto g = pm->gradient(pd->get(i));
 		if(global){
 			for(size_t j = 0; j < paramWidth; ++j)
 				sumGrad[j] += g[j];
+			gradient.push_back(move(g));
+		} else{
+			priority[i] = calcPriority(g);
 		}
-		gradient.push_back(move(g));
 	}
 	// prepare priority
-	//uniform_real_distribution<float> dist(0.0f, 1.0f);
-	//mt19937 gen(1);
-	priority.resize(pd->size());
-	for(size_t i = 0; i < pd->size(); ++i){
-		priority[i] = calcPriority(gradient[i]);
-		//priority[i] = dist(gen);
+	if(global){
+		for(size_t i = 0; i < pd->size(); ++i){
+			priority[i] = calcPriority(gradient[i]);
+		}
 	}
 }
 
@@ -73,6 +79,7 @@ PSGD::~PSGD()
 	LOG(INFO) << "[Stat-Trainer]: time-prio-pick: " << stat_t_prio_pick
 		<< "\ttime-prio-update: " << stat_t_prio_update
 		<< "\ttime-grad-calc: " << stat_t_grad_calc
+		<< "\ttime-grad-renew: " << stat_t_grad_renew
 		<< "\ttime-grad-post: " << stat_t_grad_post;
 }
 
@@ -81,36 +88,53 @@ Trainer::DeltaResult PSGD::batchDelta(
 {
 	size_t end = min(start + cnt, pd->size());
 	Timer tmr;
+	vector<double> grad(paramWidth, 0.0);
+	// force renew the gradient of some data points
+	size_t rcnt = renewSize + 1;
+	while(--rcnt > 0){
+		auto&& g = pm->gradient(pd->get(renewPointer));
+		priority[renewPointer] = calcPriority(g);
+		if(useRenewGrad){
+			for(size_t j = 0; j < paramWidth; ++j)
+				grad[j] += g[j];
+		}
+		if(global){
+			updateSumGrad(renewPointer, g);
+			gradient[renewPointer] = move(g);
+		}
+		renewPointer = (renewPointer + 1) % pd->size();
+	}
+	stat_t_grad_renew += tmr.elapseSd();
 	// pick top-k
+	tmr.restart();
 	size_t k = static_cast<size_t>(round(topRatio*cnt));
 	vector<int> topk = getTopK(start, end, k);
+	k = topk.size();
 	stat_t_prio_pick += tmr.elapseSd();
 	// update gradient and priority of data-points
 	tmr.restart();
-	vector<double> grad(paramWidth, 0.0);
 	for(auto i : topk){
-		// gradient
+		// calculate gradient
 		auto&& g = pm->gradient(pd->get(i));
+		stat_t_grad_calc += tmr.elapseSd();
+		// calcualte priority
+		tmr.restart();
+		priority[i] = calcPriority(g);
+		if(global){
+			updateSumGrad(i, g);
+		}
+		stat_t_prio_update += tmr.elapseSd();
+		// accumulate gradient result
+		tmr.restart();
 		for(size_t j = 0; j < paramWidth; ++j)
 			grad[j] += g[j];
-		if(global)
-			updateSumGrad(i, g);
-		//priority[i] = calcPriority(g);
-		gradient[i] = move(g);
-		// priority
-		stat_t_grad_calc += tmr.elapseSd();
+		stat_t_grad_post += tmr.elapseSd();
+		// final
 		tmr.restart();
-		priority[i] = calcPriority(gradient[i]);
-		stat_t_prio_update += tmr.elapseSd();
-		tmr.restart();
+		if(global){
+			gradient[i] = move(g);
+		}
 	}
-/*	stat_t_grad_calc += tmr.elapseSd();
-	// update priority
-	tmr.restart();
-	for(auto i : topk){
-		priority[i] = calcPriority(gradient[i]);
-	}
-	stat_t_prio_update += tmr.elapseSd();*/
 	// calculate delta to report
 	tmr.restart();
 	double factor = -rate;
@@ -166,7 +190,8 @@ std::vector<int> PSGD::getTopK(const size_t first, const size_t last, const size
 }
 
 void PSGD::updateSumGrad(const int i, const std::vector<double>& g){
+	auto& go = gradient[i];
 	for(size_t j = 0; j < paramWidth; ++j){
-		sumGrad[j] += g[j] - gradient[i][j];
+		sumGrad[j] += g[j] - go[j];
 	}
 }

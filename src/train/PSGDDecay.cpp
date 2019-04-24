@@ -1,36 +1,31 @@
-#include "PSGDwR.h"
+#include "PSGDDecay.h"
 #include "util/Timer.h"
+#include "util/Util.h"
 #include "logging/logging.h"
 #include <algorithm>
 #include <numeric>
-#include <cmath>
-#include "util/Util.h"
 
 using namespace std;
 
-void PSGDwR::init(const std::vector<std::string>& param)
+void PSGDDecay::init(const std::vector<std::string>& param)
 {
 	try{
 		rate = stod(param[0]);
 		topRatio = stod(param[1]);
-		global = param.size() > 2 ? param[2] == "global" : false; // true->global (gi*avg(g)), false->self (gi*gi)
-		renewPortion = param.size() > 3 ? stod(param[3]) : 0.01;
+		decay = stod(param[2]);
+		renewRatio= param.size() > 3 ? stod(param[3]) : 0.01;
 		useRenewGrad = param.size() > 4 ? beTrueOption(param[4]) : false;
 	} catch(exception& e){
-		throw invalid_argument("Cannot parse parameters for PSGDwR\n" + string(e.what()));
+		throw invalid_argument("Cannot parse parameters for PSGDDecay\n" + string(e.what()));
 	}
-	if(global)
-		fp_cp = &PSGDwR::calcPriorityGlobal;
-	else
-		fp_cp = &PSGDwR::calcPrioritySelf;
 }
 
-std::string PSGDwR::name() const
+std::string PSGDDecay::name() const
 {
-	return "psgdr";
+	return "psgdd";
 }
 
-void PSGDwR::prepare()
+void PSGDDecay::prepare()
 {
 	// initialize parameter by data
 	paramWidth = pm->paramWidth();
@@ -44,38 +39,28 @@ void PSGDwR::prepare()
 				pd->get(i).x, pm->getParameter().weights, pd->get(i).y, nullptr);
 		}
 	}
-	if(global){
-		sumGrad.resize(paramWidth, 0.0);
-	}
-	renewSize = static_cast<size_t>(pd->size() * renewPortion);
+	avgGrad.resize(paramWidth, 0.0);
+	renewSize = static_cast<size_t>(pd->size() * renewRatio);
 	renewPointer = 0;
 }
 
-void PSGDwR::ready()
+void PSGDDecay::ready()
 {
 	// prepare gradient and priority
-	if(global)
-		gradient.reserve(pd->size());
+	// (Because we do not want to calculate gradient twice)
 	priority.resize(pd->size());
 	for(size_t i = 0; i < pd->size(); ++i){
 		auto g = pm->gradient(pd->get(i));
-		if(global){
-			for(size_t j = 0; j < paramWidth; ++j)
-				sumGrad[j] += g[j];
-			gradient.push_back(move(g));
-		} else{
-			priority[i] = calcPriority(g);
+		for(size_t j = 0; j < paramWidth; ++j){
+			avgGrad[j] += g[j];
 		}
-	}
-	// prepare priority
-	if(global){
-		for(size_t i = 0; i < pd->size(); ++i){
-			priority[i] = calcPriority(gradient[i]);
-		}
+		float p0 = calcPriority(g); // using current avgGrad
+		// rectify the priority
+		priority[i] = p0 / (i * i);
 	}
 }
 
-PSGDwR::~PSGDwR()
+PSGDDecay::~PSGDDecay()
 {
 	LOG(INFO) << "[Stat-Trainer]: time-prio-pick: " << stat_t_prio_pick
 		<< "\ttime-prio-update: " << stat_t_prio_update
@@ -84,35 +69,40 @@ PSGDwR::~PSGDwR()
 		<< "\ttime-grad-post: " << stat_t_grad_post;
 }
 
-Trainer::DeltaResult PSGDwR::batchDelta(
+Trainer::DeltaResult PSGDDecay::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
 	size_t end = min(start + cnt, pd->size());
 	Timer tmr;
-	vector<double> grad(paramWidth, 0.0);
+	vector<double> grad;
 	// force renew the gradient of some data points
+	vector<double> gbuf(paramWidth, 0.0);
 	size_t rcnt = renewSize + 1;
 	while(--rcnt > 0){
 		auto&& g = pm->gradient(pd->get(renewPointer));
 		priority[renewPointer] = calcPriority(g);
-		if(useRenewGrad){
-			for(size_t j = 0; j < paramWidth; ++j)
-				grad[j] += g[j];
-		}
-		if(global){
-			updateSumGrad(renewPointer, g);
-			gradient[renewPointer] = move(g);
-		}
+		for(size_t j = 0; j < paramWidth; ++j)
+			gbuf[j] += g[j];
 		renewPointer = (renewPointer + 1) % pd->size();
 	}
+	updateAvgGrad(gbuf);
+	if(useRenewGrad){
+		grad = move(gbuf);
+		gbuf.assign(paramWidth, 0.0);
+	} else{
+		grad.assign(paramWidth, 0.0);
+	}
+	// at this time: gbuf is empty
 	stat_t_grad_renew += tmr.elapseSd();
 	// pick top-k
 	tmr.restart();
 	size_t k = static_cast<size_t>(round(topRatio*cnt));
 	vector<int> topk = getTopK(start, end, k);
+	k = topk.size();
 	stat_t_prio_pick += tmr.elapseSd();
 	// update gradient and priority of data-points
 	tmr.restart();
+	const double dfactor = decay / k;
 	for(auto i : topk){
 		// calculate gradient
 		auto&& g = pm->gradient(pd->get(i));
@@ -120,9 +110,8 @@ Trainer::DeltaResult PSGDwR::batchDelta(
 		// calcualte priority
 		tmr.restart();
 		priority[i] = calcPriority(g);
-		if(global){
-			updateSumGrad(i, g);
-		}
+		//updateAvgGrad(g);
+		updateAvgGrad(g, dfactor);
 		stat_t_prio_update += tmr.elapseSd();
 		// accumulate gradient result
 		tmr.restart();
@@ -131,10 +120,8 @@ Trainer::DeltaResult PSGDwR::batchDelta(
 		stat_t_grad_post += tmr.elapseSd();
 		// final
 		tmr.restart();
-		if(global){
-			gradient[i] = move(g);
-		}
 	}
+	//updateAvgGrad(grad);
 	// calculate delta to report
 	tmr.restart();
 	double factor = -rate;
@@ -148,30 +135,19 @@ Trainer::DeltaResult PSGDwR::batchDelta(
 	return { cnt, topk.size(), move(grad) };
 }
 
-Trainer::DeltaResult PSGDwR::batchDelta(
+Trainer::DeltaResult PSGDDecay::batchDelta(
 	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
 {
 	return batchDelta(start, cnt, avg);
 }
 
-float PSGDwR::calcPriority(const std::vector<double>& g)
+float PSGDDecay::calcPriority(const std::vector<double>& g)
 {
-	return (this->*fp_cp)(g);
-}
-
-float PSGDwR::calcPriorityGlobal(const std::vector<double>& g)
-{
-	auto p = inner_product(g.begin(), g.end(), sumGrad.begin(), 0.0);
+	auto p = inner_product(g.begin(), g.end(), avgGrad.begin(), 0.0);
 	return static_cast<float>(p);
 }
 
-float PSGDwR::calcPrioritySelf(const std::vector<double>& g)
-{
-	auto p = inner_product(g.begin(), g.end(), g.begin(), 0.0);
-	return static_cast<float>(p);
-}
-
-std::vector<int> PSGDwR::getTopK(const size_t first, const size_t last, const size_t k)
+std::vector<int> PSGDDecay::getTopK(const size_t first, const size_t last, const size_t k)
 {
 	std::vector<int> res;
 	res.reserve(last - first);
@@ -189,9 +165,13 @@ std::vector<int> PSGDwR::getTopK(const size_t first, const size_t last, const si
 	return res;
 }
 
-void PSGDwR::updateSumGrad(const int i, const std::vector<double>& g){
-	auto& go = gradient[i];
+void PSGDDecay::updateAvgGrad(const std::vector<double>& g){
+	updateAvgGrad(g, decay);
+}
+
+void PSGDDecay::updateAvgGrad(const std::vector<double>& g, const double f)
+{
 	for(size_t j = 0; j < paramWidth; ++j){
-		sumGrad[j] += g[j] - go[j];
+		avgGrad[j] = avgGrad[j] * f + g[j] * (1.0 - f);
 	}
 }

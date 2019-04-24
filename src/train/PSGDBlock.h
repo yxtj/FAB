@@ -1,7 +1,7 @@
 #pragma once
 #include "Trainer.h"
 
-class BlockPSGD : public Trainer
+class PSGDBlock : public Trainer
 {
 	double rate = 1.0;
 	double topRatio = 1.0;
@@ -27,7 +27,7 @@ public:
 	virtual std::string name() const;
 	virtual void prepare();
 	virtual void ready();
-	virtual ~BlockPSGD();
+	virtual ~PSGDBlock();
 
 	virtual DeltaResult batchDelta(
 		const size_t start, const size_t cnt, const bool avg = true);

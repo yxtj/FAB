@@ -48,8 +48,9 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		//("learning_rate,l", value(&lrate)->required(), "The learning rate")
 		("optimizer,o", value(&optimizer)->required()->default_value("gd:0.01"),
 			"The optimizer to train. Support: gd:<lr>, em:<lr>, kmeans, "
-			"psgd:<lr>:<k-ratio>:<global/self>, psgdr:<lr>:<k-ratio>:<global/self>:<r-ratio>, "
-			"bpsgd:<lr>:<k-ratio>:<point-bs>:<dim-bs>.")
+			"psgd:<lr>:<k-ratio>:<global/square>:<r-ratio>:<use-rg>, "
+			"psgdb:<lr>:<k-ratio>:<blk-size>:<r-ratio>:<use-rg>, "
+			"psgdd:<lr>:<k-ratio>:<decay-factor>:<r-ratio>:<use-rg>")
 		// file - input
 		("data_file,d", value(&fnData)->required(), "The file name of the input data")
 		("header", bool_switch(&header)->default_value(false), 
@@ -122,20 +123,6 @@ void Option::showUsage() const {
 	if(pimpl == nullptr)
 		return;
 	cout << pimpl->desc << endl;
-	/*
-	cout << "usage: <mode> <alg> <param> <data-file> <output-file> <id-skip> <id-y> <normalize>"
-		" <lrate> <batch-size> <term-iter> <term-time> [arv-iter=1000] [arv-time=0.5] [log-iter=1000]"
-		" [flex-param=portion:0.05] [mcast-param=all]" << endl;
-	//cout << "usage: <algorithm> <mode> <data-file> <output-file> <id-skip> <id-y> <nw> <batch-size> <term-iter> <term-time>" << endl;
-	cout << "  <mode>: bsp, tap, ssp:<n>, fsp, aap\n"
-		<< "  <alg>: algorithm name. Support: lr, mlp, cnn, rnn, tm.\n"
-		<< "  <param>: parameter of the algorithm, usually the shape of the algorithm.\n"
-		<< "  <id-skip> <id-y>: a list separated with space, comma and a-b (a, a+1, a+2, ..., b).\n"
-		<< "  [flex-param]: supports: interval:x (x is in seconds), portion:x (x in 0~1), "
-		"improve:x,t (x: avg. imporovement, t: max waiting time), balance:w (num. of windows)\n"
-		<< "  [mcast-param]: supports: all, ring:k, random:k,seed, hash:k\n"
-		<< endl;
-	*/
 }
 
 bool Option::preprocessMode(){
@@ -177,7 +164,7 @@ bool Option::processOptimizer()
 			ch += 'a' - 'A';
 	}
 	vector<string> t = getStringList(optimizer, ":-, ");
-	vector<string> supported = { "gd", "em", "kmeans", "psgd", "psgdr", "bpsgd" };
+	vector<string> supported = { "gd", "em", "kmeans", "psgd", "psgdb", "psgdd" };
 	auto it = find(supported.begin(), supported.end(), t[0]);
 	if(it == supported.end() && t[0].find("_poc_") == string::npos)
 		return false;

@@ -6,13 +6,18 @@ class PSGD : public Trainer
 	double rate = 1.0;
 	double topRatio = 1.0;
 	bool global = true; // true->global (pi=gi*avg(g)), false->self (pi=gi*gi)
+	double renewRatio = 0.01;
+	bool useRenewGrad = false;
+
 	size_t paramWidth; // parameter width
 	std::vector<std::vector<double>> gradient;
 	std::vector<double> sumGrad;
 	std::vector<float> priority;
+	size_t renewSize;
+	size_t renewPointer;
 
 public:
-	double stat_t_grad_calc = 0, stat_t_grad_post = 0;
+	double stat_t_grad_renew = 0, stat_t_grad_calc = 0, stat_t_grad_post = 0;
 	double stat_t_prio_pick = 0, stat_t_prio_update = 0;
 
 public:
