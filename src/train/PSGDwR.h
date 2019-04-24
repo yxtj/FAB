@@ -7,7 +7,8 @@ class PSGDwR : public Trainer
 	double rate = 1.0;
 	double topRatio = 1.0;
 	bool global = true; // true->global (pi=gi*avg(g)), false->self (pi=gi*gi)
-	double renewPortion = 0.05;
+	double renewPortion = 0.01;
+	bool useRenewGrad = false;
 
 	size_t paramWidth; // parameter width
 	std::vector<std::vector<double>> gradient;
@@ -40,6 +41,5 @@ private:
 	fp_cp_t fp_cp;
 
 	std::vector<int> getTopK(const size_t first, const size_t last, const size_t k);
-	void updateGradient(const int i);
 	void updateSumGrad(const int i, const std::vector<double>& g);
 };
