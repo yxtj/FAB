@@ -15,6 +15,8 @@ struct Statistics {
 	double t_par_calc, t_par_wait;
 	// calculation
 	size_t n_iter, n_point;
+	// other
+	double t_data_load, t_train_prepare;
 
 	// summary
 	double t_smy_work, t_smy_wait;

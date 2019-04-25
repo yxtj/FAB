@@ -71,8 +71,9 @@ void Master::run()
 	startMsgLoop(logName+"-MSG");
 	
 	LOG(INFO) << "Wait online messages";
+	tmrTrain.restart();
 	suOnline.wait();
-
+	stat.t_data_load += tmrTrain.elapseSd();
 	LOG(INFO) << "Send worker list";
 	broadcastWorkerList();
 	LOG(INFO)<<"Waiting dataset info to initialize parameters";
@@ -94,7 +95,7 @@ void Master::run()
 	tmrTrain.restart();
 	initializeParameter();
 	waitReady();
-
+	stat.t_train_prepare += tmrTrain.elapseS();
 	LOG(INFO) << "Start training";
 	broadcastStart();
 

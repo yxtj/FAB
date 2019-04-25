@@ -95,7 +95,9 @@ void Runner::showStat() const
 		<< "\ttime-calc: " << stat.t_par_calc << "\ttime-wait: " << stat.t_par_wait
 		<< "\n";
 	if(logName.find("M") != logName.npos){ // master
-		oss << head << "Archive: num: " << stat.n_archive << "\ttime: " << stat.t_archive
+		oss << head << "Prepare: data: " << stat.t_data_load << "\ttrainer: " << stat.t_train_prepare
+			<< "\n"
+			<< head << "Archive: num: " << stat.n_archive << "\ttime: " << stat.t_archive
 			<< "\ttime-1k: " << stat.t_archive / stat.n_archive * 1000
 			<< "\n"
 			<< head << "Merge: time-1k-delta(c): " << stat.t_smy_work / stat.n_dlt_recv * 1000
