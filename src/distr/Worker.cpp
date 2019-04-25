@@ -172,7 +172,7 @@ void Worker::registerHandlers()
 	//regDSPProcess(MType::CTrainPause, localCBBinder(&Worker::handlePause));
 	//regDSPProcess(MType::CTrainContinue, localCBBinder(&Worker::handleContinue));
 
-	regDSPProcess(CType::ImmediateControl, localCBBinder(&Worker::handleNormalControl));
+	regDSPProcess(CType::ImmediateControl, localCBBinder(&Worker::handleImmediateControl));
 	//regDSPImmediate(MType::CTerminate, localCBBinder(&Worker::handleTerminate));
 
 	//regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameter));
@@ -333,6 +333,7 @@ void Worker::handleImmediateControl(const std::string & data, const RPCInfo & in
 {
 	int type = deserialize<int>(data);
 	//const char* p = data.data() + sizeof(int);
+	LOG(INFO) << "immediate: " << type;
 	switch(type){
 	case MType::CTerminate:
 		handleTerminate(data.substr(sizeof(int)), info);
@@ -341,6 +342,7 @@ void Worker::handleImmediateControl(const std::string & data, const RPCInfo & in
 }
 void Worker::handleTerminate(const std::string & data, const RPCInfo & info)
 {
+	LOG(INFO) << "handle terminate";
 	exitTrain = true;
 	pauseTrain(); // in case if the system is calculating delta
 	suParam.notify(); // in case if the system just calculated a delta (is waiting for new parameter)
