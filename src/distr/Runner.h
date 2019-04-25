@@ -61,7 +61,7 @@ protected:
 	void addRPHN(const int type, std::function<void()> fun, const int n, const bool spawnThread = false);
 	void addRPHNSU(const int type, SyncUnit& su);
 
-	void sendReply(const RPCInfo& info);
+	void sendReply(const RPCInfo& info, const int type);
 
 	// handlers
 public:

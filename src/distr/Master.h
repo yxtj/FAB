@@ -44,19 +44,24 @@ private:
 	void shiftAccumulatedDeltaNext(); // optimized version of clearAccumulatedDeltaNext(0)
 	void accumulateDeltaNext(const int d, const std::vector<double>& delta, const size_t cnt); // include slot d
 	//void receiveDelta(std::vector<double>& delta, const int source);
+	
 	bool terminateCheck();
 	void checkDataset();
+
 	void initializeParameter();
 	void sendParameter(const int target);
 	void broadcastParameter();
 	void multicastParameter(const int source);
 	void waitParameterConfirmed();
+
 	bool needArchive();
 	void archiveProgress(const bool force = false);
 
 // signal logic
 public:
 	void broadcastWorkerList();
+	void waitReady();
+	void broadcastStart();
 	void broadcastSignalPause();
 	void broadcastSignalContinue();
 	void broadcastSignalTerminate();
@@ -66,9 +71,15 @@ public:
 
 // handler
 public:
+	void handleNormalControl(const std::string& data, const RPCInfo& info);
 	void handleReply(const std::string& data, const RPCInfo& info);
 	void handleOnline(const std::string& data, const RPCInfo& info);
 	void handleDataset(const std::string& data, const RPCInfo& info);
+	void handleReady(const std::string& data, const RPCInfo& info);
+
+	void handleImmediateControl(const std::string& data, const RPCInfo& info);
+	void handleClosed(const std::string& data, const RPCInfo& info);
+
 	void handleParameter(const std::string& data, const RPCInfo& info);
 
 	void handleDelta(const std::string& data, const RPCInfo& info);
@@ -107,6 +118,7 @@ private:
 	SyncUnit suWorker;
 	SyncUnit suAllClosed;
 	SyncUnit suDatasetInfo;
+	SyncUnit suReady;
 	int typeDDeltaAny, typeDDeltaAll;
 	SyncUnit suDeltaAny, suDeltaAll;
 	SyncUnit suParam; // reply of parameter broadcast

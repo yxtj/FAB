@@ -23,16 +23,6 @@ Master::Master() : Runner() {
 	tmrArch.restart();
 	doArchive = false;
 	archDoing = false;
-
-	suOnline.reset();
-	suWorker.reset();
-	suDatasetInfo.reset();
-	suParam.reset();
-	suDeltaAny.reset();
-	suDeltaAll.reset();
-	suTPause.reset();
-	suTContinue.reset();
-	suAllClosed.reset();
 }
 
 void Master::init(const Option* opt, const size_t lid)
@@ -82,6 +72,7 @@ void Master::run()
 	
 	LOG(INFO) << "Wait online messages";
 	suOnline.wait();
+
 	LOG(INFO) << "Send worker list";
 	broadcastWorkerList();
 	LOG(INFO)<<"Waiting dataset info to initialize parameters";
@@ -100,7 +91,12 @@ void Master::run()
 	}
 	iter = 0;
 	LOG(INFO) << "Coordinae initializing parameter";
+	tmrTrain.restart();
 	initializeParameter();
+	waitReady();
+
+	LOG(INFO) << "Start training";
+	broadcastStart();
 
 	tmrTrain.restart();
 	archiveProgress(true);
@@ -148,9 +144,14 @@ Master::callback_t Master::localCBBinder(
 
 void Master::registerHandlers()
 {
-	regDSPProcess(MType::CReply, localCBBinder(&Master::handleReply));
-	regDSPProcess(MType::COnline, localCBBinder(&Master::handleOnline));
-	regDSPProcess(MType::CDataset, localCBBinder(&Master::handleDataset));
+	regDSPProcess(CType::NormalControl, localCBBinder(&Master::handleNormalControl));
+	//regDSPProcess(MType::CReply, localCBBinder(&Master::handleReply));
+	//regDSPProcess(MType::COnline, localCBBinder(&Master::handleOnline));
+	//regDSPProcess(MType::CDataset, localCBBinder(&Master::handleDataset));
+
+	regDSPImmediate(CType::ImmediateControl, localCBBinder(&Master::handleImmediateControl));
+	//regDSPImmediate(MType::CClosed, localCBBinder(&Master::handleClosed));
+
 	regDSPProcess(MType::DParameter, localCBBinder(&Master::handleParameter));
 	// regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDelta)); // for bsp and fsp
 	// regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaTap)); // for tap
@@ -158,10 +159,12 @@ void Master::registerHandlers()
 	addRPHEachSU(MType::COnline, suOnline);
 	addRPHEachSU(MType::CWorkers, suWorker);
 	addRPHEachSU(MType::CDataset, suDatasetInfo);
+	addRPHEachSU(MType::CReady, suReady);
 	addRPHEachSU(MType::DParameter, suParam);
 	addRPHEachSU(MType::CTrainPause, suTPause);
 	addRPHEachSU(MType::CTrainContinue, suTContinue);
-	addRPHEachSU(MType::CTerminate, suAllClosed);
+	//addRPHEachSU(MType::CTerminate, suAllClosed); // in reply
+	addRPHEachSU(MType::CClosed, suAllClosed); // in immediate handler
 	addRPHAnySU(typeDDeltaAny, suDeltaAny);
 	addRPHEachSU(typeDDeltaAll, suDeltaAll);
 }
@@ -363,25 +366,35 @@ void Master::archiveProgress(const bool force)
 void Master::broadcastWorkerList()
 {
 	vector<pair<int, int>> temp = wm.list();
-	net->broadcast(MType::CWorkers, temp);
+	net->broadcast(CType::NormalControl, make_pair(MType::CWorkers, temp));
 	suWorker.wait();
+}
+
+void Master::waitReady()
+{
+	suReady.wait_n_reset();
+}
+
+void Master::broadcastStart()
+{
+	net->broadcast(CType::NormalControl, MType::CStart);
 }
 
 void Master::broadcastSignalPause()
 {
-	net->broadcast(MType::CTrainPause, "");
+	net->broadcast(CType::NormalControl, MType::CTrainPause);
 	suTPause.wait_n_reset();
 }
 
 void Master::broadcastSignalContinue()
 {
-	net->broadcast(MType::CTrainContinue, "");
+	net->broadcast(CType::NormalControl, MType::CTrainContinue);
 	suTContinue.wait_n_reset();
 }
 
 void Master::broadcastSignalTerminate()
 {
-	net->broadcast(MType::CTerminate, "");
+	net->broadcast(CType::ImmediateControl, MType::CTerminate);
 }
 
 void Master::waitDeltaFromAny(){
@@ -397,6 +410,28 @@ void Master::gatherDelta()
 	suDeltaAll.reset();
 	net->broadcast(MType::DRDelta, "");
 	suDeltaAll.wait();
+}
+
+// handler - normal control
+
+void Master::handleNormalControl(const std::string & data, const RPCInfo & info)
+{
+	int type = deserialize<int>(data);
+	//const char* p = data.data() + sizeof(int);
+	switch(type){
+	case MType::CReply:
+		handleReply(data.substr(sizeof(int)), info);
+		break;
+	case MType::COnline:
+		handleOnline(data.substr(sizeof(int)), info);
+		break;
+	case MType::CDataset:
+		handleDataset(data.substr(sizeof(int)), info);
+		break;
+	case MType::CReady:
+		handleReady(data.substr(sizeof(int)), info);
+		break;
+	}
 }
 
 void Master::handleReply(const std::string & data, const RPCInfo & info)
@@ -415,7 +450,7 @@ void Master::handleOnline(const std::string & data, const RPCInfo & info)
 	stat.t_data_deserial += tmr.elapseSd();
 	wm.registerID(info.source, lid);
 	rph.input(MType::COnline, lid);
-	sendReply(info);
+	sendReply(info, MType::COnline);
 }
 
 void Master::handleDataset(const std::string& data, const RPCInfo& info){
@@ -440,8 +475,35 @@ void Master::handleDataset(const std::string& data, const RPCInfo& info){
 	nPointWorker[source] = tnp;
 	nPoint += tnp;
 	rph.input(MType::CDataset, source);
-	sendReply(info);
+	sendReply(info, MType::CDataset);
 }
+
+void Master::handleReady(const std::string & data, const RPCInfo & info)
+{
+	int src = wm.nid2lid(info.source);
+	rph.input(MType::CReady, src);
+}
+
+// handler - immediate control
+
+void Master::handleImmediateControl(const std::string & data, const RPCInfo & info)
+{
+	int type = deserialize<int>(data);
+	//const char* p = data.data() + sizeof(int);
+	switch(type){
+	case MType::CClosed:
+		handleClosed(data.substr(sizeof(int)), info);
+		break;
+	}
+}
+
+void Master::handleClosed(const std::string & data, const RPCInfo & info)
+{
+	int source = wm.nid2lid(info.source);
+	rph.input(MType::CClosed, source);
+}
+
+// handler - data
 
 void Master::handleParameter(const std::string & data, const RPCInfo & info)
 {

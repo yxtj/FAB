@@ -2,34 +2,44 @@
 
 typedef int msg_t;
 
+// Channel Type
+struct CType{
+	static constexpr int NormalControl = 0;
+	static constexpr int ImmediateControl = 1;
+	static constexpr int Data = 2;
+};
+
+// Message Type
 struct MType {
-	// Basic Control
+	// Basic Control Signal (0-19)
 	static constexpr int CReply = 0;
 	static constexpr int COnline = 1;
-	static constexpr int CRegister = 2;
-	static constexpr int CWorkers = 3;
-	static constexpr int CDataset = 4;
-	static constexpr int CTerminate = 7;
-	static constexpr int CClosed = 8;
-	static constexpr int CAlive = 9;
+	static constexpr int CWorkers = 2;
+	static constexpr int CDataset = 3;
+	static constexpr int CReady = 4;
+	static constexpr int CStart = 5;
 
-	// Data and data Request
-	static constexpr int DParameter = 10;
-	static constexpr int DRParameter = 11;
-	static constexpr int DDelta = 15;
-	static constexpr int DRDelta = 16;
+	// Working Control (0-19)
+	static constexpr int CTrainPause = 10;
+	static constexpr int CTrainContinue = 11;
 
-	// Working Control
-	static constexpr int CTrainPause = 20;
-	static constexpr int CTrainContinue = 21;
+	// Immediate Control (20-29)
+	static constexpr int CTerminate = 20;
+	static constexpr int CClosed = 21;
 
-	// Process and Progress (Termination)
+	// Data and data Request (30-39)
+	static constexpr int DParameter = 30;
+	static constexpr int DRParameter = 31;
+	static constexpr int DDelta = 35;
+	static constexpr int DRDelta = 36;
+
+	// Process and Progress for Termination (40-49)
 	static constexpr int PApply = 40;
 	static constexpr int PSend = 41;
 	static constexpr int PReport = 42;
 	static constexpr int PRequest = 43;
 	static constexpr int PFinish = 44;
 
-	// Staticstics
+	// Staticstics (60-69)
 	static constexpr int SGather = 60;
 };

@@ -178,6 +178,7 @@ void Runner::addRPHNSU(const int type, SyncUnit& su)
 	addRPHN(type, bind(&SyncUnit::notify, &su), static_cast<int>(nWorker), false);
 }
 
-void Runner::sendReply(const RPCInfo& info){
-	net->send(info.source, MType::CReply, info.tag);
+void Runner::sendReply(const RPCInfo & info, const int type){
+	net->send(info.source, CType::NormalControl,
+		make_pair(MType::CReply, type));
 }

@@ -32,6 +32,8 @@ private:
 	void sendOnline();
 	void waitWorkerList();
 	void sendDatasetInfo();
+	void sendReady();
+	void waitStart();
 	void sendClosed();
 
 	void clearDelta();
@@ -49,16 +51,20 @@ private:
 
 // singal
 public:
-	//void handleDelta(const std::string& data, const RPCInfo& info);
+	void handleNormalControl(const std::string& data, const RPCInfo& info);
 	void handleReply(const std::string& data, const RPCInfo& info);
 	void handleWorkerList(const std::string& data, const RPCInfo& info);
+	void handleStart(const std::string& data, const RPCInfo& info);
+	void handlePause(const std::string& data, const RPCInfo& info);
+	void handleContinue(const std::string& data, const RPCInfo& info);
+
+	void handleImmediateControl(const std::string& data, const RPCInfo& info);
+	void handleTerminate(const std::string& data, const RPCInfo& info);
+
 	void handleParameter(const std::string& data, const RPCInfo& info);
 	void handleParameterSsp(const std::string& data, const RPCInfo& info);
 	void handleParameterFsp(const std::string& data, const RPCInfo& info);
 	void handleParameterAap(const std::string& data, const RPCInfo& info);
-	void handlePause(const std::string& data, const RPCInfo& info);
-	void handleContinue(const std::string& data, const RPCInfo& info);
-	void handleTerminate(const std::string& data, const RPCInfo& info);
 		
 
 private:
@@ -70,6 +76,7 @@ private:
 	IDMapper wm; // worker mapper
 	SyncUnit suOnline;
 	SyncUnit suDatasetInfo;
+	SyncUnit suStart;
 	
 	bool hasNewParam;
 	std::mutex mParam;

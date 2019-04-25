@@ -242,7 +242,7 @@ void Master::handleDelta(const std::string & data, const RPCInfo & info)
 	applyDelta(deltaMsg.second, s);
 	rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
-	//sendReply(info);
+	//sendReply(info, MType::DDelta);
 	++stat.n_dlt_recv;
 }
 
@@ -334,7 +334,7 @@ void Master::handleDeltaAap(const std::string & data, const RPCInfo & info)
 	lastDeltaSource = s;
 	rph.input(typeDDeltaAny, s);
 	if(opt->aapWait)
-		sendReply(info);
+		sendReply(info, MType::DDelta);
 	++stat.n_dlt_recv;
 	// broadcast new parameter in main thread
 }

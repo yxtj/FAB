@@ -78,7 +78,10 @@ void Worker::run()
 	initializeParameter();
 	DLOG(INFO) << "got init parameter";
 	applyBufferParameter();
+	DLOG(INFO) << "ready trainer";
 	trainer->ready();
+	sendReady();
+	waitStart();
 
 	DLOG(INFO) << "start training with mode: " << opt->mode << ", local batch size: " << localBatchSize;
 	iter = 1;
@@ -104,9 +107,9 @@ void Worker::run()
 
 	DLOG(INFO) << "finish training";
 	sendClosed();
+	finishStat();
 	delete trainer;
 	trainer = nullptr;
-	finishStat();
 	showStat();
 	stopMsgLoop();
 }
@@ -128,7 +131,8 @@ void Worker::updatePointer(const size_t scan, const size_t report)
 
 void Worker::sendOnline()
 {
-	net->send(masterNID, MType::COnline, localID);
+	net->send(masterNID, CType::NormalControl,
+		make_pair(MType::COnline, static_cast<int>(localID)));
 }
 
 void Worker::waitWorkerList()
@@ -140,27 +144,40 @@ void Worker::sendDatasetInfo()
 {
 	tuple<size_t, size_t, size_t> t{
 		trainer->pd->xlength(), trainer->pd->ylength(), trainer->pd->size() };
-	net->send(masterNID, MType::CDataset, t);
+	net->send(masterNID, CType::NormalControl, make_pair(MType::CDataset, t));
 	suDatasetInfo.wait();
+}
+
+void Worker::sendReady()
+{
+	net->send(masterNID, CType::NormalControl, MType::CReady);
+}
+
+void Worker::waitStart()
+{
+	suStart.wait();
 }
 
 void Worker::sendClosed()
 {
-	net->send(masterNID, MType::CClosed, localID);
+	net->send(masterNID, CType::ImmediateControl,
+		make_pair(MType::CClosed, localID));
 }
 
 void Worker::registerHandlers()
 {
-	regDSPProcess(MType::CReply, localCBBinder(&Worker::handleReply));
-	regDSPProcess(MType::CWorkers, localCBBinder(&Worker::handleWorkerList));
-	regDSPProcess(MType::CTrainPause, localCBBinder(&Worker::handlePause));
-	regDSPProcess(MType::CTrainContinue, localCBBinder(&Worker::handleContinue));
-	regDSPImmediate(MType::CTerminate, localCBBinder(&Worker::handleTerminate));
+	regDSPProcess(CType::NormalControl, localCBBinder(&Worker::handleNormalControl));
+	//regDSPProcess(MType::CReply, localCBBinder(&Worker::handleReply));
+	//regDSPProcess(MType::CWorkers, localCBBinder(&Worker::handleWorkerList));
+	//regDSPProcess(MType::CTrainPause, localCBBinder(&Worker::handlePause));
+	//regDSPProcess(MType::CTrainContinue, localCBBinder(&Worker::handleContinue));
+
+	regDSPProcess(CType::ImmediateControl, localCBBinder(&Worker::handleNormalControl));
+	//regDSPImmediate(MType::CTerminate, localCBBinder(&Worker::handleTerminate));
 
 	//regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameter));
 	//regDSPProcess(MType::DDelta, localCBBinder(&Worker::handleDelta));
 
-	//addRPHAnySU(MType::CWorkers, suOnline);
 	//addRPHAnySU(MType::DParameter, suParam);
 	addRPHAnySU(MType::CDataset, suDatasetInfo);
 }
@@ -224,13 +241,13 @@ void Worker::applyBufferParameter()
 
 void Worker::waitParameter()
 {
-	suParam.wait_n_reset();
+	suParam.wait();
 }
 
 void Worker::fetchParmeter()
 {
 	net->send(masterNID, MType::DRParameter, localID);
-	suParam.wait();
+	suParam.wait_n_reset();
 	++stat.n_dlt_recv;
 }
 
@@ -244,7 +261,30 @@ void Worker::resumeTrain()
 	allowTrain = true;
 }
 
-void Worker::handleReply(const std::string& data, const RPCInfo& info) {
+void Worker::handleNormalControl(const std::string & data, const RPCInfo & info)
+{
+	int type = deserialize<int>(data);
+	//const char* p = data.data() + sizeof(int);
+	switch(type){
+	case MType::CReply:
+		handleReply(data.substr(sizeof(int)), info);
+		break;
+	case MType::CWorkers:
+		handleWorkerList(data.substr(sizeof(int)), info);
+		break;
+	case MType::CStart:
+		handleStart(data.substr(sizeof(int)), info);
+		break;
+	case MType::CTrainPause:
+		handlePause(data.substr(sizeof(int)), info);
+		break;
+	case MType::CTrainContinue:
+		handleContinue(data.substr(sizeof(int)), info);
+		break;
+	}
+}
+
+void Worker::handleReply(const std::string & data, const RPCInfo & info) {
 	Timer tmr;
 	int type = deserialize<int>(data);
 	stat.t_data_deserial += tmr.elapseSd();
@@ -269,25 +309,40 @@ void Worker::handleWorkerList(const std::string & data, const RPCInfo & info)
 	}
 	//rph.input(MType::CWorkers, info.source);
 	suOnline.notify();
-	sendReply(info);
+	sendReply(info, MType::CWorkers);
+}
+
+void Worker::handleStart(const std::string & data, const RPCInfo & info)
+{
+	suStart.notify();
 }
 
 void Worker::handlePause(const std::string & data, const RPCInfo & info)
 {
 	pauseTrain();
-	sendReply(info);
+	sendReply(info, MType::CTrainPause);
 }
 
 void Worker::handleContinue(const std::string & data, const RPCInfo & info)
 {
 	resumeTrain();
-	sendReply(info);
+	sendReply(info, MType::CTrainContinue);
 }
 
+void Worker::handleImmediateControl(const std::string & data, const RPCInfo & info)
+{
+	int type = deserialize<int>(data);
+	//const char* p = data.data() + sizeof(int);
+	switch(type){
+	case MType::CTerminate:
+		handleTerminate(data.substr(sizeof(int)), info);
+		break;
+	}
+}
 void Worker::handleTerminate(const std::string & data, const RPCInfo & info)
 {
 	exitTrain = true;
 	pauseTrain(); // in case if the system is calculating delta
 	suParam.notify(); // in case if the system just calculated a delta (is waiting for new parameter)
-	sendReply(info);
+	sendReply(info, MType::CTerminate);
 }
