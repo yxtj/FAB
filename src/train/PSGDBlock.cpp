@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <random>
 #include <numeric>
+#include <cmath>
 
 using namespace std;
 

@@ -4,6 +4,7 @@
 #include "logging/logging.h"
 #include <algorithm>
 #include <numeric>
+#include <cmath>
 
 using namespace std;
 
