@@ -283,7 +283,7 @@ void Master::accumulateDeltaNext(const int d, const std::vector<double>& delta, 
 
 bool Master::terminateCheck()
 {
-	return (iter >= opt->tcIter)
+	return (iter > opt->tcIter)
 		|| (tmrTrain.elapseSd() > opt->tcTime);
 }
 
