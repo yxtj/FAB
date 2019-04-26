@@ -64,6 +64,7 @@ public:
 	}
 
 	void flush();
+	void cancel(const std::vector<int>& types);
 
 	int id() const;
 	int size() const;

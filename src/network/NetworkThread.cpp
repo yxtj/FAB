@@ -2,6 +2,7 @@
 #include "NetworkImplMPI.h"
 #include "logging/logging.h"
 #include <chrono>
+#include <algorithm>
 using namespace std;
 
 double FLAGS_sleep_time = 0.001;
@@ -66,7 +67,7 @@ int64_t NetworkThread::unpicked_bytes() const{
 void NetworkThread::Run(){
 	TaskHeader hdr;
 	unsigned cnt_idle_loop=0;
-	static constexpr unsigned SLEEP_CNT=256;
+	static constexpr unsigned SLEEP_CNT=32;
 	done=false;
 	while(running){
 		bool idle=true;
@@ -165,6 +166,19 @@ void NetworkThread::flush() {
 	while(active()) {
 		Sleep();
 	}
+}
+
+void NetworkThread::cancel(const std::vector<int>& types)
+{
+	lock_guard<recursive_mutex> sl(ps_lock);
+	auto itp = remove_if(pending_sends_->begin(), pending_sends_->end(),
+		[&](const std::pair<Task*, bool>& p){
+		return find(types.begin(), types.end(), p.first->type) != types.end();
+	});
+	for(auto it = itp; it != pending_sends_->end(); ++it){
+		delete it->first;
+	}
+	pending_sends_->erase(itp, pending_sends_->end());
 }
 
 // ---------------- singleton related ------------------
