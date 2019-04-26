@@ -4,6 +4,7 @@
 #include "data/DataHolder.h"
 #include "distr/Master.h"
 #include "distr/Worker.h"
+#include "message/MType.h"
 #include <string>
 #include <vector>
 #include <iostream>
@@ -24,11 +25,11 @@ int main(int argc, char* argv[]){
 	DLOG(INFO) << "size=" << net->size() << " id=" << net->id();
 	if(net->id() == 0){
 		LOG(INFO) << "Infromation:\nData file: " << opt.fnData
-			<< " \tNormalize: " << opt.normalize << "\tBinary: " << opt.binary
+			<< " \tNormalize: " << opt.normalize
 			<< "\n  Idx-y: " << opt.idY << "\tIdx-skip: " << opt.idSkip
 			<< "\nAlgorithm: " << opt.algorighm << "\tParam: " << opt.algParam << "\tSeed: " << opt.seed
 			<< "\n  Interval Estimator: " << opt.intervalParam << "\tMulticast: " << opt.mcastParam
-			<< "\nRecord file: " << opt.fnOutput
+			<< "\nRecord file: " << opt.fnOutput << "\tBinary: " << opt.binary
 			<< "\nTraining configurations:\n  Mode: " << opt.mode
 			<< "\tOptimizer: " << opt.optimizer << "\tParam: " << opt.optimizerParam
 			<< "\tBatch-size: " << opt.batchSize << "\tWorker-#: " << opt.nw
@@ -67,7 +68,8 @@ int main(int argc, char* argv[]){
 		}
 	}
 
-	//NetworkThread::Shutdown();
-	NetworkThread::Terminate();
+	net->cancel({ CType::Data });
+	NetworkThread::Shutdown();
+	//NetworkThread::Terminate();
 	return 0;
 }
