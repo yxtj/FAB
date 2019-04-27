@@ -8,4 +8,4 @@ struct DataPoint {
 };
 
 DataPoint parseLine(const std::string& line, const std::string& sepper,
-	const std::unordered_set<int>& xIds, const std::unordered_set<int>& yIds, const bool appOne);
+	const std::unordered_set<int>& xIds, const std::unordered_set<int>& yIds);

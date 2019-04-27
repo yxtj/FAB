@@ -84,7 +84,7 @@ int main(int argc, char* argv[]){
 	}
 
 	mt19937 gen(1);
-	DataHolder dh(false, 1, 0);
+	DataHolder dh(1, 0);
 	auto fun = [](const string& s){return str2list(s, 1, 1.0 / 5); };
 	auto foo = [&](){ return rndlist(gen, 4, 4, 0.0, 5.0); };
 	// pattern: 505;050;505

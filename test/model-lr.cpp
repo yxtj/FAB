@@ -60,7 +60,7 @@ int main(int argc, char* argv[]){
 		return 1;
 	}
 
-	DataHolder dh(true, 1, 0);
+	DataHolder dh(1, 0);
 	dh.load(opt.fnData, ",", opt.idSkip, opt.idY, opt.withHeader, true);
 	if(opt.doNormalize)
 		dh.normalize(false);

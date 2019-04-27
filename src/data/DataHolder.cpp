@@ -5,12 +5,12 @@
 
 using namespace std;
 
-DataHolder::DataHolder(const bool appOne, const size_t nparts, const size_t localid)
-	: appendOne(appOne), npart(nparts), pid(localid)
+DataHolder::DataHolder(const size_t nparts, const size_t localid)
+	:  npart(nparts), pid(localid)
 {}
 
 size_t DataHolder::xlength() const{
-	return nx + (appendOne ? 1 : 0);
+	return nx;
 }
 
 size_t DataHolder::ylength() const{
@@ -73,7 +73,7 @@ void DataHolder::load(const std::string& fpath, const std::string& sepper,
 			continue;
 		if(topk != 0 && lid > topk)
 			break;
-		DataPoint dp = parseLine(line, sepper, xIds, yIds_u, appendOne);
+		DataPoint dp = parseLine(line, sepper, xIds, yIds_u);
 		data.push_back(move(dp));
 	}
 }
@@ -94,6 +94,21 @@ void DataHolder::add(std::vector<double>&& x, std::vector<double>&& y){
 	dp.x = move(x);
 	dp.y = move(y);
 	data.push_back(move(dp));
+}
+
+void DataHolder::add(const DataPoint & dp)
+{
+	data.push_back(dp);
+}
+
+void DataHolder::add(DataPoint && dp)
+{
+	data.push_back(move(dp));
+}
+
+void DataHolder::shuffle()
+{
+	random_shuffle(data.begin(), data.end());
 }
 
 // normalize to [-1, 1]

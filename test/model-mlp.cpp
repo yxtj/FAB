@@ -62,7 +62,7 @@ int main(int argc, char* argv[]){
 		return 1;
 	}
 
-	DataHolder dh(false, 1, 0);
+	DataHolder dh(1, 0);
 	if(!opt.fnData.empty()){
 		dh.load(opt.fnData, ",", {}, opt.idY, opt.withHeader, true);
 	} else{

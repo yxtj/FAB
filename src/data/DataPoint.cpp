@@ -5,7 +5,7 @@
 using namespace std;
 
 DataPoint parseLine(const std::string& line, const std::string& sepper,
-	const std::unordered_set<int>& xIds, const std::unordered_set<int>& yIds, const bool appOne)
+	const std::unordered_set<int>& xIds, const std::unordered_set<int>& yIds)
 {
 	vector<double> x;
 	x.reserve(xIds.size());
@@ -28,8 +28,6 @@ DataPoint parseLine(const std::string& line, const std::string& sepper,
 			x.push_back(stod(line.substr(pl, p - pl)));
 		else if(yIds.count(idx) != 0)
 			y.push_back(stod(line.substr(pl, p - pl)));
-		if(appOne)
-			x.push_back(1.0);
 	} catch(...){
 		cout << "Error on idx= " << idx << " on line: " << line << endl;
 	}

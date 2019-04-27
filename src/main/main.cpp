@@ -53,7 +53,7 @@ int main(int argc, char* argv[]){
 		Worker w;
 		w.init(&opt, lid);
 		VLOG(2) << "Loading data";
-		DataHolder dh(false, opt.nw, lid);
+		DataHolder dh(opt.nw, lid);
 		try{
 			dh.load(opt.fnData, ",", opt.idSkip, opt.idY, opt.header, true);
 			DVLOG(2) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;
@@ -61,11 +61,11 @@ int main(int argc, char* argv[]){
 				dh.normalize(false);
 				DVLOG(2) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;
 			}
-			w.bindDataset(&dh);
-			w.run();
 		} catch(exception& e){
 			LOG(FATAL) << "Error in loading data file: " << opt.fnData << "\n" << e.what() << endl;
 		}
+		w.bindDataset(&dh);
+		w.run();
 	}
 
 	net->cancel({ CType::Data });

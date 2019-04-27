@@ -145,7 +145,7 @@ int main(int argc, char* argv[]){
 	}
 	const bool write = !opt.fnOutput.empty();
 
-	DataHolder dh(false, 1, 0);
+	DataHolder dh(1, 0);
 	dh.load(opt.fnData, ",", opt.idSkip, opt.idY, false, true, opt.topk_data);
 	if(opt.normalize)
 		dh.normalize(false);

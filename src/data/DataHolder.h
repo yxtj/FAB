@@ -8,13 +8,12 @@ class DataHolder {
 	size_t npart; // total number of parts
 	size_t pid; // part id
 
-	bool appendOne;
 	size_t nx; // length of x
 	size_t ny; // length of y
 public:
 	// <appOne>: append a constant value (one) to each x
 	// <nparts> <localid>: used for distributed case
-	DataHolder(const bool appOne = true, const size_t nparts = 1, const size_t localid = 0);
+	DataHolder(const size_t nparts = 1, const size_t localid = 0);
 	size_t xlength() const;
 	size_t ylength() const;
 	size_t nparts() const;
@@ -28,6 +27,10 @@ public:
 
 	void add(const std::vector<double>& x, const std::vector<double>& y);
 	void add(std::vector<double>&& x, std::vector<double>&& y);
+	void add(const DataPoint& dp);
+	void add(DataPoint&& dp);
+	
+	void shuffle();
 
 	size_t size() const {
 		return data.size();

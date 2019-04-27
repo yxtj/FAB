@@ -18,7 +18,7 @@ int main(int argc, char* argv[]){
 	string prefix = argc > 1 ? argv[1] : "E:/Code/FSB/dataset/";
 	string name = argc > 2 ? argv[2] : "affairs.csv";
 	bool header = argc > 3 ? argv[3] == "1" : true;
-	DataHolder dh(false, 1, 0);
+	DataHolder dh(1, 0);
 	try{
 		dh.load(prefix + name, ",", { 0 }, { 9 }, header, true);
 	}catch(exception& e){
