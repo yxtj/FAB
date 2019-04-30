@@ -11,7 +11,6 @@ class DataHolder {
 	size_t nx; // length of x
 	size_t ny; // length of y
 public:
-	// <appOne>: append a constant value (one) to each x
 	// <nparts> <localid>: used for distributed case
 	DataHolder(const size_t nparts = 1, const size_t localid = 0);
 	size_t xlength() const;

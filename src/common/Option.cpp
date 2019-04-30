@@ -52,9 +52,15 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 			"psgdb:<lr>:<k-ratio>:<blk-size>:<r-ratio>:<use-rg>, "
 			"psgdd:<lr>:<k-ratio>:<decay-factor>:<r-ratio>:<use-rg>")
 		// file - input
+		("dataset", value(&dataset)->default_value("csv"),
+			"The dataset/type to use. Give dataset name (mnist) or file type (csv) or \"customize\"")
+		("trainpart", bool_switch(&trainPart)->default_value(true),
+			"Whether to use the trainning part of the dateset")
 		("data_file,d", value(&fnData)->required(), "The file name of the input data")
+		("topk,k", value(&topk)->default_value(0), "Only use the first <k> data points. (0 means all)")
 		("header", bool_switch(&header)->default_value(false), 
 			"Whether the input file contain a header line")
+		("sepper", value(&sepper)->default_value(","), "Separator for customized dataset.")
 		("skip", value(&tmp_ids)->default_value({}, ""),
 			"The columns to skip in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)")
@@ -63,6 +69,7 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)")
 		("normalize,n", bool_switch(&normalize)->default_value(false),
 			"Whether to do normailzation on the input file")
+		("shuffle", bool_switch(&shuffle)->default_value(false), "Randomly shuffle the dataset")
 		// file - output
 		("record_file,r", value(&fnOutput)->required(), "The file name of the archived parameter")
 		("binary,b", bool_switch(&binary)->default_value(false), "Whether to output using binary IO")
@@ -102,8 +109,12 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		return false;
 
 	// check and preprocess
-	if(!preprocessMode()){
+	if(!processMode()){
 		cerr << "Error: mode not supported: " << mode << endl;
+		return false;
+	}
+	if(!processDataset()){
+		cerr << "Error: dataset not supported: " << dataset << endl;
 		return false;
 	}
 	if(!processAlgorithm()){
@@ -125,7 +136,7 @@ void Option::showUsage() const {
 	cout << pimpl->desc << endl;
 }
 
-bool Option::preprocessMode(){
+bool Option::processMode(){
 	for(char& ch : mode){
 		if(ch >= 'A' && ch <= 'Z')
 			ch += 'a' - 'A';
@@ -147,12 +158,24 @@ bool Option::preprocessMode(){
 	return true;
 }
 
+bool Option::processDataset(){
+	for(char& ch : dataset){
+		if(ch >= 'A' && ch <= 'Z')
+			ch += 'a' - 'A';
+	}
+	const vector<string> supported{ "customize", "csv", "tsv",
+		"mnist", "cifar10", "cifar100" };
+	auto it = find(supported.begin(), supported.end(), dataset);
+	return it != supported.end();
+
+}
+
 bool Option::processAlgorithm(){
 	for(char& ch : algorighm){
 		if(ch >= 'A' && ch <= 'Z')
 			ch += 'a' - 'A';
 	}
-	vector<string> supported = { "lr", "mlp", "cnn", "rnn", "tm", "km" };
+	const vector<string> supported = { "lr", "mlp", "cnn", "rnn", "tm", "km" };
 	auto it = find(supported.begin(), supported.end(), algorighm);
 	return it != supported.end();
 }
@@ -164,7 +187,7 @@ bool Option::processOptimizer()
 			ch += 'a' - 'A';
 	}
 	vector<string> t = getStringList(optimizer, ":-, ");
-	vector<string> supported = { "gd", "em", "kmeans", "psgd", "psgdb", "psgdd" };
+	const vector<string> supported = { "gd", "em", "kmeans", "psgd", "psgdb", "psgdd" };
 	auto it = find(supported.begin(), supported.end(), t[0]);
 	if(it == supported.end() && t[0].find("_poc_") == string::npos)
 		return false;

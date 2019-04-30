@@ -1,6 +1,7 @@
 #include "logging/logging.h"
 #include "common/Option.h"
 #include "network/NetworkThread.h"
+#include "data/DataLoader.h"
 #include "data/DataHolder.h"
 #include "distr/Master.h"
 #include "distr/Worker.h"
@@ -24,9 +25,9 @@ int main(int argc, char* argv[]){
 	}
 	DLOG(INFO) << "size=" << net->size() << " id=" << net->id();
 	if(net->id() == 0){
-		LOG(INFO) << "Infromation:\nData file: " << opt.fnData
-			<< " \tNormalize: " << opt.normalize
-			<< "\n  Idx-y: " << opt.idY << "\tIdx-skip: " << opt.idSkip
+		LOG(INFO) << "Infromation:\nDataset: " << opt.dataset << "\tData file: " << opt.fnData
+			<< " \tNormalize: " << opt.normalize << "\tRandom Shuffle: " << opt.shuffle
+			<< "\n  Separator: " << opt.sepper << "\tIdx-y: " << opt.idY << "\tIdx-skip: " << opt.idSkip
 			<< "\nAlgorithm: " << opt.algorighm << "\tParam: " << opt.algParam << "\tSeed: " << opt.seed
 			<< "\n  Interval Estimator: " << opt.intervalParam << "\tMulticast: " << opt.mcastParam
 			<< "\nRecord file: " << opt.fnOutput << "\tBinary: " << opt.binary
@@ -52,14 +53,22 @@ int main(int argc, char* argv[]){
 		size_t lid = net->id()-1;
 		Worker w;
 		w.init(&opt, lid);
-		VLOG(2) << "Loading data";
-		DataHolder dh(opt.nw, lid);
+		DataHolder dh;
 		try{
-			dh.load(opt.fnData, ",", opt.idSkip, opt.idY, opt.header, true);
+			DataLoader dl;
+			dl.init(opt.dataset, opt.nw, lid, true);
+			dl.bindParameter(opt.sepper, opt.idSkip, opt.idY, opt.header);
+			VLOG(1) << "Loading data";
+			size_t localk = opt.topk / opt.nw + (lid < opt.topk%opt.nw ? 1 : 0);
+			dh = dl.load(opt.fnData, opt.trainPart, localk);
 			DVLOG(2) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;
 			if(opt.normalize){
 				dh.normalize(false);
 				DVLOG(2) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;
+			}
+			VLOG(1) << "Shuffle data";
+			if(opt.shuffle){
+				dh.shuffle();
 			}
 		} catch(exception& e){
 			LOG(FATAL) << "Error in loading data file: " << opt.fnData << "\n" << e.what() << endl;

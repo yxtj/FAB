@@ -3,13 +3,18 @@
 #include <vector>
 
 struct Option{
-	//std::string prefix;
+	std::string dataset;
 	std::string fnData;
-	std::string fnOutput;
+	size_t topk;
 	std::vector<int> idSkip;
 	std::vector<int> idY;
+	std::string sepper;
+	bool trainPart;
 	bool header;
 	bool normalize;
+	bool shuffle;
+
+	std::string fnOutput;
 	bool binary;
 
 	size_t nw; // number of workers
@@ -44,7 +49,8 @@ struct Option{
 	void showUsage() const;
 
 private:
-	bool preprocessMode();
+	bool processMode();
+	bool processDataset();
 	bool processAlgorithm();
 	bool processOptimizer();
 
