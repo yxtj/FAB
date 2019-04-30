@@ -13,13 +13,25 @@ void DataLoader::init(const std::string & dataset, const size_t nparts,
 	localOnly = onlyLocalPart;
 }
 
-DataHolder DataLoader::load(const std::string & path, const bool trainPart,
-	const std::vector<int> skips, const std::vector<int>& yIds,
-	const bool header, const bool randomShuffle, const size_t topk)
+void DataLoader::bindParameter(const std::string & sepper,
+	const std::vector<int> skips, const std::vector<int>& yIds, const bool header)
+{
+	this->sepper = sepper;
+	this->skips = skips;
+	this->yIds = yIds;
+	this->header = header;
+}
+
+DataHolder DataLoader::load(
+	const std::string & path, const bool trainPart, const size_t topk)
 {
 	DataHolder dh(npart, lid);
 	if(ds_type == "csv"){
-		load_csv(dh, path, skips, yIds, header, topk);
+		load_customized(dh, path, ",", skips, yIds, header, topk);
+	} else if(ds_type == "tsv"){
+		load_customized(dh, path, "\t", skips, yIds, header, topk);
+	} else if(ds_type == "customize"){
+		load_customized(dh, path, sepper, skips, yIds, header, topk);
 	} else if(ds_type == "mnist"){
 		load_mnist(dh, trainPart, path, topk);
 	} else if(ds_type == "cifar10"){
@@ -27,19 +39,12 @@ DataHolder DataLoader::load(const std::string & path, const bool trainPart,
 	} else if(ds_type == "cifar100"){
 		load_cifar100(dh, trainPart, path, topk);
 	}
-	if(randomShuffle)
-		shuffle(dh);
 	return dh;
 }
 
-void DataLoader::shuffle(DataHolder & dh)
-{
-	dh.shuffle();
-}
-
-// -------- load csv file --------
-void DataLoader::load_csv(DataHolder & dh, const std::string & fpath,
-	const std::vector<int> skips, const std::vector<int>& yIds, 
+// -------- load customized file --------
+void DataLoader::load_customized(DataHolder & dh, const std::string & fpath,
+	const std::string& sepper, const std::vector<int> skips, const std::vector<int>& yIds,
 	const bool header, const size_t topk)
 {
 	ifstream fin(fpath);
@@ -51,10 +56,10 @@ void DataLoader::load_csv(DataHolder & dh, const std::string & fpath,
 	int n = 0;
 	string line;
 	getline(fin, line);
-	size_t p = line.find(",");
+	size_t p = line.find(sepper);
 	while(p != string::npos){
 		++n;
-		p = line.find(",", p + 1);
+		p = line.find(sepper, p + 1);
 	}
 	++n;
 	// calculate xIds and yId
@@ -84,7 +89,7 @@ void DataLoader::load_csv(DataHolder & dh, const std::string & fpath,
 			continue;
 		if(topk != 0 && lid > topk)
 			break;
-		DataPoint dp = parseLine(line, ",", xIds, yIds_u);
+		DataPoint dp = parseLine(line, sepper, xIds, yIds_u);
 		dh.add(move(dp));
 	}
 }
@@ -108,9 +113,11 @@ void DataLoader::load_mnist(DataHolder & dh, const bool trainPart,
 	char buffer[len];
 	fimg.read(buffer, 16);
 	flbl.read(buffer, 8);
-	for(size_t i = 0; i < n; ++i){
+	for(size_t i = 0; i < n && fimg && flbl; ++i){
 		fimg.read(buffer, len);
 		int lbl = flbl.get();
+		if(localOnly && i % npart != lid) // not local line
+			continue;
 		vector<double> x(len), y(1);
 		for(int j = 0; j < len; ++j)
 			x[j] = static_cast<double>(buffer[j]);
@@ -130,8 +137,10 @@ void DataLoader::load_cifar10(DataHolder & dh, const bool trainPart,
 		}
 		constexpr int len = 3 * 32 * 32;
 		char buffer[len+1];
-		for(size_t i = 0; i < n; ++i){
+		for(size_t i = 0; i < n && fin; ++i){
 			fin.read(buffer, len+1);
+			if(localOnly && i % npart != lid) // not local line
+				continue;
 			vector<double> x(len), y(1);
 			y[0] = static_cast<double>(buffer[0]);
 			for(int j = 0; j < len; ++j)
@@ -165,8 +174,10 @@ void DataLoader::load_cifar100(DataHolder & dh, const bool trainPart,
 		}
 		constexpr int len = 3 * 32 * 32; // RGB - X - Y
 		char buffer[len + 2];
-		for(size_t i = 0; i < n; ++i){
+		for(size_t i = 0; i < n && fin; ++i){
 			fin.read(buffer, len + 2);
+			if(localOnly && i % npart != lid) // not local line
+				continue;
 			vector<double> x(len), y(1);
 			y[0] = static_cast<double>(buffer[1]);
 			for(int j = 0; j < len; ++j)
