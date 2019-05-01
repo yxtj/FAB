@@ -1,5 +1,6 @@
 #include "DataLoader.h"
 #include <fstream>
+#include <limits>
 using namespace std;
 
 // -------- DataLoader basic --------
@@ -9,7 +10,7 @@ void DataLoader::init(const std::string & dataset, const size_t nparts,
 {
 	ds_type = dataset;
 	npart = nparts;
-	lid = localid;
+	pid = localid;
 	localOnly = onlyLocalPart;
 }
 
@@ -25,19 +26,20 @@ void DataLoader::bindParameter(const std::string & sepper,
 DataHolder DataLoader::load(
 	const std::string & path, const bool trainPart, const size_t topk)
 {
-	DataHolder dh(npart, lid);
+	DataHolder dh(npart, pid);
+	size_t limit = topk == 0 ? numeric_limits<size_t>::max() : topk;
 	if(ds_type == "csv"){
-		load_customized(dh, path, ",", skips, yIds, header, topk);
+		load_customized(dh, path, ",", skips, yIds, header, limit);
 	} else if(ds_type == "tsv"){
-		load_customized(dh, path, "\t", skips, yIds, header, topk);
+		load_customized(dh, path, "\t", skips, yIds, header, limit);
 	} else if(ds_type == "customize"){
-		load_customized(dh, path, sepper, skips, yIds, header, topk);
+		load_customized(dh, path, sepper, skips, yIds, header, limit);
 	} else if(ds_type == "mnist"){
-		load_mnist(dh, trainPart, path, topk);
+		load_mnist(dh, trainPart, path, limit);
 	} else if(ds_type == "cifar10"){
-		load_cifar10(dh, trainPart, path, topk);
+		load_cifar10(dh, trainPart, path, limit);
 	} else if(ds_type == "cifar100"){
-		load_cifar100(dh, trainPart, path, topk);
+		load_cifar100(dh, trainPart, path, limit);
 	}
 	return dh;
 }
@@ -81,13 +83,13 @@ void DataLoader::load_customized(DataHolder & dh, const std::string & fpath,
 	if(!header)
 		fin.seekg(0);
 	// parse lines
-	size_t lid = 0; // line id;
+	size_t i = 0; // line id;
 	while(getline(fin, line)){
 		if(line.size() < nx || line.front() == '#') // invalid line
 			continue;
-		if(localOnly && lid++ % npart != lid) // not local line
+		if(localOnly && i++ % npart != pid) // not local line
 			continue;
-		if(topk != 0 && lid > topk)
+		if(topk != 0 && i > topk)
 			break;
 		DataPoint dp = parseLine(line, sepper, xIds, yIds_u);
 		dh.add(move(dp));
@@ -101,13 +103,13 @@ void DataLoader::load_mnist(DataHolder & dh, const bool trainPart,
 	string prefix = trainPart ? "train" : "t10k";
 	size_t n = trainPart ? 60000 : 10000;
 	n = n < topk ? n : topk;
-	ifstream fimg(dpath + '/' + prefix + "-images-idx3-ubyte");
+	ifstream fimg(dpath + '/' + prefix + "-images.idx3-ubyte");
 	if(fimg.fail()){
-		throw invalid_argument("Error in reading file: " + dpath + '/' + prefix + "-images-idx3-ubyte");
+		throw invalid_argument("Error in reading file: " + dpath + '/' + prefix + "-images.idx3-ubyte");
 	}
-	ifstream flbl(dpath + '/' + prefix + "-labels-idx1-ubyte");
+	ifstream flbl(dpath + '/' + prefix + "-labels.idx1-ubyte");
 	if(flbl.fail()){
-		throw invalid_argument("Error in reading file: " + dpath + '/' + prefix + "-labels-idx3-ubyte");
+		throw invalid_argument("Error in reading file: " + dpath + '/' + prefix + "-labels.idx3-ubyte");
 	}
 	constexpr int len = 28 * 28;
 	char buffer[len];
@@ -116,12 +118,12 @@ void DataLoader::load_mnist(DataHolder & dh, const bool trainPart,
 	for(size_t i = 0; i < n && fimg && flbl; ++i){
 		fimg.read(buffer, len);
 		int lbl = flbl.get();
-		if(localOnly && i % npart != lid) // not local line
+		if(localOnly && i % npart != pid) // not local line
 			continue;
-		vector<double> x(len), y(1);
+		vector<double> x(len), y(10, 0.0);
 		for(int j = 0; j < len; ++j)
 			x[j] = static_cast<double>(buffer[j]);
-		y[0] = static_cast<double>(lbl);
+		y[lbl] = 1.0;
 		dh.add(move(x), move(y));
 	}
 }
@@ -135,14 +137,15 @@ void DataLoader::load_cifar10(DataHolder & dh, const bool trainPart,
 		if(fin.fail()){
 			throw invalid_argument("Error in reading file: " + name);
 		}
-		constexpr int len = 3 * 32 * 32;
+		constexpr int len = 3 * 32 * 32; // RGB - X - Y
 		char buffer[len+1];
 		for(size_t i = 0; i < n && fin; ++i){
 			fin.read(buffer, len+1);
-			if(localOnly && i % npart != lid) // not local line
+			if(localOnly && i % npart != pid) // not local line
 				continue;
-			vector<double> x(len), y(1);
-			y[0] = static_cast<double>(buffer[0]);
+			vector<double> x(len), y(10, 0.0);
+			const int p = static_cast<int>(buffer[0]);
+			y[p] = 1.0;
 			for(int j = 0; j < len; ++j)
 				x[j] = static_cast<double>(buffer[j + 1]);
 			dh.add(move(x), move(y));
@@ -176,10 +179,11 @@ void DataLoader::load_cifar100(DataHolder & dh, const bool trainPart,
 		char buffer[len + 2];
 		for(size_t i = 0; i < n && fin; ++i){
 			fin.read(buffer, len + 2);
-			if(localOnly && i % npart != lid) // not local line
+			if(localOnly && i % npart != pid) // not local line
 				continue;
-			vector<double> x(len), y(1);
-			y[0] = static_cast<double>(buffer[1]);
+			vector<double> x(len), y(100, 0.0);
+			const int p = static_cast<int>(buffer[1]);
+			y[p] = 1.0;
 			for(int j = 0; j < len; ++j)
 				x[j] = static_cast<double>(buffer[j + 2]);
 			dh.add(move(x), move(y));

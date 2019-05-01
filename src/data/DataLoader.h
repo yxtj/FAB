@@ -5,7 +5,7 @@
 
 class DataLoader{
 	std::string ds_type;
-	size_t npart, lid;
+	size_t npart, pid;
 	bool localOnly;
 
 	// parameters for customized format (and csv, tsv)
