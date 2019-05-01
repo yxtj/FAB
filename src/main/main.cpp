@@ -25,8 +25,9 @@ int main(int argc, char* argv[]){
 	}
 	DLOG(INFO) << "size=" << net->size() << " id=" << net->id();
 	if(net->id() == 0){
-		LOG(INFO) << "Infromation:\nDataset: " << opt.dataset << "\tData file: " << opt.fnData
-			<< " \tNormalize: " << opt.normalize << "\tRandom Shuffle: " << opt.shuffle
+		LOG(INFO) << "Infromation:\nDataset: " << opt.dataset << "\tLocation: " << opt.fnData
+			<< "\n  Normalize: " << opt.normalize << "\tRandom Shuffle: " << opt.shuffle
+			<< "\tTrainPart: " << opt.trainPart
 			<< "\n  Separator: " << opt.sepper << "\tIdx-y: " << opt.idY << "\tIdx-skip: " << opt.idSkip
 			<< "\nAlgorithm: " << opt.algorighm << "\tParam: " << opt.algParam << "\tSeed: " << opt.seed
 			<< "\n  Interval Estimator: " << opt.intervalParam << "\tMulticast: " << opt.mcastParam
