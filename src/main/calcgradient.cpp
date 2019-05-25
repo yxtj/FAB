@@ -40,7 +40,8 @@ struct Option {
 			"The parameter of the algorithm, usually the shape of the algorithm")->required();
 		app.add_option("-r,--record", fnRecord, "The file of the parameter record")->required();
 		app.add_flag("-b,--binary", binary, "Whether the record file is binary");
-		app.add_option("-l,--lines", tmp_r, "Lines of the parameter to use")->required();
+		app.add_option("-l,--linelist", tmp_r, "The Lines of the parameter to use. "
+			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)")->required();
 		// data-file
 		app.add_option("-d,--data", fnData, "The data file")->required();
 		app.add_option("--skip", tmp_s, "The columns to skip in the data file. "
