@@ -22,6 +22,10 @@ def getIdxByVer(ver):
         idx1,idx2=1,2
     elif ver == 2:
         idx1,idx2=0,2
+    elif ver == 3:
+        idx1,idx2=1,3
+    elif ver == 4:
+        idx1,idx2=0,3
     else:
         return ver[0], ver[1]
     return idx1, idx2
@@ -74,11 +78,34 @@ def plotUnit(legendList, fn, name, lineMarker, color, n, idx1, idx2):
         legendList.append(name)
     return line[0].get_color(), d.shape[1]
 
+def plotScoreUnit(legendList, d, name, lineMarker, color, n, idx1, idx2):
+    line = plt.plot(d[:n][idx1], d[:n][idx2], lineMarker, color=color)
+    if(legendList is not None):
+        legendList.append(name)
+    return line[0].get_color(), d.shape[1]
+    
 def drawList(prefix, mList, n=None, ver=0, xlbl=None, ylbl=None):
     plt.figure();
     idx1,idx2=getIdxByVer(ver)
     for m in mList:
         _, nc = plotUnit(None, prefix+m+'.txt', m, '-', None, n, idx1, idx2)
+    #plt.hold(True)
+    plt.legend(renameLegend(mList))
+    xr,yr = getxyLabel(idx1, idx2, nc)
+    xlbl=xlbl if xlbl is not None else xr
+    ylbl=ylbl if ylbl is not None else yr  
+    plt.xlabel(xlbl)
+    plt.ylabel(ylbl)
+    plt.tight_layout()
+    plt.show()
+
+def drawScoreList(dataList, nameList, n=None, ver=0, xlbl=None, ylbl=None):
+    plt.figure();
+    idx1,idx2=getIdxByVer(ver)
+    for i in range(len(dataList)):
+        d = dataList[i]
+        m = nameList[i]
+        _, nc = plotScoreUnit(None, d, m, '-', None, n, idx1, idx2)
     #plt.hold(True)
     plt.legend(renameLegend(mList))
     xr,yr = getxyLabel(idx1, idx2, nc)
@@ -106,24 +133,26 @@ def genFL(pre, l, post=''):
     return [str(pre)+str(i)+post for i in l]
 
 def drawListCmp(prefix, mList1, mList2, mList3=None, n=None, ncol=1, ver=0, xlbl=None, ylbl=None, save=False):
+    llen=len(mList1)
     if mList2 is None or len(mList2) == 0:
         mList2=None
     else:
-        assert(len(mList1) == len(mList2))
+        llen=max(llen, len(mList2))
     if mList3 is None or len(mList3) == 0:
         mList3=None
     else:
-        assert(len(mList1) == len(mList3))
+        llen=max(llen, len(mList3))
     plt.figure()
-    l=len(mList1)
     lgd=[]
     idx1,idx2=getIdxByVer(ver)
-    for i in range(l):
-        c,nc=plotUnit(lgd, prefix+mList1[i]+'.txt', mList1[i], '-', None, n, idx1, idx2)
-        if mList2:
-            plotUnit(lgd, prefix+mList2[i]+'.txt', mList2[i], '--', c, n, idx1, idx2)
-        if mList3:
-            plotUnit(lgd, prefix+mList3[i]+'.txt', mList3[i], '-.', c, n, idx1, idx2)
+    for i in range(llen):
+        c=None
+        if i < len(mList1) and mList1[i]:
+            c,nc=plotUnit(lgd, prefix+mList1[i]+'.txt', mList1[i], '-', c, n, idx1, idx2)
+        if mList2 and i < len(mList2) and mList2[i]:
+            c,nc=plotUnit(lgd, prefix+mList2[i]+'.txt', mList2[i], '--', c, n, idx1, idx2)
+        if mList3 and i < len(mList3) and mList3[i]:
+            c,nc=plotUnit(lgd, prefix+mList3[i]+'.txt', mList3[i], '-.', c, n, idx1, idx2)
     #plt.hold(True)
     plt.legend(renameLegend(lgd), ncol=ncol)
     xr,yr = getxyLabel(idx1, idx2, nc)
@@ -138,6 +167,7 @@ def drawListCmp(prefix, mList1, mList2, mList3=None, n=None, ncol=1, ver=0, xlbl
         plt.savefig(gfn+'.png')
     plt.tight_layout()
     plt.show()
+
 
 #drawListCmp('../10000-0.1/',['async-1','async-2','async-4'],['fab-1','fab-2','fab-4'])
 #drawListCmp('10,15,1-100k/1000-0.1/',['async-1','async-2','async-4', 'async-8'],['fab-1','fab-2','fab-4','fab-8'])

@@ -19,14 +19,13 @@ def loadGradBinaryOne(fn, n, type='f'):
     else:
         t='d'
         s=8
-    fin=open(fn, 'rb')
     l=[]
-    d=fin.read(n*s)
-    while d:
-        v=struct.unpack(t*n, d)
-        l.append(v)
+    with open(fn, 'rb') as fin:
         d=fin.read(n*s)
-    fin.close()
+        while d:
+            v=struct.unpack(t*n, d)
+            l.append(v)
+            d=fin.read(n*s)
     return l
     
 
