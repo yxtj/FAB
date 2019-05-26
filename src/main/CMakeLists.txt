@@ -36,3 +36,9 @@ add_executable(calcgradient calcgradient.cpp
 target_link_libraries(calcgradient
 	data model util
 )
+# exe: calcpriority
+add_executable(calcpriority calcpriority.cpp
+	${HEADERS} ${SOURCES})
+target_link_libraries(calcpriority
+	data model util
+)
