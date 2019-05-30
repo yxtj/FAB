@@ -20,7 +20,7 @@ class PSGD : public Trainer
 	//	Increment, // keep the summation incrementally
 	//	Decay, // use the decay implementation for exponential average
 	//};
-	bool gradDecayFactor = 0.9;
+	//float gradDecayFactor = 0.9;
 	// variations
 	bool varUpdateRptGradAll = false; // also report gradient using ALL gradients of renew phase
 	bool varUpdateRptGradSel = false; // also report gradient using SOME gradients of renew phase (priority>=threshold)

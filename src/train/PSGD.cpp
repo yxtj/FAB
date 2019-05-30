@@ -18,15 +18,14 @@ void PSGD::init(const std::vector<std::string>& param)
 			renewRatio = stod(stod(param[2]));
 			if(!parsePriority(param[3], param[4], param.size() > 5 ? param[5] : ""))
 				throw invalid_argument("priority type is not recognized: " + param[3]);
-			if(param.size() <= 6)
-				break;
+			//if(param.size() <= 6)
+			//	break;
 			//if(!parseGradient(param[5], param.size() > 6 ? param[6] : ""))
 			//	throw invalid_argument("gradient type is not recognized: " + param[5]);
-			parseGradient("", param[6]);
-			if(param.size() <= 7)
+			if(param.size() <= 6)
 				break; 
-			if(!parseVariation(param[7]))
-				throw invalid_argument("variation is not recognized: " + param[7]);
+			if(!parseVariation(param[6]))
+				throw invalid_argument("variation is not recognized: " + param[6]);
 		} while(false);
 	} catch(exception& e){
 		throw invalid_argument("Cannot parse parameters for PSGD\n" + string(e.what()));
@@ -117,9 +116,10 @@ Trainer::DeltaResult PSGD::batchDelta(
 	// variation
 	if(varUpdateAvgGradTop){
 		updateAvgGradDecay(grad2, static_cast<double>(k) / cnt);
+	}
 	tmr.restart();
 	// phase 3: post-process
-	if(varUpdateParamRenewAll || varUpdateParamRenewSel){
+	if(varUpdateRptGradAll || varUpdateRptGradSel){
 		for(size_t j = 0; j < paramWidth; ++j)
 			grad2 += grad[1];
 	}
@@ -163,8 +163,8 @@ bool PSGD::parseGradient(const std::string & type, const std::string & factor)
 	//	gradType = GradientType::Decay;
 	//else
 	//	return false;
-	if(!factor.empty())
-		gradDecayFactor = stod(factor);
+	//if(!factor.empty())
+	//	gradDecayFactor = stod(factor);
 	return true;
 }
 
