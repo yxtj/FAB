@@ -4,6 +4,7 @@
 #include "logging/logging.h"
 #include <algorithm>
 #include <numeric>
+#include <limits>
 #include <cmath>
 
 using namespace std;
@@ -11,18 +12,25 @@ using namespace std;
 void PSGD::init(const std::vector<std::string>& param)
 {
 	try{
-		rate = stod(param[0]);
-		topRatio = stod(param[1]);
-		global = param.size() > 2 ? param[2] == "global" : false; // true->global (gi*avg(g)), false->self (gi*gi)
-		renewRatio= param.size() > 3 ? stod(param[3]) : 0.01;
-		useRenewGrad = param.size() > 4 ? beTrueOption(param[4]) : false;
+		do{
+			rate = stod(param[0]);
+			topRatio = stod(param[1]);
+			renewRatio = stod(stod(param[2]));
+			if(!parsePriority(param[3], param[4], param.size() > 5 ? param[5] : ""))
+				throw invalid_argument("priority type is not recognized: " + param[3]);
+			if(param.size() <= 6)
+				break;
+			//if(!parseGradient(param[5], param.size() > 6 ? param[6] : ""))
+			//	throw invalid_argument("gradient type is not recognized: " + param[5]);
+			parseGradient("", param[6]);
+			if(param.size() <= 7)
+				break; 
+			if(!parseVariation(param[7]))
+				throw invalid_argument("variation is not recognized: " + param[7]);
+		} while(false);
 	} catch(exception& e){
 		throw invalid_argument("Cannot parse parameters for PSGD\n" + string(e.what()));
 	}
-	if(global)
-		fp_cp = &PSGD::calcPriorityGlobal;
-	else
-		fp_cp = &PSGD::calcPrioritySelf;
 }
 
 std::string PSGD::name() const
@@ -44,35 +52,39 @@ void PSGD::prepare()
 				pd->get(i).x, pm->getParameter().weights, pd->get(i).y, nullptr);
 		}
 	}
-	if(global){
-		sumGrad.resize(paramWidth, 0.0);
-	}
+	avgGrad.resize(paramWidth, 0.0);
 	renewSize = static_cast<size_t>(pd->size() * renewRatio);
 	renewPointer = 0;
 }
 
 void PSGD::ready()
 {
-	// prepare gradient and priority
-	if(global)
-		gradient.reserve(pd->size());
+	// prepare gradient (and priority)
 	priority.resize(pd->size());
 	for(size_t i = 0; i < pd->size(); ++i){
 		auto g = pm->gradient(pd->get(i));
-		if(global){
+		if(prioInitType == PriorityType::Projection){
 			for(size_t j = 0; j < paramWidth; ++j)
-				sumGrad[j] += g[j];
-			gradient.push_back(move(g));
+				avgGrad[j] += g[j];
 		} else{
-			priority[i] = calcPriority(g);
+			priority[i] = calcPriorityLength(g);
 		}
+		priorityIdx.push_back(static_cast<int>(i));
 	}
 	// prepare priority
-	if(global){
+	if(prioInitType == PriorityType::Projection){
+		for(size_t j = 0; j < paramWidth; ++j)
+			avgGrad[j] /= pd->size();
 		for(size_t i = 0; i < pd->size(); ++i){
-			priority[i] = calcPriority(gradient[i]);
+			auto g = pm->gradient(pd->get(i));
+			priority[i] = calcPriorityProjection(g);
 		}
 	}
+	// prepare top priority list
+	size_t k = static_cast<size_t>(pd->size() * topRatio);
+	if(k == pd->size())
+		--k;
+	getTopK(k);
 }
 
 PSGD::~PSGD()
@@ -89,64 +101,37 @@ Trainer::DeltaResult PSGD::batchDelta(
 {
 	size_t end = min(start + cnt, pd->size());
 	Timer tmr;
-	vector<double> grad(paramWidth, 0.0);
-	// force renew the gradient of some data points
-	size_t rcnt = renewSize + 1;
-	while(--rcnt > 0){
-		auto&& g = pm->gradient(pd->get(renewPointer));
-		priority[renewPointer] = calcPriority(g);
-		if(useRenewGrad){
-			for(size_t j = 0; j < paramWidth; ++j)
-				grad[j] += g[j];
-		}
-		if(global){
-			updateSumGrad(renewPointer, g);
-			gradient[renewPointer] = move(g);
-		}
-		renewPointer = (renewPointer + 1) % pd->size();
+	// phase 1: update the priority of some data points
+	vector<double> grad1;
+	size_t r;
+	tie(r, grad1) = phaseUpdatePriority(renewSize);
+	if(varUpdateRptGradAll || varUpdateRptGradSel){
+		updateAvgGradDecay(grad1, static_cast<double>(r) / cnt);
 	}
 	stat_t_grad_renew += tmr.elapseSd();
-	// pick top-k
+	// phase 2: calculate gradient for parameter
 	tmr.restart();
+	vector<double> grad2;
 	size_t k = static_cast<size_t>(round(topRatio*cnt));
-	vector<int> topk = getTopK(start, end, k);
-	k = topk.size();
-	stat_t_prio_pick += tmr.elapseSd();
-	// update gradient and priority of data-points
+	tie(k, grad2) = phaseCalculateGradient(k);
+	// variation
+	if(varUpdateAvgGradTop){
+		updateAvgGradDecay(grad2, static_cast<double>(k) / cnt);
 	tmr.restart();
-	for(auto i : topk){
-		// calculate gradient
-		auto&& g = pm->gradient(pd->get(i));
-		stat_t_grad_calc += tmr.elapseSd();
-		// calcualte priority
-		tmr.restart();
-		priority[i] = calcPriority(g);
-		if(global){
-			updateSumGrad(i, g);
-		}
-		stat_t_prio_update += tmr.elapseSd();
-		// accumulate gradient result
-		tmr.restart();
+	// phase 3: post-process
+	if(varUpdateParamRenewAll || varUpdateParamRenewSel){
 		for(size_t j = 0; j < paramWidth; ++j)
-			grad[j] += g[j];
-		stat_t_grad_post += tmr.elapseSd();
-		// final
-		tmr.restart();
-		if(global){
-			gradient[i] = move(g);
-		}
+			grad2 += grad[1];
 	}
-	// calculate delta to report
-	tmr.restart();
 	double factor = -rate;
 	if(avg)
 		factor /= k;
 	else
 		factor *= static_cast<double>(cnt) / k;
-	for(auto& v : grad)
+	for(auto& v : grad2)
 		v *= factor;
 	stat_t_grad_post += tmr.elapseSd();
-	return { cnt, topk.size(), move(grad) };
+	return { cnt, topk.size(), move(grad2) };
 }
 
 Trainer::DeltaResult PSGD::batchDelta(
@@ -155,44 +140,122 @@ Trainer::DeltaResult PSGD::batchDelta(
 	return batchDelta(start, cnt, avg);
 }
 
+bool PSGD::parsePriority(const std::string & type, const std::string & factor)
+{
+	if(contains(type, { "p","project","projection","g","global" })){
+		prioType = PriorityType::Projection;
+		fp_cp = &PSGD::calcPriorityProjection;
+	} else if(contains(type, { "l","length","s","square","self" })){
+		prioType = PriorityType::Length;
+		fp_cp = &PSGD::calcPriorityLength;
+	} else
+		return false;
+	if(!factor.empty())
+		prioDecayFactor = stod(factor);
+	return true;
+}
+
+bool PSGD::parseGradient(const std::string & type, const std::string & factor)
+{
+	//if(contains(type, { "a","accurate","incr","increament","increamental" }))
+	//	gradType = GradientType::Increment;
+	//else if(contains(type, { "d","decay" }))
+	//	gradType = GradientType::Decay;
+	//else
+	//	return false;
+	if(!factor.empty())
+		gradDecayFactor = stod(factor);
+	return true;
+}
+
+bool PSGD::parseVariation(const std::string & str)
+{
+	if(str.find('j') != string::npos || str.find("rj") != string::npos)
+		varUpdateRptGradAll = true;
+	if(str.find('s') != string::npos || str.find("rs") != string::npos)
+		varUpdateRptGradSel = true;
+	if(str.find('t') != string::npos || str.find("at") != string::npos)
+		varUpdateAvgGradTop= true;
+}
+
 float PSGD::calcPriority(const std::vector<double>& g)
 {
 	return (this->*fp_cp)(g);
 }
 
-float PSGD::calcPriorityGlobal(const std::vector<double>& g)
+float PSGD::calcPriorityProjection(const std::vector<double>& g)
 {
 	auto p = inner_product(g.begin(), g.end(), sumGrad.begin(), 0.0);
 	return static_cast<float>(p);
 }
 
-float PSGD::calcPrioritySelf(const std::vector<double>& g)
+float PSGD::calcPriorityLength(const std::vector<double>& g)
 {
 	auto p = inner_product(g.begin(), g.end(), g.begin(), 0.0);
 	return static_cast<float>(p);
 }
 
-std::vector<int> PSGD::getTopK(const size_t first, const size_t last, const size_t k)
+void PSGD::updateAvgGradDecay(const std::vector<double>& g, const double f)
 {
-	std::vector<int> res;
-	res.reserve(last - first);
-	for(size_t i = first; i < last; ++i)
-		res.push_back(static_cast<int>(i));
-	if(res.size() <= k)
-		return res;
-	auto it = res.begin() + k;
+	for(size_t j = 0; j < paramWidth; ++j){
+		avgGrad[j] = (1 - f)*avgGrad[j] * f + f * g[j];
+	}
+}
+
+std::vector<double> PSGD::phaseUpdatePriority(const size_t r)
+{
+	vector<double> grad(paramWidth, 0.0);
+	// force renew the gradient of some data points
+	size_t rcnt = r + 1;
+	while(--rcnt > 0){
+		auto&& g = pm->gradient(pd->get(renewPointer));
+		float p = calcPriority(g);
+		priority[renewPointer] = p;
+		if(varUpdateRptGradAll || (varUpdateRptGradSel && p >= prioThreshold)){
+			for(size_t j = 0; j < paramWidth; ++j)
+				grad[j] += g[j];
+		}
+		renewPointer = (renewPointer + 1) % pd->size();
+	}
+	return grad;
+}
+
+std::vector<double> PSGD::phaseCalculateGradient(const size_t k)
+{
+	Timer tmr;
+	vector<double> grad(paramWidth, 0.0);
+	vector<int> topk = getTopK(start, end, k);
+	stat_t_prio_pick += tmr.elapseSd();
+	// update gradient and priority of data-points
+	for(auto i : topk){
+		// calculate gradient
+		tmr.restart();
+		auto&& g = pm->gradient(pd->get(i));
+		stat_t_grad_calc += tmr.elapseSd();
+		// calcualte priority
+		tmr.restart();
+		priority[i] = calcPriority(g);
+		stat_t_prio_update += tmr.elapseSd();
+		// accumulate gradient result
+		tmr.restart();
+		for(size_t j = 0; j < paramWidth; ++j)
+			grad[j] += g[j];
+		stat_t_grad_post += tmr.elapseSd();
+	}
+	return grad;
+}
+
+void PSGD::getTopK(const size_t k)
+{
+	if(priorityIdx.size() <= k){
+		prioThreshold = numeric_limits<double>::lowest();
+		return;
+	}
+	auto it = priorityIdx.begin() + k;
 	//partial_sort(res.begin(), it, res.end(),
-	nth_element(res.begin(), it, res.end(),
+	nth_element(priorityIdx.begin(), it, priorityIdx.end(),
 		[&](const int l, const int r){
 		return priority[l] > priority[r]; // pick the largest k
 	});
-	res.erase(it, res.end());
-	return res;
-}
-
-void PSGD::updateSumGrad(const int i, const std::vector<double>& g){
-	auto& go = gradient[i];
-	for(size_t j = 0; j < paramWidth; ++j){
-		sumGrad[j] += g[j] - go[j];
-	}
+	prioThreshold = priority[*it];
 }
