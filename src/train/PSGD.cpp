@@ -140,7 +140,7 @@ Trainer::DeltaResult PSGD::batchDelta(
 	return batchDelta(start, cnt, avg);
 }
 
-bool PSGD::parsePriority(const std::string & type, const std::string & factor)
+bool PSGD::parsePriority(const std::string & type, const std::string & typeInit, const std::string & factor)
 {
 	if(contains(type, { "p","project","projection","g","global" })){
 		prioType = PriorityType::Projection;
@@ -148,6 +148,12 @@ bool PSGD::parsePriority(const std::string & type, const std::string & factor)
 	} else if(contains(type, { "l","length","s","square","self" })){
 		prioType = PriorityType::Length;
 		fp_cp = &PSGD::calcPriorityLength;
+	} else
+		return false;
+	if(contains(typeInit, { "p","project","projection","g","global" })){
+		prioInitType = PriorityType::Projection;
+	} else if(contains(typeInit, { "l","length","s","square","self" })){
+		prioInitType = PriorityType::Length;
 	} else
 		return false;
 	if(!factor.empty())
