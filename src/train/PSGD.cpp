@@ -17,7 +17,7 @@ void PSGD::init(const std::vector<std::string>& param)
 			topRatio = stod(param[1]);
 			renewRatio = stod(param[2]);
 			if(!parsePriority(param[3], param[4], param.size() > 5 ? param[5] : ""))
-				throw invalid_argument("priority type is not recognized: " + param[3]);
+				throw invalid_argument("priority type is not recognized: " + param[3] + ", " + param[4]);
 			//if(param.size() <= 6)
 			//	break;
 			//if(!parseGradient(param[5], param.size() > 6 ? param[6] : ""))
@@ -71,6 +71,10 @@ void PSGD::ready()
 		priorityIdx.push_back(static_cast<int>(i));
 	}
 	// prepare priority
+	if(prioType == PriorityType::Decay){
+		priorityWver.resize(pd->size(), 0);
+		priorityDecayRate.resize(pd->size(), 1.0f);
+	}
 	if(prioInitType == PriorityType::Projection){
 		for(size_t j = 0; j < paramWidth; ++j)
 			avgGrad[j] /= pd->size();
@@ -117,8 +121,9 @@ Trainer::DeltaResult PSGD::batchDelta(
 	if(varUpdateAvgGradTop){
 		updateAvgGradDecay(grad2, static_cast<double>(k) / cnt);
 	}
-	tmr.restart();
 	// phase 3: post-process
+	tmr.restart();
+	wver += r + k;
 	if(varUpdateRptGradAll || varUpdateRptGradSel){
 		for(size_t j = 0; j < paramWidth; ++j)
 			grad2[j] += grad1[1];
@@ -140,25 +145,26 @@ Trainer::DeltaResult PSGD::batchDelta(
 	return batchDelta(start, cnt, avg);
 }
 
-bool PSGD::parsePriority(const std::string & type, const std::string & typeInit, const std::string & factor)
+bool PSGD::parsePriority(const std::string & typeInit, const std::string & type, const std::string & factor)
 {
-	if(contains(type, { "p","project","projection","g","global" })){
-		prioType = PriorityType::Projection;
-		fp_cp = &PSGD::calcPriorityProjection;
-	} else if(contains(type, { "l","length","s","square","self" })){
-		prioType = PriorityType::Length;
-		fp_cp = &PSGD::calcPriorityLength;
-	} else if(contains(type, { "d","decay" })){
-		prioType = PriorityType::Decay;
-		fp_cp = &PSGD::calcPriorityProjection;
-	} else
-		return false;
 	if(contains(typeInit, { "p","project","projection","g","global" })){
 		prioInitType = PriorityType::Projection;
 	} else if(contains(typeInit, { "l","length","s","square","self" })){
 		prioInitType = PriorityType::Length;
 	} else
 		return false;
+	if(contains(type, { "p","project","projection","g","global" })){
+		prioType = PriorityType::Projection;
+	} else if(contains(type, { "l","length","s","square","self" })){
+		prioType = PriorityType::Length;
+	} else if(contains(type, { "d","decay" })){
+		prioType = PriorityType::Decay;
+	} else
+		return false;
+	if(prioType == PriorityType::Length)
+		fp_cp = &PSGD::calcPriorityLength;
+	else
+		fp_cp = &PSGD::calcPriorityProjection;
 	if(!factor.empty())
 		prioDecayFactor = stod(factor);
 	return true;
@@ -221,6 +227,9 @@ std::pair<size_t, std::vector<double>> PSGD::phaseUpdatePriority(const size_t r)
 	while(--rcnt > 0){
 		auto&& g = pm->gradient(pd->get(renewPointer));
 		float p = calcPriority(g);
+		if(prioType == PriorityType::Decay){
+			updatePriorityDecay(p, renewPointer);
+		}
 		priority[renewPointer] = p;
 		if(varUpdateRptGradAll || (varUpdateRptGradSel && p >= prioThreshold)){
 			for(size_t j = 0; j < paramWidth; ++j)
@@ -250,7 +259,11 @@ std::pair<size_t, std::vector<double>> PSGD::phaseCalculateGradient(const size_t
 		stat_t_grad_calc += tmr.elapseSd();
 		// calcualte priority
 		tmr.restart();
-		priority[id] = calcPriority(g);
+		float p = calcPriority(g);
+		if(prioType == PriorityType::Decay){
+			updatePriorityDecay(p, id);
+		}
+		priority[id] = p;
 		stat_t_prio_update += tmr.elapseSd();
 		// accumulate gradient result
 		tmr.restart();
@@ -286,7 +299,21 @@ void PSGD::getTopKDecay(const size_t k)
 	//partial_sort(res.begin(), it, res.end(),
 	nth_element(priorityIdx.begin(), it, priorityIdx.end(),
 		[&](const int l, const int r){
-		return priority[l] > priority[r]; // pick the largest k
+		return priority[l] * pow(priorityDecayRate[l], priorityWver[l] - wver)
+			> priority[r] * pow(priorityDecayRate[r], priorityWver[r] - wver); // pick the largest k
 	});
 	prioThreshold = priority[*it];
+}
+
+void PSGD::updatePriorityDecay(float p, size_t id)
+{
+	const float pold = priority[id];
+	float dp = pold - p;
+	if(pold == 0.0f)
+		priorityDecayRate[id] = 1.0f;
+	else if(wver == priorityWver[id])
+		priorityDecayRate[id] = priorityDecayRate[id];
+	else
+		priorityDecayRate[id] = logf(dp / p) / logf(wver - priorityWver[id]);
+	priorityWver[id] = wver;
 }

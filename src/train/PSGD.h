@@ -30,10 +30,12 @@ class PSGD : public Trainer
 	size_t paramWidth; // parameter width
 	std::vector<double> avgGrad;
 	std::vector<float> priority;
-	std::vector<int> priorityIdx;
-	int dpCnt;
-	std::vector<int> priorityDpCnt;
-	float prioThreshold;
+	std::vector<int> priorityIdx; // for top-k
+	float prioThreshold; // for variation-RptGradSel
+	//std::vector<float> priorityOld; // for priority decay
+	std::vector<float> priorityDecayRate; // for priority decay
+	std::vector<int> priorityWver; // for priority decay
+	int wver; // for priority decay
 
 	size_t renewSize;
 	size_t renewPointer;
@@ -56,7 +58,7 @@ public:
 
 // parse parameters
 private:
-	bool parsePriority(const std::string& type, const std::string& typeInit, const std::string& factor);
+	bool parsePriority(const std::string& typeInit, const std::string& type, const std::string& factor);
 	bool parseGradient(const std::string& type, const std::string& factor);
 	bool parseVariation(const std::string& str);
 // priority
@@ -75,4 +77,5 @@ private:
 	std::pair<size_t, std::vector<double>> phaseCalculateGradient(const size_t k);
 	void getTopK(const size_t k);
 	void getTopKDecay(const size_t k);
+	void updatePriorityDecay(float p, size_t id);
 };
