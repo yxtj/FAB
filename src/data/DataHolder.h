@@ -13,6 +13,7 @@ class DataHolder {
 public:
 	// <nparts> <localid>: used for distributed case
 	DataHolder(const size_t nparts = 1, const size_t localid = 0);
+	void setLength(const size_t lx, const size_t ly);
 	size_t xlength() const;
 	size_t ylength() const;
 	size_t nparts() const;

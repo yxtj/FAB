@@ -79,6 +79,7 @@ void DataLoader::load_customized(DataHolder & dh, const std::string & fpath,
 	//nx = n - skips.size() - 1; // does not work when skips contains placeholders like -1
 	nx = xIds.size();
 	size_t ny = yIds_u.size();
+	dh.setLength(nx, ny);
 
 	// deal with header
 	if(!header)
@@ -113,6 +114,7 @@ void DataLoader::load_mnist(DataHolder & dh, const bool trainPart,
 		throw invalid_argument("Error in reading file: " + dpath + '/' + prefix + "-labels.idx3-ubyte");
 	}
 	constexpr int len = 28 * 28;
+	dh.setLength(len, 10);
 	char buffer[len];
 	fimg.read(buffer, 16);
 	flbl.read(buffer, 8);
@@ -152,6 +154,7 @@ void DataLoader::load_cifar10(DataHolder & dh, const bool trainPart,
 			dh.add(move(x), move(y));
 		}
 	};
+	dh.setLength(3 * 32 * 32, 10);
 	if(trainPart){
 		size_t n = topk == 0 ? 50000 : topk;
 		for(int fileId = 1; fileId <= 5; ++fileId){
@@ -190,6 +193,7 @@ void DataLoader::load_cifar100(DataHolder & dh, const bool trainPart,
 			dh.add(move(x), move(y));
 		}
 	};
+	dh.setLength(3 * 32 * 32, 100);
 	if(trainPart){
 		size_t n = topk == 0 ? 50000 : topk;
 		func(dpath + "/train.bin", n);

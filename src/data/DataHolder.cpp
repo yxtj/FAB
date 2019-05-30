@@ -9,6 +9,11 @@ DataHolder::DataHolder(const size_t nparts, const size_t localid)
 	:  npart(nparts), pid(localid)
 {}
 
+void DataHolder::setLength(const size_t lx, const size_t ly){
+	nx = lx;
+	ny = ly;
+}
+
 size_t DataHolder::xlength() const{
 	return nx;
 }
@@ -79,8 +84,6 @@ void DataHolder::load(const std::string& fpath, const std::string& sepper,
 }
 
 void DataHolder::add(const std::vector<double>& x, const std::vector<double>& y){
-	nx = x.size();
-	ny = y.size();
 	DataPoint dp;
 	dp.x = x;
 	dp.y = y;
@@ -88,8 +91,6 @@ void DataHolder::add(const std::vector<double>& x, const std::vector<double>& y)
 }
 
 void DataHolder::add(std::vector<double>&& x, std::vector<double>&& y){
-	nx = x.size();
-	ny = y.size();
 	DataPoint dp;
 	dp.x = move(x);
 	dp.y = move(y);
