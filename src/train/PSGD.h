@@ -8,15 +8,16 @@ class PSGD : public Trainer
 	double topRatio = 1.0;
 	double renewRatio = 0.01;
 	// priority
-	struct enum ProrityType{
+	enum struct PriorityType{
 		Projection, // pi=gi*avg(g)
 		Length, // pi=gi*gi
+		Decay, // pi=gi*avg(g)*exp(at)
 	};
-	ProrityType prioType = ProrityType::Projection;
-	ProrityType prioInitType = ProrityType::Length;
+	PriorityType prioType = PriorityType::Projection;
+	PriorityType prioInitType = PriorityType::Length;
 	double prioDecayFactor = -1;
 	// gradient
-	//struct enum GradientType{
+	//enum struct GradientType{
 	//	Increment, // keep the summation incrementally
 	//	Decay, // use the decay implementation for exponential average
 	//};
@@ -30,6 +31,8 @@ class PSGD : public Trainer
 	std::vector<double> avgGrad;
 	std::vector<float> priority;
 	std::vector<int> priorityIdx;
+	int dpCnt;
+	std::vector<int> priorityDpCnt;
 	float prioThreshold;
 
 	size_t renewSize;
@@ -53,7 +56,7 @@ public:
 
 // parse parameters
 private:
-	bool parsePriority(const std::string& type, const std::string& factor);
+	bool parsePriority(const std::string& type, const std::string& typeInit, const std::string& factor);
 	bool parseGradient(const std::string& type, const std::string& factor);
 	bool parseVariation(const std::string& str);
 // priority
@@ -71,4 +74,5 @@ private:
 	std::pair<size_t, std::vector<double>> phaseUpdatePriority(const size_t r);
 	std::pair<size_t, std::vector<double>> phaseCalculateGradient(const size_t k);
 	void getTopK(const size_t k);
+	void getTopKDecay(const size_t k);
 };

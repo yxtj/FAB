@@ -142,5 +142,5 @@ size_t stoulKMG(const std::string & str, const bool binary)
 
 bool contains(const std::string& str, const std::initializer_list<std::string>& list)
 {
-	return find(list.begin(), list.end(), str) != list.end())
+	return find(list.begin(), list.end(), str) != list.end();
 }

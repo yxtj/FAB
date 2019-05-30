@@ -15,7 +15,7 @@ void PSGD::init(const std::vector<std::string>& param)
 		do{
 			rate = stod(param[0]);
 			topRatio = stod(param[1]);
-			renewRatio = stod(stod(param[2]));
+			renewRatio = stod(param[2]);
 			if(!parsePriority(param[3], param[4], param.size() > 5 ? param[5] : ""))
 				throw invalid_argument("priority type is not recognized: " + param[3]);
 			//if(param.size() <= 6)
@@ -121,7 +121,7 @@ Trainer::DeltaResult PSGD::batchDelta(
 	// phase 3: post-process
 	if(varUpdateRptGradAll || varUpdateRptGradSel){
 		for(size_t j = 0; j < paramWidth; ++j)
-			grad2 += grad[1];
+			grad2[j] += grad1[1];
 	}
 	double factor = -rate;
 	if(avg)
@@ -131,7 +131,7 @@ Trainer::DeltaResult PSGD::batchDelta(
 	for(auto& v : grad2)
 		v *= factor;
 	stat_t_grad_post += tmr.elapseSd();
-	return { cnt, topk.size(), move(grad2) };
+	return { cnt, k, move(grad2) };
 }
 
 Trainer::DeltaResult PSGD::batchDelta(
@@ -148,6 +148,9 @@ bool PSGD::parsePriority(const std::string & type, const std::string & typeInit,
 	} else if(contains(type, { "l","length","s","square","self" })){
 		prioType = PriorityType::Length;
 		fp_cp = &PSGD::calcPriorityLength;
+	} else if(contains(type, { "d","decay" })){
+		prioType = PriorityType::Decay;
+		fp_cp = &PSGD::calcPriorityProjection;
 	} else
 		return false;
 	if(contains(typeInit, { "p","project","projection","g","global" })){
@@ -182,6 +185,7 @@ bool PSGD::parseVariation(const std::string & str)
 		varUpdateRptGradSel = true;
 	if(str.find('t') != string::npos || str.find("at") != string::npos)
 		varUpdateAvgGradTop= true;
+	return true;
 }
 
 float PSGD::calcPriority(const std::vector<double>& g)
@@ -191,7 +195,7 @@ float PSGD::calcPriority(const std::vector<double>& g)
 
 float PSGD::calcPriorityProjection(const std::vector<double>& g)
 {
-	auto p = inner_product(g.begin(), g.end(), sumGrad.begin(), 0.0);
+	auto p = inner_product(g.begin(), g.end(), avgGrad.begin(), 0.0);
 	return static_cast<float>(p);
 }
 
@@ -208,9 +212,10 @@ void PSGD::updateAvgGradDecay(const std::vector<double>& g, const double f)
 	}
 }
 
-std::vector<double> PSGD::phaseUpdatePriority(const size_t r)
+std::pair<size_t, std::vector<double>> PSGD::phaseUpdatePriority(const size_t r)
 {
 	vector<double> grad(paramWidth, 0.0);
+	size_t n = 0;
 	// force renew the gradient of some data points
 	size_t rcnt = r + 1;
 	while(--rcnt > 0){
@@ -223,24 +228,29 @@ std::vector<double> PSGD::phaseUpdatePriority(const size_t r)
 		}
 		renewPointer = (renewPointer + 1) % pd->size();
 	}
-	return grad;
+	return make_pair(move(n), move(grad));
 }
 
-std::vector<double> PSGD::phaseCalculateGradient(const size_t k)
+std::pair<size_t, std::vector<double>> PSGD::phaseCalculateGradient(const size_t k)
 {
 	Timer tmr;
 	vector<double> grad(paramWidth, 0.0);
-	vector<int> topk = getTopK(start, end, k);
+	vector<int> topk;
+	if(prioType == PriorityType::Decay)
+		getTopKDecay(k);
+	else
+		getTopK(k);
 	stat_t_prio_pick += tmr.elapseSd();
 	// update gradient and priority of data-points
-	for(auto i : topk){
+	for(size_t i = 0; i < k; ++i){
+		size_t id = priorityIdx[i];
 		// calculate gradient
 		tmr.restart();
-		auto&& g = pm->gradient(pd->get(i));
+		auto&& g = pm->gradient(pd->get(id));
 		stat_t_grad_calc += tmr.elapseSd();
 		// calcualte priority
 		tmr.restart();
-		priority[i] = calcPriority(g);
+		priority[id] = calcPriority(g);
 		stat_t_prio_update += tmr.elapseSd();
 		// accumulate gradient result
 		tmr.restart();
@@ -248,13 +258,28 @@ std::vector<double> PSGD::phaseCalculateGradient(const size_t k)
 			grad[j] += g[j];
 		stat_t_grad_post += tmr.elapseSd();
 	}
-	return grad;
+	return make_pair(k, move(grad));
 }
 
 void PSGD::getTopK(const size_t k)
 {
 	if(priorityIdx.size() <= k){
-		prioThreshold = numeric_limits<double>::lowest();
+		prioThreshold = numeric_limits<float>::lowest();
+		return;
+	}
+	auto it = priorityIdx.begin() + k;
+	//partial_sort(res.begin(), it, res.end(),
+	nth_element(priorityIdx.begin(), it, priorityIdx.end(),
+		[&](const int l, const int r){
+		return priority[l] > priority[r]; // pick the largest k
+	});
+	prioThreshold = priority[*it];
+}
+
+void PSGD::getTopKDecay(const size_t k)
+{
+	if(priorityIdx.size() <= k){
+		prioThreshold = numeric_limits<float>::lowest();
 		return;
 	}
 	auto it = priorityIdx.begin() + k;
