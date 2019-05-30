@@ -2,6 +2,7 @@
 #include <utility>
 #include <string>
 #include <vector>
+#include <initializer_list>
 
 std::pair<int, int> getScreenSize();
 bool beTrueOption(const std::string& str);
@@ -16,3 +17,5 @@ std::vector<int> getIntListByRange(const std::string & str, const std::string& s
 // binary: whether to use 2^10=1024 or 1000
 int stoiKMG(const std::string & str, const bool binary = false);
 size_t stoulKMG(const std::string & str, const bool binary = false);
+
+bool contains(const std::string& str, const std::initializer_list<std::string>& list);
