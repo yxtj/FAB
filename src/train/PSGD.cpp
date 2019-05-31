@@ -16,16 +16,16 @@ void PSGD::init(const std::vector<std::string>& param)
 			rate = stod(param[0]);
 			topRatio = stod(param[1]);
 			renewRatio = stod(param[2]);
-			if(!parsePriority(param[3], param[4], param.size() > 5 ? param[5] : ""))
+			if(!parsePriority(param[3], param[4]))
 				throw invalid_argument("priority type is not recognized: " + param[3] + ", " + param[4]);
 			//if(param.size() <= 6)
 			//	break;
 			//if(!parseGradient(param[5], param.size() > 6 ? param[6] : ""))
 			//	throw invalid_argument("gradient type is not recognized: " + param[5]);
-			if(param.size() <= 6)
+			if(param.size() <= 5)
 				break; 
-			if(!parseVariation(param[6]))
-				throw invalid_argument("variation is not recognized: " + param[6]);
+			if(!parseVariation(param[5]))
+				throw invalid_argument("variation is not recognized: " + param[5]);
 		} while(false);
 	} catch(exception& e){
 		throw invalid_argument("Cannot parse parameters for PSGD\n" + string(e.what()));
@@ -71,7 +71,7 @@ void PSGD::ready()
 		priorityIdx.push_back(static_cast<int>(i));
 	}
 	// prepare priority
-	if(prioType == PriorityType::Decay){
+	if(prioType == PriorityType::DecayExp || prioType == PriorityType::DecayLinear){
 		priorityWver.resize(pd->size(), 0);
 		priorityDecayRate.resize(pd->size(), 1.0f);
 	}
@@ -145,7 +145,7 @@ Trainer::DeltaResult PSGD::batchDelta(
 	return batchDelta(start, cnt, avg);
 }
 
-bool PSGD::parsePriority(const std::string & typeInit, const std::string & type, const std::string & factor)
+bool PSGD::parsePriority(const std::string & typeInit, const std::string & type)
 {
 	if(contains(typeInit, { "p","project","projection","g","global" })){
 		prioInitType = PriorityType::Projection;
@@ -157,16 +157,18 @@ bool PSGD::parsePriority(const std::string & typeInit, const std::string & type,
 		prioType = PriorityType::Projection;
 	} else if(contains(type, { "l","length","s","square","self" })){
 		prioType = PriorityType::Length;
-	} else if(contains(type, { "d","decay" })){
-		prioType = PriorityType::Decay;
+	} else if(contains(type, { "d","e","decayexp" })){
+		prioType = PriorityType::DecayExp;
+	} else if(contains(type, { "i","decaylinear","decaylog" })){
+		prioType = PriorityType::DecayLinear;
 	} else
 		return false;
 	if(prioType == PriorityType::Length)
 		fp_cp = &PSGD::calcPriorityLength;
 	else
 		fp_cp = &PSGD::calcPriorityProjection;
-	if(!factor.empty())
-		prioDecayFactor = stod(factor);
+	//if(!factor.empty())
+	//	prioDecayFactor = stod(factor);
 	return true;
 }
 
@@ -227,7 +229,7 @@ std::pair<size_t, std::vector<double>> PSGD::phaseUpdatePriority(const size_t r)
 	while(--rcnt > 0){
 		auto&& g = pm->gradient(pd->get(renewPointer));
 		float p = calcPriority(g);
-		if(prioType == PriorityType::Decay){
+		if(prioType == PriorityType::DecayExp || prioType == PriorityType::DecayLinear){
 			updatePriorityDecay(p, renewPointer);
 		}
 		priority[renewPointer] = p;
@@ -245,7 +247,7 @@ std::pair<size_t, std::vector<double>> PSGD::phaseCalculateGradient(const size_t
 	Timer tmr;
 	vector<double> grad(paramWidth, 0.0);
 	vector<int> topk;
-	if(prioType == PriorityType::Decay)
+	if(prioType == PriorityType::DecayExp || prioType == PriorityType::DecayLinear)
 		getTopKDecay(k);
 	else
 		getTopK(k);
@@ -260,7 +262,7 @@ std::pair<size_t, std::vector<double>> PSGD::phaseCalculateGradient(const size_t
 		// calcualte priority
 		tmr.restart();
 		float p = calcPriority(g);
-		if(prioType == PriorityType::Decay){
+		if(prioType == PriorityType::DecayExp || prioType == PriorityType::DecayLinear){
 			updatePriorityDecay(p, id);
 		}
 		priority[id] = p;

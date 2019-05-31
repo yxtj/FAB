@@ -11,11 +11,12 @@ class PSGD : public Trainer
 	enum struct PriorityType{
 		Projection, // pi=gi*avg(g)
 		Length, // pi=gi*gi
-		Decay, // pi=gi*avg(g)*exp(at)
+		DecayExp, // pi=gi*avg(g)*exp(at)
+		DecayLinear, // pi=log(gi)+log(avg(g))+(at)
 	};
 	PriorityType prioType = PriorityType::Projection;
 	PriorityType prioInitType = PriorityType::Length;
-	double prioDecayFactor = -1;
+	//double prioDecayFactor = -1;
 	// gradient
 	//enum struct GradientType{
 	//	Increment, // keep the summation incrementally
@@ -58,7 +59,7 @@ public:
 
 // parse parameters
 private:
-	bool parsePriority(const std::string& typeInit, const std::string& type, const std::string& factor);
+	bool parsePriority(const std::string& typeInit, const std::string& type);
 	bool parseGradient(const std::string& type, const std::string& factor);
 	bool parseVariation(const std::string& str);
 // priority
