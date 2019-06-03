@@ -297,8 +297,8 @@ void PSGD::getTopKDecay(const size_t k)
 	//partial_sort(res.begin(), it, res.end(),
 	nth_element(priorityIdx.begin(), it, priorityIdx.end(),
 		[&](const int l, const int r){
-		return priority[l] * pow(priorityDecayRate[l], priorityWver[l] - wver)
-			> priority[r] * pow(priorityDecayRate[r], priorityWver[r] - wver); // pick the largest k
+		return priority[l] * exp(priorityDecayRate[l] * (wver - priorityWver[l]))
+			> priority[r] * exp(priorityDecayRate[r] * (wver - priorityWver[r])); // pick the largest k
 	});
 	prioThreshold = priority[*it];
 }
@@ -306,7 +306,7 @@ void PSGD::getTopKDecay(const size_t k)
 void PSGD::updatePriorityDecay(float p, size_t id)
 {
 	const float pold = priority[id];
-	if(pold == 0.0f){
+	if(pold == 0.0f || p <= 0.0f){
 		priorityDecayRate[id] = 1.0f;
 	} else if(wver == priorityWver[id]){
 		priorityDecayRate[id] = priorityDecayRate[id];
@@ -314,7 +314,8 @@ void PSGD::updatePriorityDecay(float p, size_t id)
 		float dp = pold - p;
 		size_t dn = wver - priorityWver[id];
 		// dp/p = 1 - exp(lambda * dn)
-		priorityDecayRate[id] = logf(1 - dp / p) / dn;
+		// lambda = ln(1-dp/p)/dn
+		priorityDecayRate[id] = logf(1 - dp / pold) / dn;
 	}
 	priorityWver[id] = wver;
 }
