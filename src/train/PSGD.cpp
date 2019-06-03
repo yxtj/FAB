@@ -71,7 +71,7 @@ void PSGD::ready()
 		priorityIdx.push_back(static_cast<int>(i));
 	}
 	// prepare priority
-	if(prioType == PriorityType::DecayExp || prioType == PriorityType::DecayLinear){
+	if(prioType == PriorityType::DecayExp){
 		priorityWver.resize(pd->size(), 0);
 		priorityDecayRate.resize(pd->size(), 1.0f);
 	}
@@ -108,9 +108,7 @@ Trainer::DeltaResult PSGD::batchDelta(
 	vector<double> grad1;
 	size_t r;
 	tie(r, grad1) = phaseUpdatePriority(renewSize);
-	if(varUpdateRptGradAll || varUpdateRptGradSel){
-		updateAvgGradDecay(grad1, static_cast<double>(r) / cnt);
-	}
+	updateAvgGradDecay(grad1, static_cast<double>(r) / cnt);
 	stat_t_grad_renew += tmr.elapseSd();
 	// phase 2: calculate gradient for parameter
 	tmr.restart();
@@ -123,7 +121,7 @@ Trainer::DeltaResult PSGD::batchDelta(
 	}
 	// phase 3: post-process
 	tmr.restart();
-	wver += r + k;
+	wver += static_cast<unsigned>(r + k);
 	if(varUpdateRptGradAll || varUpdateRptGradSel){
 		for(size_t j = 0; j < paramWidth; ++j)
 			grad2[j] += grad1[1];
@@ -159,8 +157,6 @@ bool PSGD::parsePriority(const std::string & typeInit, const std::string & type)
 		prioType = PriorityType::Length;
 	} else if(contains(type, { "d","e","decayexp" })){
 		prioType = PriorityType::DecayExp;
-	} else if(contains(type, { "i","decaylinear","decaylog" })){
-		prioType = PriorityType::DecayLinear;
 	} else
 		return false;
 	if(prioType == PriorityType::Length)
@@ -229,7 +225,7 @@ std::pair<size_t, std::vector<double>> PSGD::phaseUpdatePriority(const size_t r)
 	while(--rcnt > 0){
 		auto&& g = pm->gradient(pd->get(renewPointer));
 		float p = calcPriority(g);
-		if(prioType == PriorityType::DecayExp || prioType == PriorityType::DecayLinear){
+		if(prioType == PriorityType::DecayExp){
 			updatePriorityDecay(p, renewPointer);
 		}
 		priority[renewPointer] = p;
@@ -247,7 +243,7 @@ std::pair<size_t, std::vector<double>> PSGD::phaseCalculateGradient(const size_t
 	Timer tmr;
 	vector<double> grad(paramWidth, 0.0);
 	vector<int> topk;
-	if(prioType == PriorityType::DecayExp || prioType == PriorityType::DecayLinear)
+	if(prioType == PriorityType::DecayExp)
 		getTopKDecay(k);
 	else
 		getTopK(k);
@@ -262,7 +258,7 @@ std::pair<size_t, std::vector<double>> PSGD::phaseCalculateGradient(const size_t
 		// calcualte priority
 		tmr.restart();
 		float p = calcPriority(g);
-		if(prioType == PriorityType::DecayExp || prioType == PriorityType::DecayLinear){
+		if(prioType == PriorityType::DecayExp){
 			updatePriorityDecay(p, id);
 		}
 		priority[id] = p;
@@ -310,12 +306,15 @@ void PSGD::getTopKDecay(const size_t k)
 void PSGD::updatePriorityDecay(float p, size_t id)
 {
 	const float pold = priority[id];
-	float dp = pold - p;
-	if(pold == 0.0f)
+	if(pold == 0.0f){
 		priorityDecayRate[id] = 1.0f;
-	else if(wver == priorityWver[id])
+	} else if(wver == priorityWver[id]){
 		priorityDecayRate[id] = priorityDecayRate[id];
-	else
-		priorityDecayRate[id] = logf(dp / p) / logf(wver - priorityWver[id]);
+	} else{
+		float dp = pold - p;
+		size_t dn = wver - priorityWver[id];
+		// dp/p = 1 - exp(lambda * dn)
+		priorityDecayRate[id] = logf(1 - dp / p) / dn;
+	}
 	priorityWver[id] = wver;
 }

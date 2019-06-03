@@ -11,8 +11,7 @@ class PSGD : public Trainer
 	enum struct PriorityType{
 		Projection, // pi=gi*avg(g)
 		Length, // pi=gi*gi
-		DecayExp, // pi=gi*avg(g)*exp(at)
-		DecayLinear, // pi=log(gi)+log(avg(g))+(at)
+		DecayExp, // pi=gi*avg(g)*exp(a*t)
 	};
 	PriorityType prioType = PriorityType::Projection;
 	PriorityType prioInitType = PriorityType::Length;
@@ -35,8 +34,8 @@ class PSGD : public Trainer
 	float prioThreshold; // for variation-RptGradSel
 	//std::vector<float> priorityOld; // for priority decay
 	std::vector<float> priorityDecayRate; // for priority decay
-	std::vector<int> priorityWver; // for priority decay
-	int wver; // for priority decay
+	std::vector<unsigned> priorityWver; // for priority decay
+	unsigned wver; // for priority decay
 
 	size_t renewSize;
 	size_t renewPointer;
