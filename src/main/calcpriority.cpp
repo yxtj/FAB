@@ -218,6 +218,10 @@ int main(int argc, char* argv[]){
 		cerr << "data size does not match model" << endl;
 		return 4;
 	}
+	if(!opt.saveMemory && m.paramWidth() * dh.size() * sizeof(double) >= 8 * 1024 * 1024 * 1024){
+		cerr << "Warning: require at least "<<
+			m.paramWidth() * dh.size() * sizeof(double) / 1024 / 1024 / 1024 << " GB memory." << endl;
+	}
 
 	ParamArchiver archiver;
 	if(!archiver.init_read(opt.fnRecord, m.paramWidth(), opt.binary)){
