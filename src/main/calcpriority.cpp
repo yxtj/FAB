@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iomanip>
 #include <algorithm>
+#include <future>
 #include "data/DataHolder.h"
 #include "util/Util.h"
 #include "model/Model.h"
@@ -32,6 +33,7 @@ struct Option {
 	bool outputFloat = true;
 
 	bool saveMemory = false;
+	int nthread = 1;
 
 	CLI::App app;
 
@@ -60,6 +62,7 @@ struct Option {
 		app.add_flag("--ofloat", outputFloat, "Whether to output in 32-bit float (when obinary is set)");
 		// others
 		app.add_flag("--savememory", saveMemory, "Whether to save memory by running slower");
+		app.add_option("-w,--thread", nthread, "Number of thread");
 
 		try {
 			app.parse(argc, argv);
@@ -249,17 +252,43 @@ int main(int argc, char* argv[]){
 	double time;
 	Parameter param;
 	int idx = 0;
-	while(!archiver.eof() && archiver.valid()){
-		if(!archiver.load(iter, time, param))
-			continue;
-		if(!binary_search(opt.rlines.begin(), opt.rlines.end(), idx++)){
-			if(idx > opt.rlines.back())
-				break;
-			continue;
+	if(opt.nthread == 1){
+		while(!archiver.eof() && archiver.valid()){
+			if(!archiver.load(iter, time, param))
+				continue;
+			if(!binary_search(opt.rlines.begin(), opt.rlines.end(), idx++)){
+				if(idx > opt.rlines.back())
+					break;
+				continue;
+			}
+			m.setParameter(move(param));
+			vector<double> priority = calculator.priority(m, dh);
+			dumper.dump(priority);
 		}
-		m.setParameter(move(param));
-		vector<double> priority = calculator.priority(m, dh);
-		dumper.dump(priority);
+	} else{
+		while(!archiver.eof() && archiver.valid()){
+			vector<future<vector<double>>> handlers;
+			int i = 0;
+			while(i < opt.nthread && !archiver.eof() && archiver.valid()){
+				if(!archiver.load(iter, time, param))
+					continue;
+				if(!binary_search(opt.rlines.begin(), opt.rlines.end(), idx++)){
+					if(idx > opt.rlines.back())
+						break;
+					continue;
+				}
+				m.setParameter(move(param));
+				handlers.push_back(async(launch::async, [&](Model m){
+					return calculator.priority(m, dh);
+				}, m));
+				++idx;
+				++i;
+			}
+			for(size_t i = 0; i < handlers.size(); ++i){
+				auto priority = handlers[i].get();
+				dumper.dump(priority);
+			}
+		}
 	}
 	archiver.close();
 	fout.close();
