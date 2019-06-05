@@ -30,9 +30,9 @@ def getIdxByVer(ver):
         return ver[0], ver[1]
     return idx1, idx2
 
-__HEADER4__=['time', 'loss', 'difference', 'delta']
-__HEADER5__=['time', 'loss', 'accuracy', 'difference', 'delta']
-__HEADER6__=['iteration', 'time', 'loss', 'accuracy', 'difference', 'delta']
+__HEADER4__=['time(s)', 'loss', 'difference', 'delta']
+__HEADER5__=['time(s)', 'loss', 'accuracy', 'difference', 'delta']
+__HEADER6__=['iteration', 'time(s)', 'loss', 'accuracy', 'difference', 'delta']
 def getxyLabel(idx1, idx2, ncol):
     if ncol == 4 and idx1 < 4 and idx2 < 4:
         return __HEADER4__[idx1], __HEADER4__[idx2]
