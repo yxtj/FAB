@@ -31,6 +31,8 @@ struct Option {
 	bool outputBinary = false;
 	bool outputFloat = true;
 
+	bool saveMemory = false;
+
 	CLI::App app;
 
 	bool parse(int argc, char* argv[]){
@@ -56,6 +58,8 @@ struct Option {
 		app.add_option("-o,--output", fnOutput, "The output calcpriority file")->required();
 		app.add_flag("--obinary", outputBinary, "Whether to output in binary");
 		app.add_flag("--ofloat", outputFloat, "Whether to output in 32-bit float (when obinary is set)");
+		// others
+		app.add_flag("--savememory", saveMemory, "Whether to save memory by running slower");
 
 		try {
 			app.parse(argc, argv);
@@ -75,35 +79,59 @@ struct Option {
 };
 
 struct PriorityCalculator{
-	bool init(const string& pmethod){
-		if(pmethod == "square")
+	bool init(const string& pmethod, const bool& saveMem){
+		if(pmethod == "square"){
 			pf = &PriorityCalculator::prioritySquare;
-		else if(pmethod == "project")
-			pf = &PriorityCalculator::priorityProject;
-		else
+		} else if(pmethod == "project"){
+			if(saveMem)
+				pf = &PriorityCalculator::priorityProjectMemory;
+			else
+				pf = &PriorityCalculator::priorityProjectQuick;
+		} else
 			return false;
 		return true;
 	}
-	vector<double> priority(const vector<vector<double>>& gradient){
-		return (this->*pf)(gradient);
+	vector<double> priority(Model& m, const DataHolder& dh){
+		return (this->*pf)(m, dh);
 	}
 private:
-	using pf_t = vector<double>(PriorityCalculator::*)(const vector<vector<double>>&);
+	using pf_t = vector<double>(PriorityCalculator::*)(Model& m, const DataHolder& dh);
 	pf_t pf;
-	vector<double> prioritySquare(const vector<vector<double>>& gradient){
+	vector<double> prioritySquare(Model& m, const DataHolder& dh){
 		vector<double> res;
-		for(auto& g : gradient){
+		for(size_t i = 0; i < dh.size(); ++i){
+			auto g = m.gradient(dh.get(i));
 			double p = inner_product(g.begin(), g.end(), g.begin(), 0.0);
 			res.push_back(p);
 		}
 		return res;
 	}
-	vector<double> priorityProject(const vector<vector<double>>& gradient){
-		size_t n = gradient[0].size();
+	vector<double> priorityProjectMemory(Model& m, const DataHolder& dh){
+		size_t n = m.paramWidth();
 		vector<double> avg(n, 0.0);
-		for(auto& g : gradient){
-			for(size_t i = 0; i < n; ++i)
-				avg[i] += g[i];
+		for(size_t i = 0; i < dh.size(); ++i){
+			auto g = m.gradient(dh.get(i));
+			for(size_t j = 0; j < n; ++j)
+				avg[j] += g[j];
+		}
+		vector<double> res;
+		for(size_t i = 0; i < dh.size(); ++i){
+			auto g = m.gradient(dh.get(i));
+			double p = inner_product(g.begin(), g.end(), avg.begin(), 0.0);
+			res.push_back(p);
+		}
+		return res;
+	}
+	vector<double> priorityProjectQuick(Model& m, const DataHolder& dh){
+		size_t n = m.paramWidth();
+		vector<double> avg(n, 0.0);
+		vector<vector<double>> gradient;
+		gradient.reserve(dh.size());
+		for(size_t i = 0; i < dh.size(); ++i){
+			auto g = m.gradient(dh.get(i));
+			for(size_t j = 0; j < n; ++j)
+				avg[j] += g[j];
+			gradient.push_back(move(g));
 		}
 		for(auto& v : avg)
 			v /= gradient.size();
@@ -198,7 +226,7 @@ int main(int argc, char* argv[]){
 	}
 
 	PriorityCalculator calculator;
-	if(!calculator.init(opt.pmethod)){
+	if(!calculator.init(opt.pmethod, opt.saveMemory)){
 		cerr << "cannot initialize priority calculator with method: " << opt.pmethod << endl;
 		return 6;
 	}
@@ -224,13 +252,7 @@ int main(int argc, char* argv[]){
 			continue;
 		}
 		m.setParameter(move(param));
-		vector<vector<double>> gradient;
-		gradient.reserve(dh.size());
-		for(size_t i = 0; i < dh.size(); ++i){
-			auto g = m.gradient(dh.get(i));
-			gradient.push_back(move(g));
-		}
-		vector<double> priority = calculator.priority(gradient);
+		vector<double> priority = calculator.priority(m, dh);
 		dumper.dump(priority);
 	}
 	archiver.close();
