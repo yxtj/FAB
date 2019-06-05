@@ -281,7 +281,6 @@ int main(int argc, char* argv[]){
 				handlers.push_back(async(launch::async, [&](Model m){
 					return calculator.priority(m, dh);
 				}, m));
-				++idx;
 				++i;
 			}
 			for(size_t i = 0; i < handlers.size(); ++i){
