@@ -218,7 +218,9 @@ int main(int argc, char* argv[]){
 		cerr << "data size does not match model" << endl;
 		return 4;
 	}
-	if(!opt.saveMemory && m.paramWidth() * dh.size() * sizeof(double) >= 8 * 1024 * 1024 * 1024){
+	if(!opt.saveMemory && m.paramWidth() * dh.size() * sizeof(double) >=
+		8*static_cast<size_t>(1024 * 1024 * 1024))
+	{
 		cerr << "Warning: require at least "<<
 			m.paramWidth() * dh.size() * sizeof(double) / 1024 / 1024 / 1024 << " GB memory." << endl;
 	}
