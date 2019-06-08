@@ -49,8 +49,8 @@ Trainer::DeltaResult PSGD_dim::batchDelta(
 		grad[j] += gradient[i][j];
 	}
 	double factor = -rate;
-	if(!avg)
-		factor *= static_cast<double>(cnt);
+	if(avg)
+		factor /= k;
 	for(size_t i = 0; i < paramWidth; ++i){
 		auto& v = grad[i];
 		v *= factor / dimCnt[i];

@@ -62,8 +62,6 @@ Trainer::DeltaResult PSGD_point::batchDelta(
 	double factor = -rate;
 	if(avg)
 		factor /= k;
-	else
-		factor *= static_cast<double>(cnt) / k;
 	for(auto& v : grad)
 		v *= factor;
 	stat_t_grad_post += tmr.elapseSd();

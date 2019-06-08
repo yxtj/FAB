@@ -108,7 +108,7 @@ Trainer::DeltaResult PSGD::batchDelta(
 	vector<double> grad1;
 	size_t r;
 	tie(r, grad1) = phaseUpdatePriority(renewSize);
-	updateAvgGradDecay(grad1, static_cast<double>(r) / cnt);
+	updateAvgGrad(grad1, static_cast<double>(r) / cnt);
 	stat_t_grad_renew += tmr.elapseSd();
 	// phase 2: calculate gradient for parameter
 	tmr.restart();
@@ -117,7 +117,7 @@ Trainer::DeltaResult PSGD::batchDelta(
 	tie(k, grad2) = phaseCalculateGradient(k);
 	// variation
 	if(varUpdateAvgGradTop){
-		updateAvgGradDecay(grad2, static_cast<double>(k) / cnt);
+		updateAvgGrad(grad2, static_cast<double>(k) / cnt);
 	}
 	// phase 3: post-process
 	tmr.restart();
@@ -129,8 +129,8 @@ Trainer::DeltaResult PSGD::batchDelta(
 	double factor = -rate;
 	if(avg)
 		factor /= k;
-	else
-		factor *= static_cast<double>(cnt) / k;
+//	else
+//		factor *= static_cast<double>(cnt) / k;
 	for(auto& v : grad2)
 		v *= factor;
 	stat_t_grad_post += tmr.elapseSd();
@@ -209,7 +209,7 @@ float PSGD::calcPriorityLength(const std::vector<double>& g)
 	return static_cast<float>(p);
 }
 
-void PSGD::updateAvgGradDecay(const std::vector<double>& g, const double f)
+void PSGD::updateAvgGrad(const std::vector<double>& g, const double f)
 {
 	for(size_t j = 0; j < paramWidth; ++j){
 		avgGrad[j] = (1 - f)*avgGrad[j] * f + f * g[j];
@@ -306,16 +306,18 @@ void PSGD::getTopKDecay(const size_t k)
 void PSGD::updatePriorityDecay(float p, size_t id)
 {
 	const float pold = priority[id];
-	if(pold == 0.0f || p <= 0.0f){
-		priorityDecayRate[id] = 1.0f;
-	} else if(wver == priorityWver[id]){
+	if(wver == priorityWver[id] || pold == 0.0f || p == 0.0f){
 		priorityDecayRate[id] = priorityDecayRate[id];
 	} else{
-		float dp = pold - p;
-		size_t dn = wver - priorityWver[id];
-		// dp/p = 1 - exp(lambda * dn)
-		// lambda = ln(1-dp/p)/dn
-		priorityDecayRate[id] = logf(1 - dp / pold) / dn;
+		float dp = p / pold;
+		if(dp <= 0.0f){
+			priorityDecayRate[id] = 1.0f;
+		} else{
+			size_t dn = wver - priorityWver[id];
+			// dp/p = 1 - exp(lambda * dn)
+			// lambda = ln(1-dp/p)/dn
+			priorityDecayRate[id] = -logf(dp) / dn;
+		}
 	}
 	priorityWver[id] = wver;
 }

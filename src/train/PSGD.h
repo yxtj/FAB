@@ -70,7 +70,7 @@ private:
 	fp_cp_t fp_cp;
 // gradient
 private:
-	void updateAvgGradDecay(const std::vector<double>& g, const double f);
+	void updateAvgGrad(const std::vector<double>& g, const double f);
 // main logic:
 private:
 	std::pair<size_t, std::vector<double>> phaseUpdatePriority(const size_t r);
