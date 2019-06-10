@@ -34,6 +34,8 @@ struct Option {
 
 	bool saveMemory = false;
 	int nthread = 1;
+	bool resume = false;
+	size_t memory = 1<<30; // 1GB
 
 	CLI::App app;
 
@@ -57,12 +59,14 @@ struct Option {
 		app.add_flag("-n,--normalize", normalize, "Whether to do data normalization");
 		// output
 		app.add_option("-m,--pmethod", pmethod, "The method of calculating priority (project or square).")->required();
-		app.add_option("-o,--output", fnOutput, "The output calcpriority file")->required();
+		app.add_option("-o,--output", fnOutput, "The output priority file")->required();
 		app.add_flag("--obinary", outputBinary, "Whether to output in binary");
 		app.add_flag("--ofloat", outputFloat, "Whether to output in 32-bit float (when obinary is set)");
 		// others
 		app.add_flag("--savememory", saveMemory, "Whether to save memory by running slower");
 		app.add_option("-w,--thread", nthread, "Number of thread");
+		app.add_flag("-c,resume", resume, "Resume from the last item of output and append it");
+		app.add_option("--mem", memory, "Available memory for caching");
 
 		try {
 			app.parse(argc, argv);
@@ -147,8 +151,50 @@ private:
 	}
 };
 
-struct PriorityDumper{
-	bool init(const string& fname, bool obinary, bool ofloat){
+struct PriorityCounter {
+	pair<int, ios::streampos> processed(const string& fname, size_t npoint, bool obinary, bool ofloat){
+		if(obinary){
+			int byte = ofloat ? sizeof(float) : sizeof(double);
+			return processedBinary(fname, npoint, byte);
+		} else{
+			return processedCSV(fname, npoint);
+		}
+	}
+private:
+	pair<int, ios::streampos> processedBinary(const string& fname, size_t npoint, int byte){
+		ifstream fin(fname, ios::binary);
+		if(!fin)
+			return make_pair(0, 0);
+		fin.seekg(0, ios::end);
+		int length = fin.tellg();
+		int n = length / byte / npoint;
+		if(n*byte*npoint != length)
+			length = n * byte*npoint;
+		return make_pair(n, length);
+	}
+	pair<int, ios::streampos> processedCSV(const string& fname, size_t npoint){
+		ifstream fin(fname, ios::binary);
+		if(!fin)
+			return make_pair(0, 0);
+		string line;
+		int n = 0;
+		int length;
+		while(getline(fin, line)){
+			int c = 0;
+			for(char ch : line)
+				if(c == ',')
+					++c;
+			if(c != npoint - 1)
+				break;
+			++n;
+			length = fin.tellg();
+		}
+		return make_pair(n, length);
+	}
+};
+
+struct PriorityDumper {
+	bool init(const string& fname, bool obinary, bool ofloat, bool resume=false, ios::streampos pos=0){
 		if(obinary){
 			if(ofloat)
 				pf = &PriorityDumper::dumpFloat;
@@ -160,7 +206,12 @@ struct PriorityDumper{
 		ios_base::openmode f = ios::out;
 		if(obinary)
 			f |= ios::binary;
-		fout.open(fname, f);
+		if(resume && pos != 0){
+			fout.open(fname, f | ios::in);
+			fout.seekp(pos);
+		} else{
+			fout.open(fname, f);
+		}
 		return fout.is_open();
 	}
 	void dump(const std::vector<double>& priority)
@@ -225,7 +276,7 @@ int main(int argc, char* argv[]){
 		8*static_cast<size_t>(1024 * 1024 * 1024))
 	{
 		cerr << "Warning: require at least "<<
-			m.paramWidth() * dh.size() * sizeof(double) / 1024 / 1024 / 1024 << " GB memory." << endl;
+			m.paramWidth() * dh.size() * sizeof(double) / (1<<30) << " GB memory." << endl;
 	}
 
 	ParamArchiver archiver;
@@ -240,8 +291,14 @@ int main(int argc, char* argv[]){
 		return 6;
 	}
 
+	pair<int, ios::streampos> processed(0, 0);
+	if(opt.resume){
+		PriorityCounter pc;
+		processed = pc.processed(opt.fnOutput, dh.size(), opt.outputBinary, opt.outputFloat);
+		cout << "  Resume after parameter: " << processed.first << ", offset: " << processed.second;
+	}
 	PriorityDumper dumper;
-	if(!dumper.init(opt.fnOutput, opt.outputBinary, opt.outputFloat)){
+	if(!dumper.init(opt.fnOutput, opt.outputBinary, opt.outputFloat, opt.resume, processed.second)){
 		cerr << "cannot open output file: " << opt.fnOutput << endl;
 		return 7;
 	}
@@ -252,6 +309,19 @@ int main(int argc, char* argv[]){
 	double time;
 	Parameter param;
 	int idx = 0;
+	int ndump = 0;
+	// skip the processed
+	while(ndump < processed.first && !archiver.eof() && archiver.valid()){
+		if(!archiver.load(iter, time, param))
+			continue;
+		if(!binary_search(opt.rlines.begin(), opt.rlines.end(), idx++)){
+			if(idx > opt.rlines.back())
+				break;
+			continue;
+		}
+		++ndump;
+	}
+	// process
 	if(opt.nthread == 1){
 		while(!archiver.eof() && archiver.valid()){
 			if(!archiver.load(iter, time, param))
@@ -261,6 +331,7 @@ int main(int argc, char* argv[]){
 					break;
 				continue;
 			}
+			++ndump;
 			m.setParameter(move(param));
 			vector<double> priority = calculator.priority(m, dh);
 			dumper.dump(priority);
@@ -277,6 +348,7 @@ int main(int argc, char* argv[]){
 						break;
 					continue;
 				}
+				++ndump;
 				m.setParameter(move(param));
 				handlers.push_back(async(launch::async, [&](Model m){
 					return calculator.priority(m, dh);
