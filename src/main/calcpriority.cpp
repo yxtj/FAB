@@ -35,7 +35,7 @@ struct Option {
 	bool saveMemory = false;
 	int nthread = 1;
 	bool resume = false;
-	size_t memory = 1<<30; // 1GB
+	size_t memory = 4*(static_cast<size_t>(1)<<30); // 4-GB
 
 	CLI::App app;
 
@@ -66,7 +66,7 @@ struct Option {
 		app.add_flag("--savememory", saveMemory, "Whether to save memory by running slower");
 		app.add_option("-w,--thread", nthread, "Number of thread");
 		app.add_flag("-c,--resume", resume, "Resume from the last item of output and append it");
-		app.add_option("--mem", memory, "Available memory for caching");
+		app.add_option("--memory", memory, "Available memory for caching");
 
 		try {
 			app.parse(argc, argv);
@@ -86,13 +86,13 @@ struct Option {
 };
 
 struct PriorityCalculator{
-	bool init(const string& pmethod, const bool& saveMem, const size_t mem, const size_t unit){
+	bool init(const string& pmethod, const bool& saveMem, const size_t buffNumberEach){
 		if(pmethod == "square"){
 			pf = &PriorityCalculator::prioritySquare;
 		} else if(pmethod == "project"){
 			if(saveMem){
-				pf = &PriorityCalculator::priorityProjectMemory;
-				buffCnt = mem / unit;
+				pf = &PriorityCalculator::priorityProjectSmallSpace;
+				bsize = buffNumberEach;
 			} else
 				pf = &PriorityCalculator::priorityProjectQuick;
 		} else
@@ -103,7 +103,7 @@ struct PriorityCalculator{
 		return (this->*pf)(m, dh);
 	}
 private:
-	size_t buffCnt;
+	size_t bsize;
 	using pf_t = vector<double>(PriorityCalculator::*)(Model& m, const DataHolder& dh);
 	pf_t pf;
 	vector<double> prioritySquare(Model& m, const DataHolder& dh){
@@ -115,24 +115,27 @@ private:
 		}
 		return res;
 	}
-	vector<double> priorityProjectMemory(Model& m, const DataHolder& dh){
-		size_t n = m.paramWidth();
+	vector<double> priorityProjectSmallSpace(Model& m, const DataHolder& dh){
+		const size_t n = m.paramWidth();
 		vector<double> avg(n, 0.0);
+		vector<vector<double>> buffer;
 		for(size_t i = 0; i < dh.size(); ++i){
 			auto g = m.gradient(dh.get(i));
 			for(size_t j = 0; j < n; ++j)
 				avg[j] += g[j];
+			if(i < bsize) // buffer the first bsize gradients
+				buffer.push_back(move(g));
 		}
 		vector<double> res;
 		for(size_t i = 0; i < dh.size(); ++i){
-			auto g = m.gradient(dh.get(i));
+			auto g = i < bsize ? buffer[i] : m.gradient(dh.get(i));
 			double p = inner_product(g.begin(), g.end(), avg.begin(), 0.0);
 			res.push_back(p);
 		}
 		return res;
 	}
 	vector<double> priorityProjectQuick(Model& m, const DataHolder& dh){
-		size_t n = m.paramWidth();
+		const size_t n = m.paramWidth();
 		vector<double> avg(n, 0.0);
 		vector<vector<double>> gradient;
 		gradient.reserve(dh.size());
@@ -175,7 +178,7 @@ private:
 		return make_pair(static_cast<int>(n), length);
 	}
 	pair<int, ios::streampos> processedCSV(const string& fname, size_t npoint){
-		ifstream fin(fname, ios::binary);
+		ifstream fin(fname);
 		if(!fin)
 			return make_pair(0, 0);
 		string line;
@@ -260,13 +263,6 @@ int main(int argc, char* argv[]){
 	}
 	ios_base::sync_with_stdio(false);
 
-	ofstream fout(opt.fnOutput);
-	if(!opt.fnOutput.empty() && fout.fail()){
-		cerr << "cannot open output file: " << opt.fnOutput << endl;
-		return 2;
-	}
-	const bool write = !opt.fnOutput.empty();
-
 	DataHolder dh(1, 0);
 	dh.load(opt.fnData, ",", opt.idSkip, opt.idY, false, true);
 	if(opt.normalize)
@@ -297,21 +293,24 @@ int main(int argc, char* argv[]){
 		return 5;
 	}
 
-	PriorityCalculator calculator;
-	if(!calculator.init(opt.pmethod, opt.saveMemory, opt.memory, m.paramWidth()*dh.size()*sizeof(double))){
-		cerr << "cannot initialize priority calculator with method: " << opt.pmethod << endl;
-		return 6;
-	}
-
 	pair<int, ios::streampos> processed(0, 0);
 	if(opt.resume){
 		PriorityCounter pc;
 		processed = pc.processed(opt.fnOutput, dh.size(), opt.outputBinary, opt.outputFloat);
-		cout << "  Resume after parameter: " << processed.first << ", offset: " << processed.second;
+		cout << "Resume after parameter: " << processed.first << ", offset: " << processed.second;
 	}
+
 	PriorityDumper dumper;
 	if(!dumper.init(opt.fnOutput, opt.outputBinary, opt.outputFloat, opt.resume, processed.second)){
 		cerr << "cannot open output file: " << opt.fnOutput << endl;
+		return 6;
+	}
+
+	PriorityCalculator calculator;
+	if(!calculator.init(opt.pmethod, opt.saveMemory,
+		opt.memory/(m.paramWidth()*dh.size()*sizeof(double))/opt.nthread))
+	{
+		cerr << "cannot initialize priority calculator with method: " << opt.pmethod << endl;
 		return 7;
 	}
 
@@ -378,6 +377,5 @@ int main(int argc, char* argv[]){
 		}
 	}
 	archiver.close();
-	fout.close();
 	return 0;
 }
