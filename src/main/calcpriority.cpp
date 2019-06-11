@@ -42,6 +42,7 @@ struct Option {
 	bool parse(int argc, char* argv[]){
 		string tmp_r;
 		string tmp_s, tmp_y;
+		string tmp_m;
 		app.add_option("-a,--algorithm", alg, "The algorithm to run")->required();
 		app.add_option("-p,--parameter", algParam,
 			"The parameter of the algorithm, usually the shape of the algorithm")->required();
@@ -66,7 +67,7 @@ struct Option {
 		app.add_flag("--savememory", saveMemory, "Whether to save memory by running slower");
 		app.add_option("-w,--thread", nthread, "Number of thread");
 		app.add_flag("-c,--resume", resume, "Resume from the last item of output and append it");
-		app.add_option("--memory", memory, "Available memory for caching");
+		app.add_option("--memory", tmp_m, "Available memory for caching (support k,m,g)");
 
 		try {
 			app.parse(argc, argv);
@@ -74,6 +75,7 @@ struct Option {
 			sort(rlines.begin(), rlines.end());
 			idSkip = getIntListByRange(tmp_s);
 			idY = getIntListByRange(tmp_y);
+			memory = stoulKMG(tmp_m, true);
 		} catch(const CLI::ParseError &e) {
 			cout << e.what() << endl;
 			return false;
