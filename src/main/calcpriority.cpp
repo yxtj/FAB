@@ -301,7 +301,7 @@ int main(int argc, char* argv[]){
 	if(opt.resume){
 		PriorityCounter pc;
 		processed = pc.processed(opt.fnOutput, dh.size(), opt.outputBinary, opt.outputFloat);
-		cout << "Resume after parameter: " << processed.first << ", offset: " << processed.second;
+		cout << "Resume after parameter: " << processed.first << ", offset: " << processed.second << endl;
 	}
 
 	PriorityDumper dumper;
