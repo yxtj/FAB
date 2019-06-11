@@ -81,6 +81,7 @@ done done
 mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d $DATADIR/$ALG-$PARAM-$DSIZE-d.csv -r $RESDIR/$m-$i-p$k.csv -y $YLIST -o psgd:$lr:$k -s $bs -b --term_iter $ITER --term_time $TIME --arch_iter 10 --arch_time 20 --log_iter 100 --v=1 > $LOGDIR/$m-$i-p$k;
 
 #k=$(echo $k0/$i | bc -l | sed 's/0\+$//' | sed 's/^\./0./');
+#lr=$(printf "%.4f" $(echo $lr0/$k | bc -l) | sed 's/0*$//')
 
 # batch of priority and benchmark
 ITER=10k; TIME=600;
