@@ -36,6 +36,7 @@ struct Option {
 	int nthread = 1;
 	bool resume = false;
 	size_t memory = 4*(static_cast<size_t>(1)<<30); // 4-GB
+	size_t logIter = 500;
 
 	CLI::App app;
 
@@ -68,6 +69,7 @@ struct Option {
 		app.add_option("-w,--thread", nthread, "Number of thread");
 		app.add_flag("-c,--resume", resume, "Resume from the last item of output and append it");
 		app.add_option("--memory", tmp_m, "Available memory for caching (support k,m,g)");
+		app.add_option("--logiter", logIter, "Interval of reporting progress");
 
 		try {
 			app.parse(argc, argv);
@@ -351,6 +353,8 @@ int main(int argc, char* argv[]){
 			m.setParameter(move(param));
 			vector<double> priority = calculator.priority(m, dh);
 			dumper.dump(priority);
+			if(ndump % opt.logIter == 0)
+				cout << "  processed: " << ndump << endl;
 		}
 	} else{
 		while(!archiver.eof() && archiver.valid()){
@@ -376,6 +380,8 @@ int main(int argc, char* argv[]){
 				auto priority = handlers[i].get();
 				dumper.dump(priority);
 			}
+			if(ndump % opt.logIter == 0)
+				cout << "  processed: " << ndump << endl;
 		}
 	}
 	archiver.close();
