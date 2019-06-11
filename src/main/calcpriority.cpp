@@ -284,12 +284,6 @@ int main(int argc, char* argv[]){
 		cerr << "data size does not match model" << endl;
 		return 4;
 	}
-	if(!opt.saveMemory && m.paramWidth() * dh.size() * sizeof(double) >=
-		8*static_cast<size_t>(1<<30))
-	{
-		cerr << "Warning: require at least "<<
-			m.paramWidth() * dh.size() * sizeof(double) / (1<<30) << " GB memory." << endl;
-	}
 
 	ParamArchiver archiver;
 	if(!archiver.init_read(opt.fnRecord, m.paramWidth(), opt.binary)){
@@ -318,7 +312,9 @@ int main(int argc, char* argv[]){
 		return 7;
 	}
 
-	cout << "# of data points: " << dh.size() << ", # of parameters: " << m.paramWidth() << endl;
+	cout << "# of data points: " << dh.size() << ", # of parameters: " << m.paramWidth()
+		<< ", required memory (MB): " << ((m.paramWidth() * dh.size() * sizeof(double)) >> 20)
+		<< endl;
 
 	int iter;
 	double time;
