@@ -42,8 +42,8 @@ class PSGD : public Trainer
 	size_t topSize;
 
 public:
-	double stat_t_grad_renew = 0, stat_t_grad_calc = 0, stat_t_grad_post = 0;
-	double stat_t_prio_pick = 0, stat_t_prio_update = 0;
+	double stat_t_renew = 0, stat_t_update = 0, stat_t_post = 0;
+	double stat_t_topk = 0, stat_t_grad_calc = 0, stat_t_prio_calc = 0;
 
 public:
 	virtual void init(const std::vector<std::string>& param);
@@ -57,10 +57,14 @@ public:
 	virtual DeltaResult batchDelta(std::atomic<bool>& cond,
 		const size_t start, const size_t cnt, const bool avg = true);
 
+// main logic:
+private:
+	std::pair<size_t, std::vector<double>> phaseUpdatePriority(const size_t r);
+	std::pair<size_t, std::vector<double>> phaseCalculateGradient(const size_t k);
+
 // parse parameters
 private:
 	bool parsePriority(const std::string& typeInit, const std::string& type);
-	bool parseGradient(const std::string& type, const std::string& factor);
 	bool parseVariation(const std::string& str);
 // priority
 private:
@@ -69,14 +73,17 @@ private:
 	float calcPriorityLength(const std::vector<double>& g);
 	using fp_cp_t = decltype(&PSGD::calcPriority);
 	fp_cp_t fp_cp;
+	void updatePriority(float p, size_t id);
+	void updatePriorityKeep(float p, size_t id);
+	void updatePriorityDecay(float p, size_t id);
+	using fp_up_t = decltype(&PSGD::updatePriority);
+	fp_up_t fp_up;
+	void getTopK(const size_t k);
+	bool topKPredKeep(const int l, const int r);
+	bool topKPredDecay(const int l, const int r);
+	using fp_pkp_t = decltype(&PSGD::topKPredKeep);
+	fp_pkp_t fp_pkp;
 // gradient
 private:
 	void updateAvgGrad(const std::vector<double>& g, const double f);
-// main logic:
-private:
-	std::pair<size_t, std::vector<double>> phaseUpdatePriority(const size_t r);
-	std::pair<size_t, std::vector<double>> phaseCalculateGradient(const size_t k);
-	void getTopK(const size_t k);
-	void getTopKDecay(const size_t k);
-	void updatePriorityDecay(float p, size_t id);
 };
