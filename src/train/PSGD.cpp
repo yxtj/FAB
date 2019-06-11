@@ -84,10 +84,8 @@ void PSGD::ready()
 		}
 	}
 	// prepare top priority list
-	size_t k = static_cast<size_t>(pd->size() * topRatio);
-	if(k == pd->size())
-		--k;
-	getTopK(k);
+	size_t topSize = static_cast<size_t>(pd->size() * topRatio);
+	getTopK(topSize);
 }
 
 PSGD::~PSGD()
@@ -113,8 +111,8 @@ Trainer::DeltaResult PSGD::batchDelta(
 	// phase 2: calculate gradient for parameter
 	tmr.restart();
 	vector<double> grad2;
-	size_t k = static_cast<size_t>(round(topRatio*cnt));
-	tie(k, grad2) = phaseCalculateGradient(k);
+	size_t k;
+	tie(k, grad2) = phaseCalculateGradient(topSize);
 	// variation
 	if(varUpdateAvgGradTop){
 		updateAvgGrad(grad2, static_cast<double>(k) / cnt);
@@ -129,8 +127,6 @@ Trainer::DeltaResult PSGD::batchDelta(
 	double factor = -rate;
 	if(avg)
 		factor /= k;
-//	else
-//		factor *= static_cast<double>(cnt) / k;
 	for(auto& v : grad2)
 		v *= factor;
 	stat_t_grad_post += tmr.elapseSd();

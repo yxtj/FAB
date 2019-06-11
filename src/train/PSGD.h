@@ -39,6 +39,7 @@ class PSGD : public Trainer
 
 	size_t renewSize;
 	size_t renewPointer;
+	size_t topSize;
 
 public:
 	double stat_t_grad_renew = 0, stat_t_grad_calc = 0, stat_t_grad_post = 0;

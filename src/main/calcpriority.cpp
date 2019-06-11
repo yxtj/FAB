@@ -49,7 +49,7 @@ struct Option {
 		app.add_option("-r,--record", fnRecord, "The file of the parameter record")->required();
 		app.add_flag("-b,--binary", binary, "Whether the record file is binary");
 		app.add_option("-l,--linelist", tmp_r, "The Lines of the parameter to use. "
-			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)")->required();
+			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)");
 		// data-file
 		app.add_option("-d,--data", fnData, "The data file")->required();
 		app.add_option("--skip", tmp_s, "The columns to skip in the data file. "
@@ -58,14 +58,14 @@ struct Option {
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)");
 		app.add_flag("-n,--normalize", normalize, "Whether to do data normalization");
 		// output
-		app.add_option("-m,--pmethod", pmethod, "The method of calculating priority (project or square).")->required();
+		app.add_option("-m,--pmethod", pmethod, "The method of calculating priority (project or square).");
 		app.add_option("-o,--output", fnOutput, "The output priority file")->required();
 		app.add_flag("--obinary", outputBinary, "Whether to output in binary");
 		app.add_flag("--ofloat", outputFloat, "Whether to output in 32-bit float (when obinary is set)");
 		// others
 		app.add_flag("--savememory", saveMemory, "Whether to save memory by running slower");
 		app.add_option("-w,--thread", nthread, "Number of thread");
-		app.add_flag("-c,resume", resume, "Resume from the last item of output and append it");
+		app.add_flag("-c,--resume", resume, "Resume from the last item of output and append it");
 		app.add_option("--mem", memory, "Available memory for caching");
 
 		try {
@@ -86,13 +86,14 @@ struct Option {
 };
 
 struct PriorityCalculator{
-	bool init(const string& pmethod, const bool& saveMem){
+	bool init(const string& pmethod, const bool& saveMem, const size_t mem, const size_t unit){
 		if(pmethod == "square"){
 			pf = &PriorityCalculator::prioritySquare;
 		} else if(pmethod == "project"){
-			if(saveMem)
+			if(saveMem){
 				pf = &PriorityCalculator::priorityProjectMemory;
-			else
+				buffCnt = mem / unit;
+			} else
 				pf = &PriorityCalculator::priorityProjectQuick;
 		} else
 			return false;
@@ -102,6 +103,7 @@ struct PriorityCalculator{
 		return (this->*pf)(m, dh);
 	}
 private:
+	size_t buffCnt;
 	using pf_t = vector<double>(PriorityCalculator::*)(Model& m, const DataHolder& dh);
 	pf_t pf;
 	vector<double> prioritySquare(Model& m, const DataHolder& dh){
@@ -166,11 +168,11 @@ private:
 		if(!fin)
 			return make_pair(0, 0);
 		fin.seekg(0, ios::end);
-		int length = fin.tellg();
-		int n = length / byte / npoint;
+		ios::streampos length = fin.tellg();
+		size_t n = length / byte / npoint;
 		if(n*byte*npoint != length)
 			length = n * byte*npoint;
-		return make_pair(n, length);
+		return make_pair(static_cast<int>(n), length);
 	}
 	pair<int, ios::streampos> processedCSV(const string& fname, size_t npoint){
 		ifstream fin(fname, ios::binary);
@@ -178,7 +180,7 @@ private:
 			return make_pair(0, 0);
 		string line;
 		int n = 0;
-		int length;
+		ios::streampos length;
 		while(getline(fin, line)){
 			int c = 0;
 			for(char ch : line)
@@ -240,6 +242,16 @@ private:
 	}
 };
 
+int checkRecordLineId(const vector<int>& rlines, const int idx){
+	if(rlines.empty() || binary_search(rlines.begin(), rlines.end(), idx)){
+		return 1;
+	}else{
+		if(idx > rlines.back())
+			return -1;
+		return 0;
+	}
+}
+
 int main(int argc, char* argv[]){
 	Option opt;
 	if(!opt.parse(argc, argv)){
@@ -273,7 +285,7 @@ int main(int argc, char* argv[]){
 		return 4;
 	}
 	if(!opt.saveMemory && m.paramWidth() * dh.size() * sizeof(double) >=
-		8*static_cast<size_t>(1024 * 1024 * 1024))
+		8*static_cast<size_t>(1<<30))
 	{
 		cerr << "Warning: require at least "<<
 			m.paramWidth() * dh.size() * sizeof(double) / (1<<30) << " GB memory." << endl;
@@ -286,7 +298,7 @@ int main(int argc, char* argv[]){
 	}
 
 	PriorityCalculator calculator;
-	if(!calculator.init(opt.pmethod, opt.saveMemory)){
+	if(!calculator.init(opt.pmethod, opt.saveMemory, opt.memory, m.paramWidth()*dh.size()*sizeof(double))){
 		cerr << "cannot initialize priority calculator with method: " << opt.pmethod << endl;
 		return 6;
 	}
@@ -314,21 +326,24 @@ int main(int argc, char* argv[]){
 	while(ndump < processed.first && !archiver.eof() && archiver.valid()){
 		if(!archiver.load(iter, time, param))
 			continue;
-		if(!binary_search(opt.rlines.begin(), opt.rlines.end(), idx++)){
-			if(idx > opt.rlines.back())
-				break;
+		int state = checkRecordLineId(opt.rlines, idx++);
+		if(state == -1){
+			break;
+		} else if(state == 0){
 			continue;
+		} else{
+			++ndump;
 		}
-		++ndump;
 	}
 	// process
 	if(opt.nthread == 1){
 		while(!archiver.eof() && archiver.valid()){
 			if(!archiver.load(iter, time, param))
 				continue;
-			if(!binary_search(opt.rlines.begin(), opt.rlines.end(), idx++)){
-				if(idx > opt.rlines.back())
-					break;
+			int state = checkRecordLineId(opt.rlines, idx++);
+			if(state == -1){
+				break;
+			} else if(state == 0){
 				continue;
 			}
 			++ndump;
@@ -343,9 +358,10 @@ int main(int argc, char* argv[]){
 			while(i < opt.nthread && !archiver.eof() && archiver.valid()){
 				if(!archiver.load(iter, time, param))
 					continue;
-				if(!binary_search(opt.rlines.begin(), opt.rlines.end(), idx++)){
-					if(idx > opt.rlines.back())
-						break;
+				int state = checkRecordLineId(opt.rlines, idx++);
+				if(state == -1){
+					break;
+				} else if(state == 0){
 					continue;
 				}
 				++ndump;
