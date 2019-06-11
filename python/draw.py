@@ -6,10 +6,9 @@ This is a temporary script file.
 """
 
 import os
-import pandas
 import numpy as np
 import matplotlib.pyplot as plt
-import re
+from util import *
 
 os.chdir('E:/Code/FSB/score/')
 #os.chdir('E:/Code/FSB/score/lr/10-100k/1000-0.1')
@@ -52,15 +51,9 @@ def renameLegend(lgd):
 
 
 def drawOne(fn, n=None, ver=0, xlbl=None, ylbl=None):
-    if fn.endswith('.txt'):
-        d = pandas.read_csv(fn,header=None);
-        lgd = fn.replace('.txt','')
-    else:
-        d = pandas.read_csv(fn+'.txt',header=None);
-        lgd = fn
-    idx1,idx2=getIdxByVer(ver)
-    xr,yr = getxyLabel(idx1, idx2, d.shape[1])
-    plt.plot(d[:n][idx1], d[:n][idx2])
+    x, y, xr, yr = loadScore(fn, n, ver)
+    lgd = fn.replace('.txt','')
+    plt.plot(x, y)
     xlbl=xlbl if xlbl is not None else xr
     ylbl=ylbl if ylbl is not None else yr  
     plt.xlabel(xlbl)
@@ -72,26 +65,20 @@ def drawOne(fn, n=None, ver=0, xlbl=None, ylbl=None):
 #drawOne('fab', 1)
 
 def plotUnit(legendList, fn, name, lineMarker, color, n, idx1, idx2):
-    d=pandas.read_csv(fn, skiprows=0, header=None)
-    line = plt.plot(d[:n][idx1], d[:n][idx2], lineMarker, color=color)
+    x, y, xr, yr = loadScore(fn, n, idx1=idx1, idx2=idx2)
+    line = plt.plot(x, y, lineMarker, color=color)
     if(legendList is not None):
         legendList.append(name)
-    return line[0].get_color(), d.shape[1]
+    return line[0].get_color(), (xr, xy)
 
-def plotScoreUnit(legendList, d, name, lineMarker, color, n, idx1, idx2):
-    line = plt.plot(d[:n][idx1], d[:n][idx2], lineMarker, color=color)
-    if(legendList is not None):
-        legendList.append(name)
-    return line[0].get_color(), d.shape[1]
-    
-def drawList(prefix, mList, n=None, ver=0, xlbl=None, ylbl=None):
+def drawList(prefix, mList, n=None, ver=1, xlbl=None, ylbl=None):
     plt.figure();
     idx1,idx2=getIdxByVer(ver)
     for m in mList:
-        _, nc = plotUnit(None, prefix+m+'.txt', m, '-', None, n, idx1, idx2)
+        _, xyr = plotUnit(None, prefix+m+'.txt', m, '-', None, n, idx1, idx2)
     #plt.hold(True)
     plt.legend(renameLegend(mList))
-    xr,yr = getxyLabel(idx1, idx2, nc)
+    xr,yr = xyr
     xlbl=xlbl if xlbl is not None else xr
     ylbl=ylbl if ylbl is not None else yr  
     plt.xlabel(xlbl)
@@ -99,7 +86,14 @@ def drawList(prefix, mList, n=None, ver=0, xlbl=None, ylbl=None):
     plt.tight_layout()
     plt.show()
 
-def drawScoreList(dataList, nameList, n=None, ver=0, xlbl=None, ylbl=None):
+
+def plotScoreUnit(legendList, d, name, lineMarker, color, n, idx1, idx2):
+    line = plt.plot(d[:n][idx1], d[:n][idx2], lineMarker, color=color)
+    if(legendList is not None):
+        legendList.append(name)
+    return line[0].get_color(), d.shape[1]
+
+def drawScoreList(dataList, nameList, n=None, ver=1, xlbl=None, ylbl=None):
     plt.figure();
     idx1,idx2=getIdxByVer(ver)
     for i in range(len(dataList)):
@@ -107,7 +101,7 @@ def drawScoreList(dataList, nameList, n=None, ver=0, xlbl=None, ylbl=None):
         m = nameList[i]
         _, nc = plotScoreUnit(None, d, m, '-', None, n, idx1, idx2)
     #plt.hold(True)
-    plt.legend(renameLegend(mList))
+    plt.legend(renameLegend(nameList))
     xr,yr = getxyLabel(idx1, idx2, nc)
     xlbl=xlbl if xlbl is not None else xr
     ylbl=ylbl if ylbl is not None else yr  
@@ -123,16 +117,7 @@ def drawScoreList(dataList, nameList, n=None, ver=0, xlbl=None, ylbl=None):
 #lmode_=['bsp-','tap-','aap-']
 #l=['%d-0.01/aap-%i' % (10*i*i,i) for i in ln]
 
-def genFLpre(pre, l):
-    return [str(pre)+str(i) for i in l]
-
-def genFLpost(l, post):
-    return [str(i)+str(post) for i in l]
-
-def genFL(pre, l, post=''):
-    return [str(pre)+str(i)+post for i in l]
-
-def drawListCmp(prefix, mList1, mList2, mList3=None, n=None, ncol=1, ver=0, xlbl=None, ylbl=None, save=False):
+def drawListCmp(prefix, mList1, mList2, mList3=None, n=None, ncol=1, ver=1, xlbl=None, ylbl=None, save=False):
     llen=len(mList1)
     if mList2 is None or len(mList2) == 0:
         mList2=None
@@ -160,145 +145,50 @@ def drawListCmp(prefix, mList1, mList2, mList3=None, n=None, ncol=1, ver=0, xlbl
     ylbl=ylbl if ylbl is not None else yr
     plt.xlabel(xlbl)
     plt.ylabel(ylbl)
-    if save:
-        gfn=re.sub('^../','',prefix)
-        gfn=re.sub('/$','',gfn)
-        gfn=gfn.replace('-100k/','/').replace('/','-')
-        plt.savefig(gfn+'.png')
+    if save and isinstance(save, str):
+        plt.savefig(save)
     plt.tight_layout()
     plt.show()
 
+
+def drawScale(prefix, l_nw, nameList, value, speedup=False, ref=False, fit=False, est=False, refIdx=0, ver=1):
+    points=np.array([whenReachValue(prefix+fn, value, est, ver) for fn in nameList])
+    x=np.array(l_nw)
+    p=np.argmax(points!=np.nan) # first points[i] != np.nan
+    if p!=0 and points[0] == np.nan:
+        points=points[p:]
+        x=x[p:]
+        refIdx-=p
+    plt.figure()
+    plt.xlabel('number of workers')
+    if speedup:
+        su=points[refIdx]/points*x[refIdx]
+        plt.plot(x, su, '*-', label='actual')
+        if ref:
+            plt.plot(x, x, '-', label='optimal')
+        if fit:
+            z=np.polyfit(x, su, 1)
+            fun=np.poly1d(z)
+            plt.plot(x, fun(x), '--', label='fit')
+        plt.ylabel('speed-up')
+    else:
+        plt.plot(x, points, '*-', label='actual')
+        if ref:
+            plt.plot(x, points[refIdx]*x[refIdx]/x, '-', label='optimal')
+        if fit:
+            z=np.polyfit(x, 1/points, 1)
+            fun=np.poly1d(z)
+            plt.plot(x, 1/fun(l_nw), '--', label='fit')
+        plt.ylabel('time (s)')
+    plt.ylim([0,None])
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+    return points
 
 #drawListCmp('../10000-0.1/',['async-1','async-2','async-4'],['fab-1','fab-2','fab-4'])
 #drawListCmp('10,15,1-100k/1000-0.1/',['async-1','async-2','async-4', 'async-8'],['fab-1','fab-2','fab-4','fab-8'])
 #bsl=[100,250,500,750,1000]
 #drawListCmp('',genFLpre(bsl_all,'-0.1/tap-4'), genFLpre(bsl_all,'-0.1/aap-4'),None,4)
 
-# returnn time and score, each file holds a ROW
-def getRecord(prefix, mList, asMatrix=False):
-    time=[]
-    score=[]
-    for m in mList:
-        t=pandas.read_csv(prefix+m+'.txt',skiprows=0, header=None)
-        time.append(t[:][0].values)
-        score.append(t[:][1].values)
-    if asMatrix == True:
-        time=np.array(time)
-        score=np.array(score)
-    return time,score
-
-
-def score2progress(score, p0=None, pinf=None):
-    if isinstance(score, np.ndarray):
-        # 1-D and 2-D np.array
-        if p0 is None:
-            p0=score.max()
-        if pinf is None:
-            pinf=score.min()
-        return (p0-score)/(p0-pinf)
-    else:
-        # list of np.array
-        n=len(score)
-        if p0 is None or pinf is None:
-            tp0=0
-            tpinf=np.inf
-            for i in range(n):
-                tp0=max(tp0, score[i].max())
-                tpinf=min(tpinf, score[i].min())
-            if p0 is None:
-                p0=tp0
-            if pinf is None:
-                pinf=tpinf
-        res=[]
-        for i in range(n):
-            res.append((p0-score[i])/(p0-pinf))
-        return res
-
-def findTime4score(time, score, spoint):
-    if isinstance(score, np.ndarray) and score.ndim == 2:
-        # matrix
-        t=np.abs(score-spoint)
-        idx=t.argmin(1)
-    elif isinstance(score, list) and isinstance(score[0], np.ndarray):
-        # list of np.array
-        idx=[]
-        for sl in score:
-            t=np.abs(sl-spoint)
-            idx.append(t.argmin())
-    else: # isinstance(score, numpy.ndarray) && score.ndim == 1:
-        # 1-D array
-        t=np.abs(score-spoint)
-        idx=t.argmin()
-        return time[idx]
-    res=[]
-    for i in range(len(idx)):
-        res.append(time[i][idx[i]])
-    return np.array(res)
-
-
-def drawScale(time, score, x, ppoints, refX=None):
-    assert len(time) == len(x) and len(score) == len(x)
-    if refX==None:
-        refIdx=0
-    else:
-        refIdx=x.index(refX)
-    factor = np.array(x).reshape([len(x),1]) / x[refIdx]
-    progress=score2progress(score)
-    lgd=[]
-    plt.figure()
-    for pp in ppoints:
-        t = findTime4score(time, progress, pp)
-        plt.plot(x, t, '-')
-        plt.plot(x, t[refIdx]/factor, '--')
-        lgd.append(str(pp)+'-act')
-        lgd.append(str(pp)+'-opt')
-    plt.xlabel('# of workers')
-    plt.ylabel('time (s)')
-    plt.legend(lgd)
-    plt.show()
-    
-    
-#time,score=getRecord('../10000-0.1/',['fab-1','fab-2','fab-4','fab-8'])
-#drawScale(time, score, [1,2,4,8], [0.9])
-
-
-def drawScaleCmpAll(prefix, modes, x, ppoint, showRef=False):
-    def getNameList(head, rng):
-        return [head+str(i) for i in rng]
-    time=[]; score=[];
-    for m in modes:
-        t,s=getRecord(prefix, getNameList(m+'-', x))
-        time.append(t)
-        score.append(s)
-    
-    def getMinMax(scoreList):
-        mi = min([sl.min() for sl in scoreList])
-        ma = max([sl.max() for sl in scoreList])
-        return mi,ma
-    s0=0; sinf=np.inf
-    for s in score:
-        mi,ma=getMinMax(s)
-        s0=max(s0,ma)
-        sinf=min(sinf,mi)
-    
-    progress=[]
-    for s in score:
-        p=score2progress(s, s0, sinf)
-        progress.append(p)
-    
-    plt.figure()
-    factor = np.array(x) / x[0]
-    lgd=[]
-    for i in range(len(modes)):
-        t = findTime4score(time[i], progress[i], ppoint)
-        plt.plot(x, t)
-        lgd.append(modes[i])
-        if showRef:
-            plt.plot(x, t[0]/factor, 'k--')
-            lgd.append(modes[i]+'-ref')
-    plt.legend(lgd)
-    plt.show()
-
-#drawScaleCmpAll('../1000-0.1/', ['sync','fsb','async','fab'], [1,2,4,8], 0.85)
-
-    

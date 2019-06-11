@@ -8,12 +8,10 @@ class MLP(object):
         self.layers = layers
         self.w = []
         self.b = []
-        self.nw = []
-        for i in range(len(self.layers) - 1):
-            self.nw.append((layers[i]+1)*layers[i+1])
     
     def initParam(self):
         self.w=[]
+		self.b=[]
         for i in range(len(self.layers)-1):
             self.w.append(np.random.randn(self.layers[i], self.layers[i+1]))
             self.b.append(np.random.randn(self.layers[i+1]))
@@ -27,12 +25,6 @@ class MLP(object):
             l=l+self.nw[i]
 
     def forward(self, X):
-        #forward propagation through our network
-        z = np.dot(X, self.W1) # dot product of X (input) and first set of 3x2 weights
-        self.z2 = self.sigmoid(z) # activation function
-        z3 = np.dot(self.z2, self.W2) # dot product of hidden layer (z2) and second set of 3x1 weights
-        o = self.sigmoid(z3) # final activation function
-        return o
         # generalize
         self.output=[]
         last = X
@@ -43,7 +35,7 @@ class MLP(object):
             self.output.append(last)
         return last
 
-    def backward(self, X, y, o):
+    def backward(self, y):
         # backward propgate through the network
         o_error = o - y # error in output
         o_delta = o_error*self.sigmoidPrime(o) # applying derivative of sigmoid to error
@@ -54,6 +46,12 @@ class MLP(object):
         self.grad1 = np.dot(X.T, z2_delta)
 
         return
+		self.grad = [None for _ in range(len(self.layers))]
+		self.goutput = [None for _ in range(len(self.output))]
+		go = self.lossPrime(y, output[-1])
+		self.goutput[-1].append(go)
+		gs = self.sigmoidPrime(None, self.output[-1])
+		
         # generalize
         for i in range(len(self.layers)-2, -1, -1):
             pred = self.output[i+1]
@@ -76,16 +74,20 @@ class MLP(object):
         self.backward(X, y, o)
 
     def loss(self, y, p):
-        return np.mean(np.square(y - p))
+        return np.mean(np.square(p - y))*0.5
+		
+	def lossPrime(self, y, p):
+		return p - y
         
     def sigmoid(self, s):
         # activation function 
         return 1/(1+np.exp(-s))
 
-    def sigmoidPrime(self, s):
+    def sigmoidPrime(self, s, o):
         #derivative of sigmoid
-        v = self.sigmoid(s)
-        return v * (1 - v)
+		if o is None and s is not None:
+			o = self.sigmoid(s)
+        return o * (1 - o)
 
 
 def main():
