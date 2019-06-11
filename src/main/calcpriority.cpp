@@ -312,7 +312,7 @@ int main(int argc, char* argv[]){
 
 	PriorityCalculator calculator;
 	if(!calculator.init(opt.pmethod, opt.saveMemory,
-		opt.memory/(m.paramWidth()*dh.size()*sizeof(double))/opt.nthread))
+		opt.memory/(m.paramWidth()*sizeof(double))/opt.nthread))
 	{
 		cerr << "cannot initialize priority calculator with method: " << opt.pmethod << endl;
 		return 7;
