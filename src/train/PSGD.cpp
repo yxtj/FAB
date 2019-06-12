@@ -53,38 +53,42 @@ void PSGD::prepare()
 	}
 	avgGrad.resize(paramWidth, 0.0);
 	renewSize = static_cast<size_t>(pd->size() * renewRatio);
+	topSize = static_cast<size_t>(pd->size() * topRatio);
 	renewPointer = 0;
 }
 
 void PSGD::ready()
 {
-	// prepare gradient (and priority)
+	// prepare initialize priority
 	priority.resize(pd->size());
+	priorityIdx.resize(pd->size());
 	for(size_t i = 0; i < pd->size(); ++i){
 		auto g = pm->gradient(pd->get(i));
-		if(prioInitType == PriorityType::Projection){
-			for(size_t j = 0; j < paramWidth; ++j)
-				avgGrad[j] += g[j];
-		} else{
+		if(prioInitType == PriorityType::Length){
 			priority[i] = calcPriorityLength(g);
 		}
-		priorityIdx.push_back(static_cast<int>(i));
+		if(prioInitType != PriorityType::Length && prioType != PriorityType::Length){
+			for(size_t j = 0; j < paramWidth; ++j)
+				avgGrad[j] += g[j];
+		}
+		priorityIdx[i] = static_cast<int>(i);
 	}
-	// prepare priority
-	if(prioType == PriorityType::DecayExp){
-		priorityWver.resize(pd->size(), 0);
-		priorityDecayRate.resize(pd->size(), 1.0f);
-	}
-	if(prioInitType == PriorityType::Projection){
+	if(prioInitType != PriorityType::Length && prioType != PriorityType::Length){
 		for(size_t j = 0; j < paramWidth; ++j)
 			avgGrad[j] /= pd->size();
+	}
+	if(prioInitType == PriorityType::Projection){
 		for(size_t i = 0; i < pd->size(); ++i){
 			auto g = pm->gradient(pd->get(i));
 			priority[i] = calcPriorityProjection(g);
 		}
 	}
+	// prepare for runtime priority
+	if(prioType == PriorityType::DecayExp){
+		priorityWver.resize(pd->size(), 0);
+		priorityDecayRate.resize(pd->size(), 1.0f);
+	}
 	// prepare top priority list
-	size_t topSize = static_cast<size_t>(pd->size() * topRatio);
 	getTopK(topSize);
 }
 
