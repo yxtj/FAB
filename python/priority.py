@@ -6,69 +6,9 @@ Created on Thu Apr  4 22:49:11 2019
 """
 
 import sys,os,re
-import struct
 import numpy as np
-import pandas
 import matplotlib.pyplot as plt
-from util import *
-
-def type2size(type):
-    if type == 'f' or type == 'float':
-        t='f'
-        s=4
-    else:
-        t='d'
-        s=8
-    return (t,s)
-
-# gradient IO
-
-def loadGradBinary(fname, ndp, ndim, type='f'):
-    n = ndim*ndp
-    t,s = type2size(type)
-    x=[]
-    with open(fname, 'rb') as fin:
-        d=fin.read(n*s)
-        while d:
-            v=struct.unpack(t*n, d)
-            x.append(v)
-            d=fin.read(n*s)
-    x=np.array(x, 'float32')
-    x.resize([len(x), ndp, ndim])
-    return x
-
-
-def loadGradCsv(fname, ndp, ndim):
-    l=pandas.read_csv(fname, header=None)
-    x=np.array(l, 'float32').ravel()
-    nk=x.shape[0]//(ndp*ndim)
-    assert(nk*ndp*ndim == x.shape[0])
-    x.resize(nk,ndp,ndim)
-    return x
-
-
-def mergeGrad(glist):
-    return np.array(v for f in glist for v in f)
-
-# priority
-    
-def loadPriority(fn, ndp, type='f'):
-    x=[]
-    t,s=type2size(type)
-    with open(fn, 'rb') as fin:
-        d=fin.read(ndp*s)
-        while d:
-            v=struct.unpack(t*ndp, d)
-            x.append(v)
-            d=fin.read(ndp*s)
-    x=np.array(x, 'float32')
-    x.resize([len(x), ndp])
-    return x
-
-
-def dumpPriority(fn, priority):
-    with open(fn, 'wb') as f:
-        np.save(f, priority)
+import myio
 
 def calcPrioritySquare(grad):
     return np.sum(grad*grad,2)
@@ -104,7 +44,7 @@ def findNonlinearIdx(priority, factor):
     return res
 
 
-#p10=loadPriority('../../gradient/lr-1000-10k-10000-0.01.priority',10000)
+#p10=myio.loadPriority('../../grad/lr-1000-10k-10000-0.01.priority',10000)
 #l2=findNonlinearIdx(p10,0.2)
 #plt.plot(p10[:,l2])
 #plt.plot(p10[:,np.random.randint(0,10000,10)])
@@ -152,7 +92,7 @@ def drawDistribution(data, nbins, noTrailingZero=False, cumulative=True, lgd=Non
 
 def drawContribution(data, nbins, cumulative=True, lgd=None):
     assert(data.ndim == 2)
-    n, m = data.shape
+    n, m = data.shape # n->point, m->iter
     assert(n>m)
     x = np.arange(0, nbins+1)/nbins*100
     bins = np.linspace(0, n-1, nbins+1, dtype=int)
@@ -170,6 +110,25 @@ def drawContribution(data, nbins, cumulative=True, lgd=None):
     if lgd is not None:
         plt.legend(lgd)
     plt.xlabel('percentile (%)')
+    plt.ylabel('contribution (%)')
+    plt.tight_layout()
+    plt.show()
+
+
+def drawContributionOfTop(data, topPoints, ncol=1):
+    assert(data.ndim == 2)
+    n, m = data.shape # n->point, m->iter
+    assert(n>m)
+    bins=np.array((1-np.array(topPoints))*n, dtype=int)
+    data=np.sort(data, 0)
+    s=data.sum(0)
+    plt.figure()
+    for b in bins:
+        y=data[b:,:].sum(0)/s
+        plt.plot(y*100)
+    plt.grid(True)
+    plt.legend(['top-'+str(t*100)+'%' for t in topPoints], ncol=ncol)
+    plt.xlabel('iteration')
     plt.ylabel('contribution (%)')
     plt.tight_layout()
     plt.show()
@@ -220,10 +179,11 @@ def drawPriorityDiff(data, step=1, stride=1, ratio=True, avg=False, lgd=None):
     plt.show()
 
 
-#p10=loadPriority('E:/Code/FSB/gradient/lr-1000-10k-10000-0.01.priority',10000)
-#sp10=loadPriority('E:/Code/FSB/gradient/lr-1000-10k-10000-0.01.square.priority',10000)
-#p101=loadPriority('E:/Code/FSB/gradient/lr-1000-10k-10000-0.01-1.priority',10000)
-#p10p=loadPriority('E:/Code/FSB/gradient/lr-1000-10k-p0.05-r0.01-ld-0.01-1.priority',10000)
+#p10=myio.loadPriority('E:/Code/FSB/grad/lr-1000-10k-10000-0.01.priority',10000)
+#sp10=myio.loadPriority('E:/Code/FSB/grad/lr-1000-10k-10000-0.01.square.priority',10000)
+#p101=myio.loadPriority('E:/Code/FSB/grad/lr-1000-10k-10000-0.01-1.priority',10000)
+#p10p=myio.loadPriority('E:/Code/FSB/grad/lr-1000-10k-p0.05-r0.01-ld-0.01-1.priority',10000)
+#pm=myio.loadPriority('E:/Code/FSB/grad/mlp-mnist300-bsp-4-b600.priority',60000)
 #r=range(0,250,50);drawDistribution(p10[r,:].T,100,True,False,['epoch-%d'%v for v in r])
 #plt.ylabel('probability');plt.xlabel('priority');plt.grid(True);plt.tight_layout()
 #plt.ylabel('density');plt.xlabel('priority');plt.grid(True);plt.tight_layout()
@@ -231,6 +191,10 @@ def drawPriorityDiff(data, step=1, stride=1, ratio=True, avg=False, lgd=None):
 #plt.xlabel('gradient projection');
 #plt.tight_layout()
 #r=range(0,250,50);drawContribution(p10[r,:].T,100,False,['epoch-%d'%v for v in r])
+
+#drawContributionOfTop(pm.T, np.linspace(0.1,0.9,9))
+#plt.legend(['top-'+str(v)+'%' for v in range(1,10)])
+#drawContributionOfTop(ps.T, [0.001, 0.01, 0.05, 0.1])
 
 #r=np.random.randint(0,10000,10)
 #r=[9759, 2663, 7733, 1341, 5248,  865, 2810, 3152, 6930,  131]
