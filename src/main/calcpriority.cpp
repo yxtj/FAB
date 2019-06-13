@@ -345,10 +345,10 @@ int main(int argc, char* argv[]){
 			} else if(state == 0){
 				continue;
 			}
-			++ndump;
 			m.setParameter(move(param));
 			vector<double> priority = calculator.priority(m, dh);
 			dumper.dump(priority);
+			++ndump;
 			if(ndump % opt.logIter == 0)
 				cout << "  processed: " << ndump << endl;
 		}
@@ -365,7 +365,6 @@ int main(int argc, char* argv[]){
 				} else if(state == 0){
 					continue;
 				}
-				++ndump;
 				m.setParameter(move(param));
 				handlers.push_back(async(launch::async, [&](Model m){
 					return calculator.priority(m, dh);
@@ -375,9 +374,10 @@ int main(int argc, char* argv[]){
 			for(size_t i = 0; i < handlers.size(); ++i){
 				auto priority = handlers[i].get();
 				dumper.dump(priority);
+				++ndump;
+				if(ndump % opt.logIter == 0)
+					cout << "  processed: " << ndump << endl;
 			}
-			if(ndump % opt.logIter == 0)
-				cout << "  processed: " << ndump << endl;
 		}
 	}
 	archiver.close();
