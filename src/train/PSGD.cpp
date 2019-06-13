@@ -276,7 +276,7 @@ void PSGD::updatePriorityDecay(float p, size_t id)
 		if(dp <= 0.0f){
 			priorityDecayRate[id] = 1.0f;
 		} else{
-			size_t dn = wver - priorityWver[id];
+			auto dn = wver - priorityWver[id];
 			// dp/p = 1 - exp(lambda * dn)
 			// lambda = ln(1-dp/p)/dn
 			priorityDecayRate[id] = -logf(dp) / dn;
@@ -284,13 +284,6 @@ void PSGD::updatePriorityDecay(float p, size_t id)
 	}
 	priorityWver[id] = wver;
 	priority[id] = p;
-}
-
-void PSGD::updateAvgGrad(const std::vector<double>& g, const double f)
-{
-	for(size_t j = 0; j < paramWidth; ++j){
-		avgGrad[j] = (1 - f)*avgGrad[j] * f + f * g[j];
-	}
 }
 
 void PSGD::getTopK(const size_t k)
@@ -313,6 +306,15 @@ bool PSGD::topKPredKeep(const int l, const int r)
 
 bool PSGD::topKPredDecay(const int l, const int r)
 {
-	return priority[l] * exp(priorityDecayRate[l] * (wver - priorityWver[l]))
-		> priority[r] * exp(priorityDecayRate[r] * (wver - priorityWver[r]));
+	const auto& vl = priorityWver[l];
+	const auto& vr = priorityWver[r];
+	return priority[l] * exp(priorityDecayRate[l] * (wver - vl))
+		> priority[r] * exp(priorityDecayRate[r] * (wver - vl));
+}
+
+void PSGD::updateAvgGrad(const std::vector<double>& g, const double f)
+{
+	for(size_t j = 0; j < paramWidth; ++j){
+		avgGrad[j] = (1 - f)*avgGrad[j] * f + f * g[j];
+	}
 }

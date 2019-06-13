@@ -32,6 +32,7 @@ class PSGD : public Trainer
 	std::vector<float> priority;
 	std::vector<int> priorityIdx; // for top-k
 	float prioThreshold; // for variation-RptGradSel
+
 	//std::vector<float> priorityOld; // for priority decay
 	std::vector<float> priorityDecayRate; // for priority decay
 	std::vector<unsigned> priorityWver; // for priority decay
