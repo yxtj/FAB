@@ -95,12 +95,13 @@ void PSGD::ready()
 PSGD::~PSGD()
 {
 	LOG(INFO) << "[Stat-Trainer]: "
-		<< "renew-phase: " << stat_t_renew << "\t"
-		<< "update-phase: " << stat_t_update << "\t"
-		<< "post-phase: " << stat_t_post << "\t"
-		<< "pick-topk: " << stat_t_topk<< "\t"
-		<< "calc-gradient: " << stat_t_grad_calc << "\t"
-		<< "calc-priority: " << stat_t_prio_calc;
+		<< "phase-renew: " << stat_t_renew << "\t"
+		<< "phase-update: " << stat_t_update << "\t"
+		<< "phase-post: " << stat_t_post << "\t"
+		<< "u-topk: " << stat_t_u_topk << "\t"
+		<< "u-gradient: " << stat_t_u_grad << "\t"
+		<< "u-priority: " << stat_t_u_prio << "\t"
+		<< "u-merge: " << stat_t_u_merge;
 }
 
 Trainer::DeltaResult PSGD::batchDelta(
@@ -171,22 +172,24 @@ std::pair<size_t, std::vector<double>> PSGD::phaseCalculateGradient(const size_t
 	vector<double> grad(paramWidth, 0.0);
 	vector<int> topk;
 	getTopK(k);
-	stat_t_topk += tmr.elapseSd();
+	stat_t_u_topk += tmr.elapseSd();
 	// update gradient and priority of data-points
 	for(size_t i = 0; i < k; ++i){
 		size_t id = priorityIdx[i];
 		// calculate gradient
 		tmr.restart();
 		auto&& g = pm->gradient(pd->get(id));
-		stat_t_grad_calc += tmr.elapseSd();
+		stat_t_u_grad += tmr.elapseSd();
 		// calcualte priority
 		tmr.restart();
 		float p = calcPriority(g);
 		updatePriority(p, renewPointer);
-		stat_t_prio_calc += tmr.elapseSd();
+		stat_t_u_prio += tmr.elapseSd();
+		tmr.restart();
 		// accumulate gradient result
 		for(size_t j = 0; j < paramWidth; ++j)
 			grad[j] += g[j];
+		stat_t_u_merge += tmr.elapseSd();
 	}
 	return make_pair(k, move(grad));
 }

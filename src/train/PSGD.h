@@ -43,7 +43,7 @@ class PSGD : public Trainer
 
 public:
 	double stat_t_renew = 0, stat_t_update = 0, stat_t_post = 0;
-	double stat_t_topk = 0, stat_t_grad_calc = 0, stat_t_prio_calc = 0;
+	double stat_t_u_topk = 0, stat_t_u_grad = 0, stat_t_u_prio = 0, stat_t_u_merge = 0;
 
 public:
 	virtual void init(const std::vector<std::string>& param);
