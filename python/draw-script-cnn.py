@@ -47,28 +47,11 @@ saveimg(namepre+'-cmp-12-zoomin')
 # priority for CNN
 bs0=60000
 pre=str(bs0)+'-0.001/bsp-4-'
-l=[0.01, 0.05, 0.1, 0.15, 0.2]
-drawListCmp('',genFL('',[prio2bs(bs0,v) for v in l],'-0.001/bsp-4'),genFL(pre+'pso',l),genFL(pre+'pgo',l),n=None,ver=1)
-
-k=0.01
-lr=[0.001, 0.01, 0.05]
-drawList('',[str(prio2bs(bs0,k))+'-0.001/bsp-4',pre+'pgo'+str(k)]+genFL(pre+'pgr'+str(k)+'-',lr),n=None,ver=1)
-drawList('',[str(prio2bs(bs0,k))+'-0.001/bsp-4',pre+'pso'+str(k)]+genFL(pre+'psr'+str(k)+'-',lr),n=None,ver=1)
-drawListCmp('',[str(prio2bs(bs0,k))+'-0.001/bsp-4',pre+'pso'+str(k),pre+'pgo'+str(k)],genFL(pre+'psr'+str(k)+'-',lr),genFL(pre+'pgr'+str(k)+'-',lr),n=None,ver=1)
-drawListCmp('',[str(prio2bs(bs0,k))+'-0.001/bsp-4'],[None,pre+'pso'+str(k)]+genFL(pre+'psr'+str(k)+'-',lr),[None,pre+'pgo'+str(k)]+genFL(pre+'pgr'+str(k)+'-',lr),n=None,ver=1)
-
-
-pre=str(bs0)+'-0.001/tap-4-'
 
 k=0.01;d=0.9
 lr=[0.001, 0.01, 0.05]
 drawListCmp('',[str(prio2bs(bs0,k))+'-0.001/tap-4'],[None]+genFL(pre+'p'+str(k)+'-r',lr,'-d'+str(d)),n=None,ver=1)
 plt.legend(['sgd']+genFL('psgd-r',lr))
-
-for i in lvername:
-    drawListCmp('',[str(prio2bs(bs0,k))+'-0.001/tap-4'],[None]+genFL(pre+'p'+str(k)+'-r',lr,'-d'+str(d)),n=None,ver=i)
-    plt.legend(['sgd']+genFL('psgd-r',lr))
-    plt.savefig('cmp-p'+str(k)+'-d'+str(d)+'-'+lvername[i]+'.pdf')
 
 
 k=0.01;r=0.01

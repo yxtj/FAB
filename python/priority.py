@@ -246,3 +246,32 @@ def drawTopKDiff(x,ref,ncol=1):
     plt.ylabel('Jacobi Score')
 
 
+def drawDecayTrend(data, diff=False):
+    assert(data.ndim==2)
+    n,m=data.shape # n->iter, m->points
+    assert(n>m)
+    y=np.log(data)
+    plt.figure()
+    ylbl='log-priority'
+    if diff:
+        y=y[1:,:]-y[:-1,:]
+        ylbl+='-difference'
+    plt.plot(y)
+    plt.grid(True)
+    plt.xlabel('iteration')
+    plt.ylabel(ylbl)
+    plt.tight_layout()
+    
+    
+#plr=myio.loadPriority('lr-1000-10k-10000-0.01-1.priority',10000)
+#plr2=myio.loadPriority('lr-1000-10k-p0.05-r0.01-ld-0.01-1.priority',10000)
+#pmlp=myio.loadPriority('mlp-mnist300-600-0.001.priority',60000)
+#pmlp2=myio.loadPriority('mlp-mnist300-bsp-4-p0.01-r0-ld.priority',60000)
+#pmlp3=myio.loadPriority('mlp-mnist300-tap-4-p0.01-r0-ld.priority',60000)
+#pcnn=myio.loadPriority('cnn-mnist1020-600.priority',60000)
+#pcnn2=myio.loadPriority('cnn-mnist1020-tap-4-p0.001-r0-ld.priority',60000)
+
+#r=np.random.randint(0,60000,10)
+#r=np.array([ 9372,  3584, 40396, 34916,  3171, 13232, 31886,  3578, 25493, 29979])
+#drawDecayTrend(pmlp2[:,r],False)
+#drawDecayTrend(pmlp2[:,r],True)

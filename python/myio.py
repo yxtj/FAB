@@ -56,6 +56,15 @@ def loadScore(fn, n=None, ver=1, **kwargs):
     xr,yr = getxyLabel(idx1, idx2, d.shape[1])
     return np.array(d[:n][idx1]), np.array(d[:n][idx2]), xr, yr
 
+
+def renameLegend(lgd):
+    for i in range(len(lgd)):
+        s=lgd[i]
+        s=s.replace('async','tap').replace('sync','bsp')
+        s=s.replace('fsb','fsp').replace('fab','aap')
+        lgd[i]=s
+    return lgd
+
 # -------- parameter --------
 
 ''' load parameter file'''

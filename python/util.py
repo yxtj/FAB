@@ -12,15 +12,6 @@ def genFL(pre, l, post=''):
     return [str(pre)+str(i)+post for i in l]
 
 
-def renameLegend(lgd):
-    for i in range(len(lgd)):
-        s=lgd[i]
-        s=s.replace('async','tap').replace('sync','bsp')
-        s=s.replace('fsb','fsp').replace('fab','aap')
-        lgd[i]=s
-    return lgd
-
-
 def whenReachValue(fn, value, est=True, ver=1):
     x, v, _, _ = myio.loadScore(fn, None)
     # find the first index where v[p]<=value

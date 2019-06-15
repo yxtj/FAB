@@ -39,8 +39,6 @@ bs0=60000
 pre=str(bs0)+'-0.001/bsp-4-'
 l=[0.01, 0.05, 0.1, 0.15, 0.2]
 
-drawListCmp('',genFL('',[prio2bs(bs0,v) for v in l],'-0.001/bsp-4'),genFL(pre+'pso',l),genFL(pre+'pgo',l),n=None,ver=1)
-
 k=0.01
 lr=[0.001, 0.01, 0.05]
 lr=[0, 0.001, 0.01, 0.05]
@@ -53,11 +51,6 @@ d=0.7
 drawListCmp('',[str(prio2bs(bs0,k))+'-0.001/bsp-4'],[None]+genFL(pre+'p'+str(k)+'-r',lr,'-d'+str(d)),n=None,ver=1)
 plt.legend(['sgd']+genFL('psgd-r',lr))
 
-for i in lvername:
-    drawListCmp('',[str(prio2bs(bs0,k))+'-0.001/bsp-4'],[None]+genFL(pre+'p'+str(k)+'-r',lr,'-d'+str(d)),n=None,ver=i)
-    plt.legend(['sgd']+genFL('psgd-r',lr))
-    plt.savefig('cmp-p'+str(k)+'-d'+str(d)+'-'+lvername[i]+'.pdf')
-
 drawList('',genFL(pre+'p'+str(k)+'-r',lr,'-d'+str(d)),n=None,ver=1)
 drawList('',genFL(pre+'p'+str(k)+'-r',lr,'-d'+str(1-k)),n=None,ver=1)
 drawListCmp('',[str(prio2bs(bs0,k))+'-0.001/bsp-4'],[None]+genFL(pre+'p'+str(k)+'-r',lr,'-d'+str(1-k)),[None]+genFL(pre+'p'+str(k)+'-r',lr,'-d'+str(d)),n=None,ver=1)
@@ -68,11 +61,6 @@ k=0.01;r=0.01
 ld=[1-k, 0.9, 0.8, 0.7]
 drawListCmp('',[str(prio2bs(bs0,k))+'-0.001/bsp-4'],[None]+genFL(pre+'p'+str(k)+'-r'+str(r)+'-d',ld),n=None,ver=1)
 plt.legend(['sgd']+genFL('decay-',ld))
-
-for i in lvername:
-    drawListCmp('',[str(prio2bs(bs0,k))+'-0.001/bsp-4'],[None]+genFL(pre+'p'+str(k)+'-r'+str(r)+'-d',ld),n=None,ver=i)
-    plt.legend(['sgd']+genFL('decay-',ld))
-    plt.savefig('decay-p'+str(k)+'-r'+str(r)+'-'+lvername[i]+'.pdf')
 
 os.chdir(r'E:\Code\FSB\score\mlp\100,40,20,1-100k\krd')
 ld=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
@@ -124,3 +112,10 @@ plt.xticks(range(0,17,4))
 # scale - time
 drawScale('60000-0.001/',l_nw,genFL('bsp-',l_nw,'-p0.05-r0.01-ld'),0.87,False)
 plt.xticks(range(0,17,4))
+
+
+# compare priority estimation method
+refcnn='score/cnn/28x28,10c5x5rp2x2,2c5x5rp2x2,10f-60k/60-0.001/tap-4'
+precnn='cnn/28x28,10c5x5rp2x2,2c5x5rp2x2,10f-60k/60000-0.001/'
+drawListCmp('',[refcnn],[None]+genFL('score',['','-e2','-e3','-ee'],'/'+precnn+'tap-4-p0.01-r0-ld'))
+plt.legend(['SGD']+genFL('PSGD',['e1','-e2','-e3','-ee']))
