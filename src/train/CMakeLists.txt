@@ -21,6 +21,8 @@ set(SOURCES
 set(IMPL_FILES
 	impl/PrioritizedHolder.hpp
 	impl/TopKHolder.hpp
+	psgd/PriorityHolder.h
+	psgd/PriorityHolder.cpp
 )
 set(PSGD_POC_FILES
 	psgd_poc/PSGD_poc.cpp
