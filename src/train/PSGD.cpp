@@ -60,12 +60,13 @@ void PSGD::prepare()
 void PSGD::ready()
 {
 	// prepare initialize priority
-	priority.resize(pd->size());
+	prhd.init(pd->size());
 	priorityIdx.resize(pd->size());
 	for(size_t i = 0; i < pd->size(); ++i){
 		auto g = pm->gradient(pd->get(i));
 		if(prioInitType == PriorityType::Length){
-			priority[i] = calcPriorityLength(g);
+			float p = calcPriorityLength(g);
+			prhd.set(i, 0, p);
 		}
 		if(prioInitType != PriorityType::Length && prioType != PriorityType::Length){
 			for(size_t j = 0; j < paramWidth; ++j)
@@ -80,13 +81,9 @@ void PSGD::ready()
 	if(prioInitType == PriorityType::Projection){
 		for(size_t i = 0; i < pd->size(); ++i){
 			auto g = pm->gradient(pd->get(i));
-			priority[i] = calcPriorityProjection(g);
+			float p = calcPriorityProjection(g);
+			prhd.set(i, 0, p);
 		}
-	}
-	// prepare for runtime priority
-	if(prioType == PriorityType::DecayExp){
-		priorityWver.resize(pd->size(), 0);
-		priorityDecayRate.resize(pd->size(), 1.0f);
 	}
 	// prepare top priority list
 	getTopK(topSize);
@@ -121,16 +118,20 @@ Trainer::DeltaResult PSGD::batchDelta(
 	size_t k;
 	tie(k, grad2) = phaseCalculateGradient(topSize);
 	// variation
-	if(varUpdateAvgGradTop){
+	if(varAvgGradTop){
 		updateAvgGrad(grad2, static_cast<double>(k) / cnt);
 	}
 	stat_t_update += tmr.elapseSd();
 	// phase 3: post-process
 	tmr.restart();
-	wver += static_cast<unsigned>(r + k);
-	if(varUpdateRptGradAll || varUpdateRptGradSel){
+	if(varVerDP){
+		wver += static_cast<unsigned>((r + k) / 32);
+	} else{
+		wver += 1;
+	}
+	if(varRptGradAll){
 		for(size_t j = 0; j < paramWidth; ++j)
-			grad2[j] += grad1[1];
+			grad2[j] += grad1[j];
 	}
 	double factor = -rate;
 	if(avg)
@@ -156,8 +157,8 @@ std::pair<size_t, std::vector<double>> PSGD::phaseUpdatePriority(const size_t r)
 	while(--rcnt > 0){
 		auto&& g = pm->gradient(pd->get(renewPointer));
 		float p = calcPriority(g);
-		updatePriority(p, renewPointer);
-		if(varUpdateRptGradAll || (varUpdateRptGradSel && p >= prioThreshold)){
+		prhd.update(renewPointer, wver, p);
+		if(varRptGradAll){
 			for(size_t j = 0; j < paramWidth; ++j)
 				grad[j] += g[j];
 		}
@@ -183,7 +184,7 @@ std::pair<size_t, std::vector<double>> PSGD::phaseCalculateGradient(const size_t
 		// calcualte priority
 		tmr.restart();
 		float p = calcPriority(g);
-		updatePriority(p, renewPointer);
+		prhd.update(i, wver, p);
 		stat_t_u_prio += tmr.elapseSd();
 		tmr.restart();
 		// accumulate gradient result
@@ -212,16 +213,10 @@ bool PSGD::parsePriority(const std::string & typeInit, const std::string & type)
 		return false;
 	if(prioType == PriorityType::Length){
 		fp_cp = &PSGD::calcPriorityLength;
-		fp_up = &PSGD::updatePriorityKeep;
-		fp_pkp = &PSGD::topKPredKeep;
 	} else if(prioType == PriorityType::Projection){
 		fp_cp = &PSGD::calcPriorityProjection;
-		fp_up = &PSGD::updatePriorityKeep;
-		fp_pkp = &PSGD::topKPredKeep;
 	} else{
 		fp_cp = &PSGD::calcPriorityProjection;
-		fp_up = &PSGD::updatePriorityDecay;
-		fp_pkp = &PSGD::topKPredDecay;
 	}
 	//if(!factor.empty())
 	//	prioDecayFactor = stod(factor);
@@ -231,11 +226,11 @@ bool PSGD::parsePriority(const std::string & typeInit, const std::string & type)
 bool PSGD::parseVariation(const std::string & str)
 {
 	if(str.find('j') != string::npos || str.find("rj") != string::npos)
-		varUpdateRptGradAll = true;
-	if(str.find('s') != string::npos || str.find("rs") != string::npos)
-		varUpdateRptGradSel = true;
+		varRptGradAll = true;
 	if(str.find('t') != string::npos || str.find("at") != string::npos)
-		varUpdateAvgGradTop= true;
+		varAvgGradTop= true;
+	if(str.find('p') != string::npos || str.find("vp") != string::npos)
+		varVerDP = true;
 	return true;
 }
 
@@ -256,60 +251,17 @@ float PSGD::calcPriorityLength(const std::vector<double>& g)
 	return static_cast<float>(p);
 }
 
-void PSGD::updatePriority(float p, size_t id)
-{
-	return (this->*fp_up)(p, id);
-}
-
-void PSGD::updatePriorityKeep(float p, size_t id)
-{
-	priority[id] = p;
-}
-
-void PSGD::updatePriorityDecay(float p, size_t id)
-{
-	const float pold = priority[id];
-	if(wver == priorityWver[id] || pold == 0.0f || p == 0.0f){
-		priorityDecayRate[id] = priorityDecayRate[id];
-	} else{
-		float dp = p / pold;
-		if(dp <= 0.0f){
-			priorityDecayRate[id] = 1.0f;
-		} else{
-			auto dn = wver - priorityWver[id];
-			// dp/p = 1 - exp(lambda * dn)
-			// lambda = ln(1-dp/p)/dn
-			priorityDecayRate[id] = -logf(dp) / dn;
-		}
-	}
-	priorityWver[id] = wver;
-	priority[id] = p;
-}
-
 void PSGD::getTopK(const size_t k)
 {
 	if(priorityIdx.size() <= k){
-		prioThreshold = numeric_limits<float>::lowest();
 		return;
 	}
 	auto it = priorityIdx.begin() + k;
 	//partial_sort(res.begin(), it, res.end(),
 	nth_element(priorityIdx.begin(), it, priorityIdx.end(), 
-		bind(fp_pkp, this, placeholders::_1, placeholders::_2));
-	prioThreshold = priority[*it];
-}
-
-bool PSGD::topKPredKeep(const int l, const int r)
-{
-	return priority[l] > priority[r]; // pick the largest k
-}
-
-bool PSGD::topKPredDecay(const int l, const int r)
-{
-	const auto& vl = priorityWver[l];
-	const auto& vr = priorityWver[r];
-	return priority[l] * exp(priorityDecayRate[l] * (wver - vl))
-		> priority[r] * exp(priorityDecayRate[r] * (wver - vl));
+		[&](const int l, const int r){
+		return prhd.get(l, wver) > prhd.get(r, wver);
+	});
 }
 
 void PSGD::updateAvgGrad(const std::vector<double>& g, const double f)

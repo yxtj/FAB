@@ -1,5 +1,6 @@
 #pragma once
 #include "Trainer.h"
+#include "psgd/PriorityHolder.h"
 
 class PSGD : public Trainer
 {
@@ -15,28 +16,19 @@ class PSGD : public Trainer
 	};
 	PriorityType prioType = PriorityType::Projection;
 	PriorityType prioInitType = PriorityType::Length;
-	//double prioDecayFactor = -1;
+//	std::vector<float> priority;
+	PriorityHolderExpTwice prhd;
+	std::vector<int> priorityIdx; // for top-k
+	unsigned wver; // parameter version
+
 	// gradient
-	//enum struct GradientType{
-	//	Increment, // keep the summation incrementally
-	//	Decay, // use the decay implementation for exponential average
-	//};
-	//float gradDecayFactor = 0.9;
+	std::vector<double> avgGrad;
 	// variations
-	bool varUpdateRptGradAll = false; // also report gradient using ALL gradients of renew phase
-	bool varUpdateRptGradSel = false; // also report gradient using SOME gradients of renew phase (priority>=threshold)
-	bool varUpdateAvgGradTop = false; // also update average gradient using gradients of the top data points
+	bool varRptGradAll = false; // also report gradient using all gradients of renew phase
+	bool varAvgGradTop = false; // also update average gradient using gradients of the top data points
+	bool varVerDP = false; // also update average gradient using gradients of the top data points
 
 	size_t paramWidth; // parameter width
-	std::vector<double> avgGrad;
-	std::vector<float> priority;
-	std::vector<int> priorityIdx; // for top-k
-	float prioThreshold; // for variation-RptGradSel
-
-	//std::vector<float> priorityOld; // for priority decay
-	std::vector<float> priorityDecayRate; // for priority decay
-	std::vector<unsigned> priorityWver; // for priority decay
-	unsigned wver; // for priority decay
 
 	size_t renewSize;
 	size_t renewPointer;
@@ -74,16 +66,7 @@ private:
 	float calcPriorityLength(const std::vector<double>& g);
 	using fp_cp_t = decltype(&PSGD::calcPriority);
 	fp_cp_t fp_cp;
-	void updatePriority(float p, size_t id);
-	void updatePriorityKeep(float p, size_t id);
-	void updatePriorityDecay(float p, size_t id);
-	using fp_up_t = decltype(&PSGD::updatePriority);
-	fp_up_t fp_up;
 	void getTopK(const size_t k);
-	bool topKPredKeep(const int l, const int r);
-	bool topKPredDecay(const int l, const int r);
-	using fp_pkp_t = decltype(&PSGD::topKPredKeep);
-	fp_pkp_t fp_pkp;
 // gradient
 private:
 	void updateAvgGrad(const std::vector<double>& g, const double f);
