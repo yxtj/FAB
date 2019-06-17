@@ -67,13 +67,13 @@ void PSGD::ready()
 			float p = calcPriorityLength(g);
 			prhd.set(i, 0, p);
 		}
-		if(prioInitType != PriorityType::Length && prioType != PriorityType::Length){
+		if(prioInitType != PriorityType::Length || prioType != PriorityType::Length){
 			for(size_t j = 0; j < paramWidth; ++j)
 				avgGrad[j] += g[j];
 		}
 		priorityIdx[i] = static_cast<int>(i);
 	}
-	if(prioInitType != PriorityType::Length && prioType != PriorityType::Length){
+	if(prioInitType != PriorityType::Length || prioType != PriorityType::Length){
 		for(size_t j = 0; j < paramWidth; ++j)
 			avgGrad[j] /= pd->size();
 	}
