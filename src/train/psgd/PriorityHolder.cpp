@@ -1,4 +1,5 @@
 #include "PriorityHolder.h"
+#include <cmath>
 using namespace std;
 
 void PriorityHolder::init(const size_t size)
@@ -6,17 +7,17 @@ void PriorityHolder::init(const size_t size)
 	priority.resize(size);
 }
 
-float PriorityHolder::get(const int id, const unsigned ver)
+float PriorityHolder::get(const size_t id, const unsigned ver)
 {
 	return priority[id].first;
 }
 
-void PriorityHolder::set(const int id, const unsigned ver, const float prio)
+void PriorityHolder::set(const size_t id, const unsigned ver, const float prio)
 {
 	priority[id].first = prio;
 }
 
-void PriorityHolder::update(const int id, const unsigned ver, const float prio)
+void PriorityHolder::update(const size_t id, const unsigned ver, const float prio)
 {
 	priority[id].first = prio;
 }
@@ -29,17 +30,17 @@ void PriorityHolderExpLinear::init(const size_t size)
 	factor.resize(size, 1.0f);
 }
 
-float PriorityHolderExpLinear::get(const int id, const unsigned ver)
+float PriorityHolderExpLinear::get(const size_t id, const unsigned ver)
 {
 	return priority[id].first * exp(factor[id] * (ver - priority[id].second));
 }
 
-void PriorityHolderExpLinear::set(const int id, const unsigned ver, const float prio)
+void PriorityHolderExpLinear::set(const size_t id, const unsigned ver, const float prio)
 {
 	priority[id] = make_pair(prio, ver);
 }
 
-void PriorityHolderExpLinear::update(const int id, const unsigned ver, const float prio)
+void PriorityHolderExpLinear::update(const size_t id, const unsigned ver, const float prio)
 {
 	// priority->p2, parameter->p1
 	// log(p1/p2) = a(n1-n2)
@@ -58,7 +59,7 @@ void PriorityHolderExpTwice::init(const size_t size)
 	factor.resize(size, make_pair(0.0f, 1.0f));
 }
 
-float PriorityHolderExpTwice::get(const int id, const unsigned ver)
+float PriorityHolderExpTwice::get(const size_t id, const unsigned ver)
 {
 	auto d1 = ver - priority[id].second;
 	if(d1 == 0)
@@ -67,13 +68,13 @@ float PriorityHolderExpTwice::get(const int id, const unsigned ver)
 	return priority[id].first * exp(factor[id].first*d2 + factor[id].second*d1);
 }
 
-void PriorityHolderExpTwice::set(const int id, const unsigned ver, const float prio)
+void PriorityHolderExpTwice::set(const size_t id, const unsigned ver, const float prio)
 {
 	old[id] = make_tuple(prio, 0.0f, 0);
-	priority[id] = make_pair(ver, prio);
+	priority[id] = make_pair(prio, ver);
 }
 
-void PriorityHolderExpTwice::update(const int id, const unsigned ver, const float prio)
+void PriorityHolderExpTwice::update(const size_t id, const unsigned ver, const float prio)
 {
 	// old->p3, priority->p2, parameter->p1
 	// log(p1/p2) = a(n1^2-n2^2) + b(n1-n2)
