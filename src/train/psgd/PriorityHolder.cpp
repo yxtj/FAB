@@ -93,18 +93,21 @@ void PriorityHolderExpTwice::update(const size_t id, const unsigned ver, const f
 		pn /= 2.0f;
 	}
 	unsigned do1 = std::get<2>(old[id]);
-	if(do1 == 0){
+	float do2 = std::get<1>(old[id]);
+	float dx = (dn2*do1 - dn1 * do2);
+	//if(do1 == 0 || dx == 0.0f){
+	if(dx == 0.0f){
 		// use exp-linear
 		float b = pn / dn1;
 		factor[id] = make_pair(0.0f, b);
 	} else{
-		float do2 = std::get<1>(old[id]);
 		float po = std::get<0>(old[id]);
 		// calculate parameter
-		float a = (pn*do1 - po * dn1) / (dn2*do1 - dn1 * do2);
-		float b = (pn*do2 - po * dn2) / (dn1*do2 - do1 * dn2);
+		float a = (pn*do1 - po * dn1) / dx;
+		float b = (pn*do2 - po * dn2) / -dx;
 		factor[id] = make_pair(a, b);
 	}
 	// set buffer
 	old[id] = make_tuple(pn, dn2, dn1);
+	priority[id] = make_pair(prio, ver);
 }
