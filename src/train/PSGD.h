@@ -52,8 +52,8 @@ public:
 
 // main logic:
 private:
-	std::pair<size_t, std::vector<double>> phaseUpdatePriority(const size_t r);
-	std::pair<size_t, std::vector<double>> phaseCalculateGradient(const size_t k);
+	std::vector<double> phaseUpdatePriority(const size_t r);
+	std::vector<double> phaseCalculateGradient(const size_t k);
 
 // parse parameters
 private:
@@ -67,6 +67,7 @@ private:
 	using fp_cp_t = decltype(&PSGD::calcPriority);
 	fp_cp_t fp_cp;
 	void getTopK(const size_t k);
+	void moveWver();
 // gradient
 private:
 	void updateAvgGrad(const std::vector<double>& g, const double f);

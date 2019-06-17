@@ -86,6 +86,7 @@ void PSGD::ready()
 	}
 	// prepare top priority list
 	getTopK(topSize);
+	moveWver();
 }
 
 PSGD::~PSGD()
@@ -106,39 +107,31 @@ Trainer::DeltaResult PSGD::batchDelta(
 	size_t end = min(start + cnt, pd->size());
 	Timer tmr;
 	// phase 1: update the priority of some data points
-	vector<double> grad1;
-	size_t r;
-	tie(r, grad1) = phaseUpdatePriority(renewSize);
-	updateAvgGrad(grad1, static_cast<double>(r) / cnt);
+	vector<double> grad1 = phaseUpdatePriority(renewSize);
+	updateAvgGrad(grad1, static_cast<double>(renewSize) / cnt);
 	stat_t_renew += tmr.elapseSd();
 	// phase 2: calculate gradient for parameter
 	tmr.restart();
-	vector<double> grad2;
-	size_t k;
-	tie(k, grad2) = phaseCalculateGradient(topSize);
+	vector<double> grad2 = phaseCalculateGradient(topSize);
 	// variation
 	if(varAvgGradTop){
-		updateAvgGrad(grad2, static_cast<double>(k) / cnt);
+		updateAvgGrad(grad2, static_cast<double>(topSize) / cnt);
 	}
 	stat_t_update += tmr.elapseSd();
 	// phase 3: post-process
 	tmr.restart();
-	if(varVerDP){
-		wver += static_cast<unsigned>((r + k) / 32);
-	} else{
-		wver += 1;
-	}
+	moveWver();
 	if(varRptGradAll){
 		for(size_t j = 0; j < paramWidth; ++j)
 			grad2[j] += grad1[j];
 	}
 	double factor = -rate;
 	if(avg)
-		factor /= k;
+		factor /= topSize;
 	for(auto& v : grad2)
 		v *= factor;
 	stat_t_post += tmr.elapseSd();
-	return { cnt, k, move(grad2) };
+	return { cnt, topSize, move(grad2) };
 }
 
 Trainer::DeltaResult PSGD::batchDelta(
@@ -147,10 +140,9 @@ Trainer::DeltaResult PSGD::batchDelta(
 	return batchDelta(start, cnt, avg);
 }
 
-std::pair<size_t, std::vector<double>> PSGD::phaseUpdatePriority(const size_t r)
+std::vector<double> PSGD::phaseUpdatePriority(const size_t r)
 {
 	vector<double> grad(paramWidth, 0.0);
-	size_t n = 0;
 	// force renew the gradient of some data points
 	size_t rcnt = r + 1;
 	while(--rcnt > 0){
@@ -160,12 +152,11 @@ std::pair<size_t, std::vector<double>> PSGD::phaseUpdatePriority(const size_t r)
 		for(size_t j = 0; j < paramWidth; ++j)
 			grad[j] += g[j];
 		renewPointer = (renewPointer + 1) % pd->size();
-		++n;
 	}
-	return make_pair(move(n), move(grad));
+	return grad;
 }
 
-std::pair<size_t, std::vector<double>> PSGD::phaseCalculateGradient(const size_t k)
+std::vector<double> PSGD::phaseCalculateGradient(const size_t k)
 {
 	Timer tmr;
 	vector<double> grad(paramWidth, 0.0);
@@ -190,7 +181,7 @@ std::pair<size_t, std::vector<double>> PSGD::phaseCalculateGradient(const size_t
 			grad[j] += g[j];
 		stat_t_u_merge += tmr.elapseSd();
 	}
-	return make_pair(k, move(grad));
+	return grad;
 }
 
 bool PSGD::parsePriority(const std::string & typeInit, const std::string & type)
@@ -260,6 +251,15 @@ void PSGD::getTopK(const size_t k)
 		[&](const int l, const int r){
 		return prhd.get(l, wver) > prhd.get(r, wver);
 	});
+}
+
+void PSGD::moveWver()
+{
+	if(varVerDP){
+		wver += static_cast<unsigned>((renewSize + topSize) / 32);
+	} else{
+		wver += 1;
+	}
 }
 
 void PSGD::updateAvgGrad(const std::vector<double>& g, const double f)
