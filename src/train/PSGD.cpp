@@ -157,11 +157,10 @@ std::pair<size_t, std::vector<double>> PSGD::phaseUpdatePriority(const size_t r)
 		auto&& g = pm->gradient(pd->get(renewPointer));
 		float p = calcPriority(g);
 		prhd.update(renewPointer, wver, p);
-		if(varRptGradAll){
-			for(size_t j = 0; j < paramWidth; ++j)
-				grad[j] += g[j];
-		}
+		for(size_t j = 0; j < paramWidth; ++j)
+			grad[j] += g[j];
 		renewPointer = (renewPointer + 1) % pd->size();
+		++n;
 	}
 	return make_pair(move(n), move(grad));
 }
