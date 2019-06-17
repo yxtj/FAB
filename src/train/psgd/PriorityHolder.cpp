@@ -85,7 +85,13 @@ void PriorityHolderExpTwice::update(const size_t id, const unsigned ver, const f
 		return;
 	} 
 	float dn2 = static_cast<float>(ver)*ver - static_cast<float>(priority[id].second)*priority[id].second;
-	float pn = log(prio / priority[id].first);
+	float pn = log(abs(prio / priority[id].first));
+	// handle the non-positive priority
+	if(prio == 0){
+		pn = 0;
+	}else if(prio < 0){
+		pn /= 2.0f;
+	}
 	unsigned do1 = std::get<2>(old[id]);
 	if(do1 == 0){
 		// use exp-linear
