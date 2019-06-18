@@ -48,7 +48,8 @@ private:
 	bool terminateCheck();
 	void checkDataset();
 
-	void initializeParameter();
+	void initializeParameter(); // generate initialized parameter locally
+	void coordinateParameter(); // coordinate initialized parameter
 	void sendParameter(const int target);
 	void broadcastParameter();
 	void multicastParameter(const int source);

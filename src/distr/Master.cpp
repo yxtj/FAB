@@ -38,14 +38,7 @@ void Master::init(const Option* opt, const size_t lid)
 	ln = opt->logIter;
 	logName = "M";
 	setLogThreadName(logName);
-	model.init(opt->algorighm, opt->algParam);
-	Parameter param;
-	if(model.getKernel()->needInitParameterByData()){
-		param.init(model.paramWidth(), 0.0);
-	} else{
-		param.init(model.paramWidth(), 0.01, 0.01, opt->seed);
-	}
-	model.setParameter(move(param));
+	initializeParameter();
 
 	if(opt->mode == "bsp"){
 		bspInit();
@@ -94,7 +87,7 @@ void Master::run()
 	iter = 0;
 	LOG(INFO) << "Coordinae initializing parameter";
 	tmrTrain.restart();
-	initializeParameter();
+	coordinateParameter();
 	waitReady();
 	stat.t_train_prepare += tmrTrain.elapseS();
 	LOG(INFO) << "Start training";
@@ -297,17 +290,31 @@ void Master::checkDataset()
 
 void Master::initializeParameter()
 {
+	model.init(opt->algorighm, opt->algParam);
+	Parameter p;
 	if(opt->resume){
 		int i;
 		double t;
-		Parameter p;
 		if(archiver.load_last(i, t, p)){
 			iter = i;
 			timeOffset = t;
 			trainer->pm->setParameter(move(p));
 		}
 		LOG(INFO) << "Resume to iteration: " << i << ", at time: " << t;
+		LOG_IF(model.paramWidth() != p.size(), FATAL) << "Size of resumed parameter does not match current model";
 	} else{
+		if(model.getKernel()->needInitParameterByData()){
+			p.init(model.paramWidth(), 0.0);
+		} else{
+			p.init(model.paramWidth(), 0.01, 0.01, opt->seed);
+		}
+	}
+	model.setParameter(move(p));
+}
+
+void Master::coordinateParameter()
+{
+	if(!opt->resume){
 		if(model.getKernel()->needInitParameterByData()){
 			suParam.wait_n_reset();
 		}

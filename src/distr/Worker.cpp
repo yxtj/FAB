@@ -209,9 +209,11 @@ void Worker::sendDelta(std::vector<double>& delta, const size_t cnt)
 
 void Worker::initializeParameter()
 {
-	if(model.getKernel()->needInitParameterByData()){
-		// model.param is set in trainer->ready()
-		net->send(masterNID, MType::DParameter, model.getParameter().weights);
+	if(!opt->resume){
+		if(model.getKernel()->needInitParameterByData()){
+			// model.param is set in trainer->ready()
+			net->send(masterNID, MType::DParameter, model.getParameter().weights);
+		}
 	}
 	waitParameter();
 }
