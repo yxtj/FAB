@@ -112,6 +112,7 @@ private:
 
 	//size_t iter; // [defined in Runner] current iteration being executate now (not complete)
 	size_t nUpdate; // used for Async case
+	double timeOffset; // used for accounting time if resumed
 	Timer tmrTrain;
 
 	SyncUnit suOnline;

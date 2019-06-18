@@ -73,6 +73,7 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		// file - output
 		("record_file,r", value(&fnOutput)->required(), "The file name of the archived parameter")
 		("binary,b", bool_switch(&binary)->default_value(false), "Whether to output using binary IO")
+		("resume", bool_switch(&resume)->default_value(false), "Whether to resume from the last output item")
 		// termination
 		("term_iter", value(&tmp_t_iter)->required(), "Termination condition: maximum iteration")
 		("term_time", value(&tcTime)->required(), "Termination condition: maximum training time")

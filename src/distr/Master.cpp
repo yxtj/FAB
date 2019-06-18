@@ -17,6 +17,7 @@ Master::Master() : Runner() {
 	nPoint = 0;
 	iter = 0;
 	nUpdate = 0;
+	timeOffset = 0.0;
 	pie = nullptr;
 	prs = nullptr;
 	lastArchIter = 0;
@@ -87,7 +88,7 @@ void Master::run()
 	clearAccumulatedDelta();
 	if(!opt->fnOutput.empty()){
 		doArchive = true;
-		archiver.init_write(opt->fnOutput, model.paramWidth(), false, opt->binary);
+		archiver.init_write(opt->fnOutput, model.paramWidth(), opt->binary, opt->resume);
 		LOG_IF(!archiver.valid(), FATAL) << "Cannot write to file: " << opt->fnOutput;
 	}
 	iter = 0;
@@ -296,8 +297,20 @@ void Master::checkDataset()
 
 void Master::initializeParameter()
 {
-	if(model.getKernel()->needInitParameterByData()){
-		suParam.wait_n_reset();
+	if(opt->resume){
+		int i;
+		double t;
+		Parameter p;
+		if(archiver.load_last(i, t, p)){
+			iter = i;
+			timeOffset = t;
+			trainer->pm->setParameter(move(p));
+		}
+		LOG(INFO) << "Resume to iteration: " << i << ", at time: " << t;
+	} else{
+		if(model.getKernel()->needInitParameterByData()){
+			suParam.wait_n_reset();
+		}
 	}
 	broadcastParameter();
 }
@@ -358,10 +371,9 @@ void Master::archiveProgress(const bool force)
 	std::async(launch::async, [&](int iter, double time, Parameter param){
 		Timer t;
 		archiver.dump(iter, time, param);
-//		archiver.dump(iter, tmrTrain.elapseSd(), model.getParameter());
 		archDoing = false;
 		stat.t_archive += t.elapseSd();
-	}, iter, tmrTrain.elapseSd(), ref(model.getParameter()));
+	}, iter, timeOffset + tmrTrain.elapseSd(), ref(model.getParameter()));
 }
 
 void Master::broadcastWorkerList()

@@ -16,6 +16,7 @@ struct Option{
 
 	std::string fnOutput;
 	bool binary;
+	bool resume;
 
 	size_t nw; // number of workers
 
