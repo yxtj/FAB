@@ -27,7 +27,7 @@ void PriorityHolder::update(const size_t id, const unsigned ver, const float pri
 void PriorityHolderExpLinear::init(const size_t size)
 {
 	priority.resize(size);
-	factor.resize(size, 1.0f);
+	factor.resize(size, -1.0f);
 }
 
 float PriorityHolderExpLinear::get(const size_t id, const unsigned ver)
@@ -42,10 +42,16 @@ void PriorityHolderExpLinear::set(const size_t id, const unsigned ver, const flo
 
 void PriorityHolderExpLinear::update(const size_t id, const unsigned ver, const float prio)
 {
+	unsigned dn = ver - priority[id].second;
+	if(dn == 0)
+		return;
 	// priority->p2, parameter->p1
 	// log(p1/p2) = a(n1-n2)
-	float dp = log(prio / priority[id].first);
-	unsigned dn = ver - priority[id].second;
+	float dp = prio / priority[id].first;
+	if(dp <= 0)
+		dp = 0;
+	else
+		dp = log(dp);
 	factor[id] = dp / dn;
 	priority[id] = make_pair(prio, ver);
 }
@@ -56,15 +62,16 @@ void PriorityHolderExpTwice::init(const size_t size)
 {
 	priority.resize(size);
 	old.resize(size);
-	factor.resize(size, make_pair(0.0f, 1.0f));
+	factor.resize(size, make_pair(0.0f, -1.0f));
 }
 
 float PriorityHolderExpTwice::get(const size_t id, const unsigned ver)
 {
-	auto d1 = ver - priority[id].second;
+	const auto& over = priority[id].second;
+	auto d1 = ver - over;
 	if(d1 == 0)
 		return priority[id].first;
-	auto d2 = ver*ver - priority[id].second*priority[id].second;
+	auto d2 = static_cast<float>(ver)*ver - static_cast<float>(over)*over;
 	return priority[id].first * exp(factor[id].first*d2 + factor[id].second*d1);
 }
 
@@ -85,13 +92,11 @@ void PriorityHolderExpTwice::update(const size_t id, const unsigned ver, const f
 		return;
 	} 
 	float dn2 = static_cast<float>(ver)*ver - static_cast<float>(priority[id].second)*priority[id].second;
-	float pn = log(abs(prio / priority[id].first));
-	// handle the non-positive priority
-	if(prio == 0){
+	float pn = prio / priority[id].first;
+	if(pn <= 0)
 		pn = 0;
-	}else if(prio < 0){
-		pn /= 2.0f;
-	}
+	else
+		pn = log(pn);
 	unsigned do1 = std::get<2>(old[id]);
 	float do2 = std::get<1>(old[id]);
 	float dx = (dn2*do1 - dn1 * do2);
