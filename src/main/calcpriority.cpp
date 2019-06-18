@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <future>
-#include "data/DataHolder.h"
+#include "data/DataLoader.h"
 #include "util/Util.h"
 #include "model/Model.h"
 #include "model/ParamArchiver.h"
@@ -23,6 +23,8 @@ struct Option {
 	vector<int> rlines;
 
 	string fnData;
+	string dataset = "csv";
+	bool dataTrainPart = false;
 	vector<int> idSkip;
 	vector<int> idY;
 	bool normalize = false;
@@ -53,6 +55,8 @@ struct Option {
 		app.add_option("-l,--linelist", tmp_r, "The Lines of the parameter to use. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)");
 		// data-file
+		app.add_option("--dataset", dataset, "The dataset type, default: csv");
+		app.add_option("--train-part", dataTrainPart, "Load the train part of the dataset");
 		app.add_option("-d,--data", fnData, "The data file")->required();
 		app.add_option("--skip", tmp_s, "The columns to skip in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)");
@@ -267,8 +271,10 @@ int main(int argc, char* argv[]){
 	}
 	ios_base::sync_with_stdio(false);
 
-	DataHolder dh(1, 0);
-	dh.load(opt.fnData, ",", opt.idSkip, opt.idY, false, true);
+	DataLoader dl;
+	dl.init(opt.dataset, 1, 0, false);
+	dl.bindParameter(",", opt.idSkip, opt.idY, false);
+	DataHolder dh = dl.load(opt.fnData, opt.dataTrainPart);
 	if(opt.normalize)
 		dh.normalize(false);
 

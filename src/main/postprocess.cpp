@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <algorithm>
 #include <future>
-#include "data/DataHolder.h"
+#include "data/DataLoader.h"
 #include "util/Util.h"
 #include "model/Model.h"
 #include "model/ParamArchiver.h"
@@ -20,6 +20,8 @@ struct Option {
 	string alg;
 	string algParam;
 	string fnRecord;
+	string dataset = "csv";
+	bool dataTrainPart = false;
 	string fnData;
 	vector<int> idSkip;
 	vector<int> idY;
@@ -48,6 +50,8 @@ struct Option {
 		app.add_flag("-b,--binary", binary, "Whether the record file is binary");
 		app.add_option("--top-param", topk_data, "Only use the top-k parameters");
 		// data-file
+		app.add_option("--dataset", dataset, "The dataset type, default: csv");
+		app.add_option("--train-part", dataTrainPart, "Load the train part of the dataset");
 		app.add_option("-d,--data", fnData, "The data file")->required();
 		app.add_option("--skip", tmp_s, "The columns to skip in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)");
@@ -184,8 +188,10 @@ int main(int argc, char* argv[]){
 		}
 	}
 
-	DataHolder dh(1, 0);
-	dh.load(opt.fnData, ",", opt.idSkip, opt.idY, false, true, opt.topk_data);
+	DataLoader dl;
+	dl.init(opt.dataset, 1, 0, false);
+	dl.bindParameter(",", opt.idSkip, opt.idY, false);
+	DataHolder dh = dl.load(opt.fnData, opt.dataTrainPart, opt.topk_data);
 	if(opt.normalize)
 		dh.normalize(false);
 	double accuracy_factor = 0.0;
