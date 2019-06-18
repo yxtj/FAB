@@ -8,14 +8,15 @@ bool ParamArchiver::valid() const
 }
 
 bool ParamArchiver::init_write(const std::string & fname,
-	const size_t wlen, const bool append, const bool binary)
+	const size_t wlen, const bool binary, const bool resume)
 {
 	this->fname = fname;
 	this->wlen = wlen;
 	this->binary = binary;
+	this->resume = resume;
 	ios_base::openmode mode = ios_base::out;
-	if(append)
-		mode |= ios_base::ate;
+	if(resume)
+		mode |= ios_base::in;
 	if(binary){
 		mode |= ios_base::binary;
 		pfd = &ParamArchiver::dump_binary;
@@ -45,6 +46,30 @@ bool ParamArchiver::init_read(const std::string & fname,
 	}
 	fs = fstream(fname, mode);
 	return fs.is_open();
+}
+
+bool ParamArchiver::load_nth(const int n, int & iter, double & time, Parameter & p)
+{
+	if(!resume)
+		return false;
+	if(binary){
+		int cnt = 0;
+		string line;
+		while(getline(fs, line)){
+			++cnt;
+			if(cnt >= n)
+				break;
+		}
+		if(cnt != n)
+			return false;
+		parse_line(line, iter, time, p);
+	} else{
+		fs.seekg((n-1)*binUnitLen);
+		if(fs.tellg() != (n - 1)*binUnitLen)
+			return false;
+		return load_binary(iter, time, p);
+	}
+	return true;
 }
 
 void ParamArchiver::dump(const int iter, const double time, const Parameter & p)

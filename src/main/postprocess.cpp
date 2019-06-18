@@ -33,6 +33,9 @@ struct Option {
 	size_t topk_data = 0;
 	size_t topk_param = 0;
 
+	bool resume = false;
+	size_t logIter = 500;
+
 	CLI::App app;
 
 	bool parse(int argc, char* argv[]){
@@ -60,6 +63,9 @@ struct Option {
 		//app.add_flag("--iteration", iteration, "Use the iteration as the first column");
 		app.add_flag("--show", show, "Show the result on STDOUT");
 
+		app.add_flag("-c,--resume", resume, "Resume from the last item of output and append it");
+		app.add_option("--logiter", logIter, "Interval of reporting progress");
+
 		try {
 			app.parse(argc, argv);
 			if(nthread <= 0)
@@ -80,6 +86,26 @@ struct Option {
 		cout << app.help() << endl;
 	}
 };
+
+pair<int, ios::streampos> countDumpedProgress(const string& fname){
+	ifstream fin(fname);
+	if(!fin)
+		return make_pair(0, 0);
+	string line;
+	int n = 0;
+	ios::streampos length;
+	while(getline(fin, line)){
+		int c = 0;
+		for(char ch : line)
+			if(c == ',')
+				++c;
+		if(c != 5) // # of column is 6
+			break;
+		++n;
+		length = fin.tellg();
+	}
+	return make_pair(n, length);
+}
 
 struct TaskResult{
 	double loss;
@@ -138,12 +164,25 @@ int main(int argc, char* argv[]){
 	}
 	const bool doAccuracy = opt.accuracy && !opt.idY.empty();
 
-	ofstream fout(opt.fnOutput);
-	if(!opt.fnOutput.empty() && fout.fail()){
-		cerr << "cannot open output file: " << opt.fnOutput << endl;
-		return 2;
-	}
+	ofstream fout;
 	const bool write = !opt.fnOutput.empty();
+	pair<int, ios::streampos> processed(0, 0);
+	if(write){
+		if(opt.resume){
+			processed = countDumpedProgress(opt.fnOutput);
+		}
+		ios_base::openmode f = ios::out;
+		if(opt.resume && processed.second != 0){
+			fout.open(opt.fnOutput, f | ios::in);
+			fout.seekp(processed.second);
+		} else{
+			fout.open(opt.fnOutput, f);
+		}
+		if(fout.fail()){
+			cerr << "cannot open output file: " << opt.fnOutput << endl;
+			return 2;
+		}
+	}
 
 	DataHolder dh(1, 0);
 	dh.load(opt.fnData, ",", opt.idSkip, opt.idY, false, true, opt.topk_data);
@@ -169,12 +208,22 @@ int main(int argc, char* argv[]){
 		return 4;
 	}
 
+	// skip processed
+	int idx = 0;
+	if(opt.resume){
+		int iter;
+		double time;
+		Parameter param;
+		idx = processed.first;
+		if(opt.resume){
+			archiver.load_nth(processed.first, iter, time, param);
+		}
+	}
 	if(opt.nthread == 1){ // 1-thread
 		vector<double> last(dh.xlength(), 0.0);
 		int iter;
 		double time;
 		Parameter param;
-		int idx = 0;
 		while(!archiver.eof() && archiver.valid()){
 			if(!archiver.load(iter, time, param))
 				continue;
@@ -203,14 +252,13 @@ int main(int argc, char* argv[]){
 			models[i].init(opt.alg, opt.algParam);
 		vector<tuple<int, double, Parameter>> data(opt.nthread);
 		vector<double> improvements(opt.nthread);
-		int idx = 0;
 		while(!archiver.eof() && archiver.valid()){
 			vector<future<TaskResult>> handlers;
 			int i = 0;
 			while(i < opt.nthread && !archiver.eof() && archiver.valid()){
 				if(!archiver.load(get<0>(data[i]), get<1>(data[i]), get<2>(data[i])))
 					continue;
-				if(!opt.show && idx % 500 == 0)
+				if(!opt.show && idx % opt.logIter == 0)
 					cout << "  processed: " << idx << endl;
 				if(opt.topk_param != 0 && idx >= opt.topk_param)
 					break;

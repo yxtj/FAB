@@ -6,12 +6,13 @@
 struct ParamArchiver {
 	std::string fname;
 	bool binary;
+	bool resume;
 	size_t wlen;
 	std::fstream fs;
 public:
 	bool valid() const;
 	bool init_write(const std::string& fname, const size_t wlen,
-		const bool append = false, const bool binary = false);
+		const bool binary = false, const bool resume = false);
 	bool init_read(const std::string& fname, const size_t wlen,
 		const bool binary = false);
 	void dump(const int iter, const double time, const Parameter& p);
@@ -20,6 +21,8 @@ public:
 	bool eof() const;
 	void close();
 
+	// only for dump and must be initialized with resume option
+	bool load_nth(const int n, int& iter, double& time, Parameter& p);
 	bool load_last(int& iter, double& time, Parameter& p);
 
 private:
