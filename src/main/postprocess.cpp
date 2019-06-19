@@ -233,7 +233,7 @@ int main(int argc, char* argv[]){
 		while(!archiver.eof() && archiver.valid()){
 			if(!archiver.load(iter, time, param))
 				continue;
-			if(!opt.show && idx % 500 == 0)
+			if(!opt.show && idx % opt.logIter == 0)
 				cout << "  processed: " << idx << endl;
 			if(opt.topk_param != 0 && idx >= opt.topk_param)
 				break;
