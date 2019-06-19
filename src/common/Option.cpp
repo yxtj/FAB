@@ -187,7 +187,7 @@ bool Option::processOptimizer()
 		if(ch >= 'A' && ch <= 'Z')
 			ch += 'a' - 'A';
 	}
-	vector<string> t = getStringList(optimizer, ":-, ");
+	vector<string> t = getStringList(optimizer, ":;, ");
 	const vector<string> supported = { "gd", "em", "kmeans", "psgd", "psgdb", "psgdd" };
 	auto it = find(supported.begin(), supported.end(), t[0]);
 	if(it == supported.end() && t[0].find("_poc_") == string::npos)
