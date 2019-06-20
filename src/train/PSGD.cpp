@@ -17,13 +17,11 @@ void PSGD::init(const std::vector<std::string>& param)
 			renewRatio = stod(param[2]);
 			if(!parsePriority(param[3], param[4]))
 				throw invalid_argument("priority type is not recognized: " + param[3] + ", " + param[4]);
-			//if(param.size() <= 6)
-			//	break;
-			//if(!parseGradient(param[5], param.size() > 6 ? param[6] : ""))
-			//	throw invalid_argument("gradient type is not recognized: " + param[5]);
-			if(param.size() <= 5)
+			if(!parseDecay(param[5]))
+				throw invalid_argument("decay type is not recognized: " + param[5]);
+			if(param.size() <= 6)
 				break; 
-			if(!parseVariation(param[5]))
+			if(!parseVariation(param[6]))
 				throw invalid_argument("variation is not recognized: " + param[5]);
 		} while(false);
 	} catch(exception& e){
@@ -38,9 +36,9 @@ std::string PSGD::name() const
 
 void PSGD::prepare()
 {
-	// initialize parameter by data
 	paramWidth = pm->paramWidth();
 	if(pm->getKernel()->needInitParameterByData()){
+		// initialize parameter by data
 		Parameter p;
 		p.init(paramWidth, 0.0);
 		pm->setParameter(p);
@@ -50,6 +48,8 @@ void PSGD::prepare()
 				pd->get(i).x, pm->getParameter().weights, pd->get(i).y, nullptr);
 		}
 	}
+	// local paraemters
+	prhd->init(pd->size());
 	avgGrad.resize(paramWidth, 0.0);
 	renewSize = static_cast<size_t>(pd->size() * renewRatio);
 	topSize = static_cast<size_t>(pd->size() * topRatio);
@@ -59,13 +59,13 @@ void PSGD::prepare()
 void PSGD::ready()
 {
 	// prepare initialize priority
-	prhd.init(pd->size());
+	prhd->init(pd->size());
 	priorityIdx.resize(pd->size());
 	for(size_t i = 0; i < pd->size(); ++i){
 		auto g = pm->gradient(pd->get(i));
 		if(prioInitType == PriorityType::Length){
 			float p = calcPriorityLength(g);
-			prhd.set(i, 0, p);
+			prhd->set(i, 0, p);
 		}
 		if(prioInitType != PriorityType::Length || prioType != PriorityType::Length){
 			for(size_t j = 0; j < paramWidth; ++j)
@@ -81,7 +81,7 @@ void PSGD::ready()
 		for(size_t i = 0; i < pd->size(); ++i){
 			auto g = pm->gradient(pd->get(i));
 			float p = calcPriorityProjection(g);
-			prhd.set(i, 0, p);
+			prhd->set(i, 0, p);
 		}
 	}
 	// prepare top priority list
@@ -99,6 +99,8 @@ PSGD::~PSGD()
 		<< "u-gradient: " << stat_t_u_grad << "\t"
 		<< "u-priority: " << stat_t_u_prio << "\t"
 		<< "u-merge: " << stat_t_u_merge;
+	delete prhd;
+	prhd = nullptr;
 }
 
 Trainer::DeltaResult PSGD::batchDelta(
@@ -148,7 +150,7 @@ std::vector<double> PSGD::phaseUpdatePriority(const size_t r)
 	while(--rcnt > 0){
 		auto&& g = pm->gradient(pd->get(renewPointer));
 		float p = calcPriority(g);
-		prhd.update(renewPointer, wver, p);
+		prhd->update(renewPointer, wver, p);
 		for(size_t j = 0; j < paramWidth; ++j)
 			grad[j] += g[j];
 		renewPointer = (renewPointer + 1) % pd->size();
@@ -173,7 +175,7 @@ std::vector<double> PSGD::phaseCalculateGradient(const size_t k)
 		// calcualte priority
 		tmr.restart();
 		float p = calcPriority(g);
-		prhd.update(i, wver, p);
+		prhd->update(i, wver, p);
 		stat_t_u_prio += tmr.elapseSd();
 		tmr.restart();
 		// accumulate gradient result
@@ -196,20 +198,32 @@ bool PSGD::parsePriority(const std::string & typeInit, const std::string & type)
 		prioType = PriorityType::Projection;
 	} else if(contains(type, { "l","length","s","square","self" })){
 		prioType = PriorityType::Length;
-	} else if(contains(type, { "d","e","decayexp" })){
-		prioType = PriorityType::DecayExp;
 	} else
 		return false;
 	if(prioType == PriorityType::Length){
 		fp_cp = &PSGD::calcPriorityLength;
 	} else if(prioType == PriorityType::Projection){
 		fp_cp = &PSGD::calcPriorityProjection;
-	} else{
-		fp_cp = &PSGD::calcPriorityProjection;
 	}
 	//if(!factor.empty())
 	//	prioDecayFactor = stod(factor);
 	return true;
+}
+
+bool PSGD::parseDecay(const std::string & type)
+{
+	if(prhd != nullptr){
+		delete prhd;
+		prhd = nullptr;
+	}
+	if(type.empty() || contains(type, { "k","keep" })){
+		prhd = new PriorityHolderKeep();
+	} else if(contains(type, { "e","d","l","linear","1" })){
+		prhd = new PriorityHolderExpLinear();
+	} else if(contains(type, { "q","quadratic","2" })){
+		prhd = new PriorityHolderExpQuadratic();
+	}
+	return prhd != nullptr;
 }
 
 bool PSGD::parseVariation(const std::string & str)
@@ -249,7 +263,7 @@ void PSGD::getTopK(const size_t k)
 	//partial_sort(res.begin(), it, res.end(),
 	nth_element(priorityIdx.begin(), it, priorityIdx.end(), 
 		[&](const int l, const int r){
-		return prhd.get(l, wver) > prhd.get(r, wver);
+		return prhd->get(l, wver) > prhd->get(r, wver);
 	});
 }
 

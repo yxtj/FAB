@@ -2,22 +2,22 @@
 #include <cmath>
 using namespace std;
 
-void PriorityHolder::init(const size_t size)
+void PriorityHolderKeep::init(const size_t size)
 {
 	priority.resize(size);
 }
 
-float PriorityHolder::get(const size_t id, const unsigned ver)
+float PriorityHolderKeep::get(const size_t id, const unsigned ver)
 {
 	return priority[id].first;
 }
 
-void PriorityHolder::set(const size_t id, const unsigned ver, const float prio)
+void PriorityHolderKeep::set(const size_t id, const unsigned ver, const float prio)
 {
 	priority[id].first = prio;
 }
 
-void PriorityHolder::update(const size_t id, const unsigned ver, const float prio)
+void PriorityHolderKeep::update(const size_t id, const unsigned ver, const float prio)
 {
 	priority[id].first = prio;
 }
@@ -28,6 +28,7 @@ void PriorityHolderExpLinear::init(const size_t size)
 {
 	priority.resize(size);
 	factor.resize(size, -1.0f);
+	alpha = 0.8;
 }
 
 float PriorityHolderExpLinear::get(const size_t id, const unsigned ver)
@@ -52,20 +53,21 @@ void PriorityHolderExpLinear::update(const size_t id, const unsigned ver, const 
 		dp = 0;
 	else
 		dp = log(dp);
-	factor[id] = dp / dn;
+	factor[id] = alpha * (dp / dn) + (1 - alpha)*factor[id];
 	priority[id] = make_pair(prio, ver);
 }
 
 // exp-twice
 
-void PriorityHolderExpTwice::init(const size_t size)
+void PriorityHolderExpQuadratic::init(const size_t size)
 {
 	priority.resize(size);
 	old.resize(size);
 	factor.resize(size, make_pair(0.0f, -1.0f));
+	alpha = 0.8;
 }
 
-float PriorityHolderExpTwice::get(const size_t id, const unsigned ver)
+float PriorityHolderExpQuadratic::get(const size_t id, const unsigned ver)
 {
 	const auto& over = priority[id].second;
 	auto d1 = ver - over;
@@ -75,13 +77,13 @@ float PriorityHolderExpTwice::get(const size_t id, const unsigned ver)
 	return priority[id].first * exp(factor[id].first*d2 + factor[id].second*d1);
 }
 
-void PriorityHolderExpTwice::set(const size_t id, const unsigned ver, const float prio)
+void PriorityHolderExpQuadratic::set(const size_t id, const unsigned ver, const float prio)
 {
 	old[id] = make_tuple(prio, 0.0f, 0);
 	priority[id] = make_pair(prio, ver);
 }
 
-void PriorityHolderExpTwice::update(const size_t id, const unsigned ver, const float prio)
+void PriorityHolderExpQuadratic::update(const size_t id, const unsigned ver, const float prio)
 {
 	// old->p3, priority->p2, parameter->p1
 	// log(p1/p2) = a(n1^2-n2^2) + b(n1-n2)
@@ -110,6 +112,9 @@ void PriorityHolderExpTwice::update(const size_t id, const unsigned ver, const f
 		// calculate parameter
 		float a = (pn*do1 - po * dn1) / dx;
 		float b = (pn*do2 - po * dn2) / -dx;
+		// exponential decay
+		a = alpha * a + (1 - alpha)*factor[id].first;
+		b = alpha * b + (1 - alpha)*factor[id].second;
 		factor[id] = make_pair(a, b);
 	}
 	// set buffer

@@ -10,14 +10,18 @@ class PSGD : public Trainer
 	double renewRatio = 0.01;
 	// priority
 	enum struct PriorityType{
-		Projection, // pi=gi*avg(g)
+		Projection, // data-point i: pi=gi*avg(g)
 		Length, // pi=gi*gi
-		DecayExp, // pi=gi*avg(g)*exp(a*t)
 	};
-	PriorityType prioType = PriorityType::Projection;
 	PriorityType prioInitType = PriorityType::Length;
+	PriorityType prioType = PriorityType::Projection;
+	enum struct DecayType{
+		Keep, // time i, all parameter a,b,c are dynamic: pi=a
+		ExpLinear, // pi=exp(a+bi), pi=pj*exp(b(i-j))
+		ExpQuadratic, // pi=exp(a+bi+ci^2), pi=pj*exp(b(i-j)+c(i^2-j^2))
+	};
 //	std::vector<float> priority;
-	PriorityHolderExpTwice prhd;
+	PriorityHolder* prhd = nullptr;
 	std::vector<int> priorityIdx; // for top-k
 	unsigned wver; // parameter version
 
@@ -41,8 +45,8 @@ public:
 public:
 	virtual void init(const std::vector<std::string>& param);
 	virtual std::string name() const;
-	virtual void prepare();
-	virtual void ready();
+	virtual void prepare(); // after bind data
+	virtual void ready(); // after set initializing parameter
 	virtual ~PSGD();
 
 	virtual DeltaResult batchDelta(
@@ -58,6 +62,7 @@ private:
 // parse parameters
 private:
 	bool parsePriority(const std::string& typeInit, const std::string& type);
+	bool parseDecay(const std::string& type);
 	bool parseVariation(const std::string& str);
 // priority
 private:
