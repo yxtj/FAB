@@ -20,9 +20,9 @@ void Master::bspProcess()
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
 		Timer tmr;
-		if(VLOG_IS_ON(2) && iter % 100 == 0){
+		if(VLOG_IS_ON(2) && iter % ln == 0){
 			double t = tmrTrain.elapseSd();
-			VLOG(2) << "  Time of recent 100 iterations: " << (t - tl);
+			VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl);
 			tl = t;
 		}
 		VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;
@@ -53,9 +53,9 @@ void Master::tapProcess()
 		if(newIter){
 			VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;
 			newIter = false;
-			if(VLOG_IS_ON(2) && iter % 100 == 0){
+			if(VLOG_IS_ON(2) && iter % ln == 0){
 				double t = tmrTrain.elapseSd();
-				VLOG(2) << "  Time of recent 100 iterations: " << (t - tl);
+				VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl);
 				tl = t;
 			}
 		}
@@ -88,9 +88,9 @@ void Master::sspProcess()
 	while(!terminateCheck()){
 		Timer tmr;
 		VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;
-		if(VLOG_IS_ON(2) && iter % 100 == 0){
+		if(VLOG_IS_ON(2) && iter % ln == 0){
 			double t = tmrTrain.elapseSd();
-			VLOG(2) << "  Time of recent 100 iterations: " << (t - tl);
+			VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl);
 			tl = t;
 		}
 		VLOG_EVERY_N(ln, 2) << "  Waiting for all deltas";
@@ -133,9 +133,9 @@ void Master::sapProcess()
 		if(newIter){
 			VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;
 			newIter = false;
-			if(VLOG_IS_ON(2) && iter % 100 == 0){
+			if(VLOG_IS_ON(2) && iter % ln == 0){
 				double t = tmrTrain.elapseSd();
-				VLOG(2) << "  Time of recent 100 iterations: " << (t - tl);
+				VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl);
 				tl = t;
 			}
 		}
@@ -166,9 +166,9 @@ void Master::fspProcess()
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
 		Timer tmr;
-		if(VLOG_IS_ON(2) && iter % 100 == 0){
+		if(VLOG_IS_ON(2) && iter % ln == 0){
 			double t = tmrTrain.elapseSd();
-			VLOG(2) << "  Time of recent 100 iterations: " << (t - tl);
+			VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl);
 			tl = t;
 		}
 		VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;
@@ -211,9 +211,9 @@ void Master::aapProcess()
 			VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;// << ", msg waiting: " << driver.queSize() << ", update: " << nUpdate;
 			//DVLOG_EVERY_N(ln / 10, 1) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
 			newIter = false;
-			if(VLOG_IS_ON(2) && iter % 100 == 0){
+			if(VLOG_IS_ON(2) && iter % ln == 0){
 				double t = tmrTrain.elapseSd();
-				VLOG(2) << "  Time of recent 100 iterations: " << (t - tl);
+				VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl);
 				tl = t;
 			}
 		}
