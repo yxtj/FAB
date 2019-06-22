@@ -21,13 +21,16 @@ set(SOURCES
 set(IMPL_FILES
 	impl/PrioritizedHolder.hpp
 	impl/TopKHolder.hpp
-	psgd/PriorityHolder.h
-	psgd/PriorityHolder.cpp
+	priority/PriorityDumper.h
+	priority/PriorityDumper.cpp
+	priority/PriorityHolder.h
+	priority/PriorityHolder.cpp
 )
 set(PSGD_POC_FILES
 	psgd_poc/PSGD_poc.cpp
 	psgd_poc/PSGD_point.cpp
 	psgd_poc/PSGD_dim.cpp
+	psgd_poc/PSGD_log.cpp
 )
 add_library(train
 	${HEADERS} ${SOURCES} ${IMPL_FILES} ${PSGD_POC_FILES})

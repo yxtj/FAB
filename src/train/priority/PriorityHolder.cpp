@@ -28,7 +28,7 @@ void PriorityHolderExpLinear::init(const size_t size)
 {
 	priority.resize(size);
 	factor.resize(size, -1.0f);
-	alpha = 0.8;
+	alpha = 0.8f;
 }
 
 float PriorityHolderExpLinear::get(const size_t id, const unsigned ver)
@@ -64,7 +64,7 @@ void PriorityHolderExpQuadratic::init(const size_t size)
 	priority.resize(size);
 	old.resize(size);
 	factor.resize(size, make_pair(0.0f, -1.0f));
-	alpha = 0.8;
+	alpha = 0.8f;
 }
 
 float PriorityHolderExpQuadratic::get(const size_t id, const unsigned ver)

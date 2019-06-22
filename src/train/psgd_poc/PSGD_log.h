@@ -1,8 +1,10 @@
 #pragma once
-#include "Trainer.h"
-#include "priority/PriorityHolder.h"
+#include "../Trainer.h"
+#include "../PSGD.h"
+#include "../priority/PriorityHolder.h"
+#include "../priority/PriorityDumper.h"
 
-class PSGD : public Trainer
+class PSGD_log : public PSGD
 {
 	// parameters
 	double rate = 1.0;
@@ -22,6 +24,7 @@ class PSGD : public Trainer
 	};
 //	std::vector<float> priority;
 	PriorityHolder* prhd = nullptr;
+	PriorityDumper pdump;
 	std::vector<int> priorityIdx; // for top-k
 	unsigned wver; // parameter version
 
@@ -46,33 +49,11 @@ public:
 	virtual void init(const std::vector<std::string>& param);
 	virtual std::string name() const;
 	virtual void prepare(); // after bind data
-	virtual void ready(); // after set initializing parameter
-	virtual ~PSGD();
 
 	virtual DeltaResult batchDelta(
 		const size_t start, const size_t cnt, const bool avg = true);
-	virtual DeltaResult batchDelta(std::atomic<bool>& cond,
-		const size_t start, const size_t cnt, const bool avg = true);
 
-// main logic:
 protected:
-	std::vector<double> phaseUpdatePriority(const size_t r);
 	std::vector<double> phaseCalculateGradient(const size_t k);
 
-// parse parameters
-	bool parsePriority(const std::string& typeInit, const std::string& type);
-	bool parseDecay(const std::string& type);
-	bool parseVariation(const std::string& str);
-
-// priority
-	float calcPriority(const std::vector<double>& g);
-	float calcPriorityProjection(const std::vector<double>& g);
-	float calcPriorityLength(const std::vector<double>& g);
-	using fp_cp_t = decltype(&PSGD::calcPriority);
-	fp_cp_t fp_cp;
-	void getTopK(const size_t k);
-	void moveWver();
-
-// gradient
-	void updateAvgGrad(const std::vector<double>& g, const double f);
 };
