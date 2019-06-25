@@ -96,12 +96,12 @@ void DataHolder::add(std::vector<double>&& x, std::vector<double>&& y){
 	data.push_back(move(dp));
 }
 
-void add(const std::vector<std::vector<double>>& x, const std::vector<double>& y){
+void DataHolder::add(const std::vector<std::vector<double>>& x, const std::vector<double>& y){
 	DataPoint dp{ x,y };
 	data.push_back(move(dp));
 }
 
-void add(std::vector<std::vector<double>>&& x, std::vector<double>&& y){
+void DataHolder::add(std::vector<std::vector<double>>&& x, std::vector<double>&& y){
 	DataPoint dp{ move(x), move(y) };
 	data.push_back(move(dp));
 }
@@ -126,8 +126,8 @@ void DataHolder::normalize(const bool onY)
 {
 	if(data.size() < 2)
 		return;
-	vector<double> max_x = data.front().x;
-	vector<double> min_x = data.front().x;
+	vector<double> max_x = data.front().x.front();
+	vector<double> min_x = data.front().x.front();
 	vector<double> max_y = data.front().y;
 	vector<double> min_y = data.front().y;
 	for(const auto& d : data){
@@ -158,7 +158,7 @@ void DataHolder::normalize(const bool onY)
 	for(size_t i = 0; i < ny; ++i)
 		range_y[i] = max_y[i] - min_y[i];
 	for(auto&d : data){
-		for(auto& x : data.x)
+		for(auto& x : d.x)
 			for(size_t i = 0; i < nx; ++i)
 				x[i] = 2 * (x[i] - min_x[i]) / range_x[i] - 1;
 		if(onY){

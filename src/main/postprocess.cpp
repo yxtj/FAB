@@ -20,14 +20,18 @@ struct Option {
 	string alg;
 	string algParam;
 	string fnRecord;
+	string fnData;
 	string dataset = "csv";
 	bool dataTrainPart = false;
-	string fnData;
+	bool normalize = false;
+	string sepper = ",";
+	bool header = false;
 	vector<int> idSkip;
 	vector<int> idY;
+	int lenUnit;
+
 	string fnParam;
 	string fnOutput;
-	bool normalize = false;
 	bool binary = false;
 	//bool iteration = false;
 	bool accuracy = false;
@@ -57,6 +61,9 @@ struct Option {
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)");
 		app.add_option("-y,--ylist", tmp_y, "The columns to be used as y in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)");
+		app.add_option("--sepper", sepper, "Separator for customized file type");
+		app.add_flag("--header", header, "Whether there is a header line in the data file");
+		app.add_option("--unit", lenUnit, "Length of a input unit, for variable-length x");
 		app.add_flag("-n,--normalize", normalize, "Whether to do data normalization");
 		app.add_option("--top-data", topk_data, "Only use the top-k data points");
 		//
@@ -74,6 +81,10 @@ struct Option {
 			app.parse(argc, argv);
 			if(nthread <= 0)
 				nthread = 1;
+			if(dataset == "csv")
+				sepper = ",";
+			else if(dataset == "tsv")
+				sepper = "\t";
 			idSkip = getIntListByRange(tmp_s);
 			idY = getIntListByRange(tmp_y);
 			auto it = remove_if(idY.begin(), idY.end(), [](const int v){
@@ -190,7 +201,10 @@ int main(int argc, char* argv[]){
 
 	DataLoader dl;
 	dl.init(opt.dataset, 1, 0, false);
-	dl.bindParameter(",", opt.idSkip, opt.idY, false);
+	if(opt.dataset == "csv" || opt.dataset == "tsv" || opt.dataset == "customize")
+		dl.bindParameterTable(opt.sepper, opt.idSkip, opt.idY, opt.header);
+	else if(opt.dataset == "list")
+		dl.bindParameterVarLen(opt.sepper, opt.lenUnit, opt.idY);
 	DataHolder dh = dl.load(opt.fnData, opt.dataTrainPart, opt.topk_data);
 	if(opt.normalize)
 		dh.normalize(false);

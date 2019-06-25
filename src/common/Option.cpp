@@ -53,36 +53,40 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 			"psgdd:<lr>:<k-ratio>:<decay-factor>:<r-ratio>:<use-rg>")
 		// file - input
 		("dataset", value(&dataset)->default_value("csv"),
-			"The dataset/type to use. Give dataset name (mnist) or file type (csv) or \"customize\"")
+			"The dataset/type to use. Give dataset name (mnist) or "
+			"type (csv, tsv, customize, list (variable length x)).")
 		("trainpart", bool_switch(&trainPart)->default_value(true),
-			"Whether to use the trainning part of the dateset")
-		("data_file,d", value(&fnData)->required(), "The file name of the input data")
+			"Whether to use the trainning part of the dateset.")
+		("data_file,d", value(&fnData)->required(), "The file name of the input data.")
 		("topk,k", value(&topk)->default_value(0), "Only use the first <k> data points. (0 means all)")
+		("normalize,n", bool_switch(&normalize)->default_value(false),
+			"Whether to do normailzation on the input file.")
+		("shuffle", bool_switch(&shuffle)->default_value(false), "Randomly shuffle the dataset.")
+		// file - input - table
 		("header", bool_switch(&header)->default_value(false), 
 			"Whether the input file contain a header line")
 		("sepper", value(&sepper)->default_value(","), "Separator for customized dataset.")
 		("skip", value(&tmp_ids)->default_value({}, ""),
 			"The columns to skip in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)")
+		// file - input - list (variable-length x)
+		("unit", value(&lenUnit)->default_value(0), "Length of one x unit for the variable length input (RNN).")
 		("ylist,y", value(&tmp_idy)->default_value({}, ""),
 			"The columns to be used as y in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)")
-		("normalize,n", bool_switch(&normalize)->default_value(false),
-			"Whether to do normailzation on the input file")
-		("shuffle", bool_switch(&shuffle)->default_value(false), "Randomly shuffle the dataset")
 		// file - output
-		("record_file,r", value(&fnOutput)->required(), "The file name of the archived parameter")
-		("binary,b", bool_switch(&binary)->default_value(false), "Whether to output using binary IO")
-		("resume", bool_switch(&resume)->default_value(false), "Whether to resume from the last output item")
+		("record_file,r", value(&fnOutput)->required(), "The file name of the archived parameter.")
+		("binary,b", bool_switch(&binary)->default_value(false), "Whether to output using binary IO.")
+		("resume", bool_switch(&resume)->default_value(false), "Whether to resume from the last output item.")
 		// termination
-		("term_iter", value(&tmp_t_iter)->required(), "Termination condition: maximum iteration")
-		("term_time", value(&tcTime)->required(), "Termination condition: maximum training time")
+		("term_iter", value(&tmp_t_iter)->required(), "Termination condition: maximum iteration.")
+		("term_time", value(&tcTime)->required(), "Termination condition: maximum training time.")
 		// archive
-		("arch_iter", value(&tmp_a_iter)->default_value("1000"), "Progress archiving condition: maximum iteration")
-		("arch_time", value(&arvTime)->default_value(1.0), "Progress archiving condition: maximum training time")
+		("arch_iter", value(&tmp_a_iter)->default_value("1000"), "Progress archiving condition: maximum iteration.")
+		("arch_time", value(&arvTime)->default_value(1.0), "Progress archiving condition: maximum training time.")
 		// log
-		("log_iter", value(&tmp_l_iter)->default_value("100"), "Log training step every <log_iter> iterations")
-		("v", value(&tmp_v), "Verbose level")
+		("log_iter", value(&tmp_l_iter)->default_value("100"), "Log training step every <log_iter> iterations.")
+		("v", value(&tmp_v), "Verbose level.")
 		;
 
 	boost::program_options::variables_map vm;
@@ -164,7 +168,7 @@ bool Option::processDataset(){
 		if(ch >= 'A' && ch <= 'Z')
 			ch += 'a' - 'A';
 	}
-	const vector<string> supported{ "customize", "csv", "tsv",
+	const vector<string> supported{ "customize", "csv", "tsv", "list",
 		"mnist", "cifar10", "cifar100" };
 	auto it = find(supported.begin(), supported.end(), dataset);
 	return it != supported.end();

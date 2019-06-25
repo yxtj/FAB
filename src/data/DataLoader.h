@@ -19,7 +19,7 @@ public:
 
 	void bindParameterTable(const std::string& sepper,
 		const std::vector<int> skips, const std::vector<int>& yIds, const bool header);
-	void bindParameterVarLen(const int lenUnit);
+	void bindParameterVarLen(const std::string& sepper, const int lenUnit, const std::vector<int>& yIds);
 
 	DataHolder load(const std::string& path, const bool trainPart, const size_t topk = 0);
 
@@ -27,6 +27,8 @@ private:
 	void load_customized(DataHolder& dh, const std::string & fpath,
 		const std::string& sepper, const std::vector<int> skips, const std::vector<int>& yIds,
 		const bool header, const size_t topk);
+	void load_varlist(DataHolder& dh, const std::string & fpath, const int lunit,
+		const std::string& sepper, const std::vector<int>& yIds, const size_t topk);
 	void load_mnist(DataHolder& dh, const bool trainPart,
 		const std::string & dpath, const size_t topk);
 	void load_cifar10(DataHolder& dh, const bool trainPart, 

@@ -213,7 +213,7 @@ private:
 		for(size_t i = 0; i < xlength; ++i)
 			x[i] = xdis(gen);
 		// calcualte y
-		vector<double> y = k->predict(x, *param);
+		vector<double> y = k->predict({ x }, *param);
 		vector<int> yy(ylength);
 		for(size_t i = 0; i < ylength; ++i)
 			yy[i] = k->classify(y[i]);

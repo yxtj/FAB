@@ -15,7 +15,7 @@ void DataLoader::init(const std::string & dataset, const size_t nparts,
 	localOnly = onlyLocalPart;
 }
 
-void DataLoader::bindParameter(const std::string & sepper,
+void DataLoader::bindParameterTable(const std::string & sepper,
 	const std::vector<int> skips, const std::vector<int>& yIds, const bool header)
 {
 	this->sepper = sepper;
@@ -24,8 +24,10 @@ void DataLoader::bindParameter(const std::string & sepper,
 	this->header = header;
 }
 
-void bindParameterVarLen(const int lenUnit){
+void DataLoader::bindParameterVarLen(const std::string& sepper, const int lenUnit, const std::vector<int>& yIds){
+	this->sepper = sepper;
 	this->lunit = lenUnit;
+	this->yIds = yIds;
 }
 
 DataHolder DataLoader::load(
@@ -39,6 +41,8 @@ DataHolder DataLoader::load(
 		load_customized(dh, path, "\t", skips, yIds, header, limit);
 	} else if(ds_type == "customize"){
 		load_customized(dh, path, sepper, skips, yIds, header, limit);
+	} else if(ds_type == "list"){
+		load_varlist(dh, path, lunit, sepper, yIds, limit);
 	} else if(ds_type == "mnist"){
 		load_mnist(dh, trainPart, path, limit);
 	} else if(ds_type == "cifar10"){
@@ -98,6 +102,51 @@ void DataLoader::load_customized(DataHolder & dh, const std::string & fpath,
 		if(topk != 0 && i > topk)
 			break;
 		DataPoint dp = parseLine(line, sepper, xIds, yIds_u);
+		dh.add(move(dp));
+	}
+}
+
+void DataLoader::load_varlist(DataHolder& dh, const std::string & fpath, const int lunit,
+	const std::string& sepper, const std::vector<int>& yIds, const size_t topk)
+{
+	ifstream fin(fpath);
+	if(fin.fail()){
+		throw invalid_argument("Error in reading file: " + fpath);
+	}
+	// calculate number of x
+	size_t nx = 0;
+	int n = 0;
+	string line;
+	getline(fin, line);
+	size_t p = line.find(sepper);
+	while(p != string::npos){
+		++n;
+		p = line.find(sepper, p + 1);
+	}
+	++n;
+	// calculate yId
+	unordered_set<int> yIds_u;
+	for(int i = 0; i < n; ++i){
+		if(find(yIds.begin(), yIds.end(), i) != yIds.end())
+			yIds_u.insert(i);
+	}
+	//nx = n - skips.size() - 1; // does not work when skips contains placeholders like -1
+	size_t ny = yIds_u.size();
+	dh.setLength(static_cast<size_t>(lunit), ny);
+
+	// deal with header
+	if(!header)
+		fin.seekg(0);
+	// parse lines
+	size_t i = 0; // line id;
+	while(getline(fin, line)){
+		if(line.size() < nx || line.front() == '#') // invalid line
+			continue;
+		if(localOnly && i++ % npart != pid) // not local line
+			continue;
+		if(topk != 0 && i > topk)
+			break;
+		DataPoint dp = parseLineVarLen(line, sepper, lunit, yIds_u);
 		dh.add(move(dp));
 	}
 }

@@ -6,11 +6,14 @@ struct Option{
 	std::string dataset;
 	std::string fnData;
 	size_t topk;
+	bool trainPart;
+
 	std::vector<int> idSkip;
 	std::vector<int> idY;
 	std::string sepper;
-	bool trainPart;
 	bool header;
+	int lenUnit;
+
 	bool normalize;
 	bool shuffle;
 

@@ -4,7 +4,7 @@
 #include <fstream>
 #include <iomanip>
 #include <algorithm>
-#include "data/DataHolder.h"
+#include "data/DataLoader.h"
 #include "util/Util.h"
 #include "model/Model.h"
 #include "model/ParamArchiver.h"
@@ -22,9 +22,14 @@ struct Option {
 	vector<int> rlines;
 
 	string fnData;
+	string dataset = "csv";
+	bool dataTrainPart = false;
 	vector<int> idSkip;
 	vector<int> idY;
 	bool normalize = false;
+	string sepper = ",";
+	bool header = false;
+	int lenUnit;
 
 	string fnOutput;
 	bool outputBinary = false;
@@ -43,11 +48,16 @@ struct Option {
 		app.add_option("-l,--linelist", tmp_r, "The Lines of the parameter to use. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)")->required();
 		// data-file
+		app.add_option("--dataset", dataset, "The dataset type, default: csv");
+		app.add_option("--train-part", dataTrainPart, "Load the train part of the dataset");
 		app.add_option("-d,--data", fnData, "The data file")->required();
 		app.add_option("--skip", tmp_s, "The columns to skip in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)");
 		app.add_option("-y,--ylist", tmp_y, "The columns to be used as y in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)");
+		app.add_option("--sepper", sepper, "Separator for customized file type");
+		app.add_flag("--header", header, "Whether there is a header line in the data file");
+		app.add_option("--unit", lenUnit, "Length of a input unit, for variable-length x");
 		app.add_flag("-n,--normalize", normalize, "Whether to do data normalization");
 		// output
 		app.add_option("-o,--output", fnOutput, "The output gradient file")->required();
@@ -134,8 +144,13 @@ int main(int argc, char* argv[]){
 	}
 	const bool write = !opt.fnOutput.empty();
 
-	DataHolder dh(1, 0);
-	dh.load(opt.fnData, ",", opt.idSkip, opt.idY, false, true);
+	DataLoader dl;
+	dl.init(opt.dataset, 1, 0, false);
+	if(opt.dataset == "csv" || opt.dataset == "tsv" || opt.dataset == "customize")
+		dl.bindParameterTable(opt.sepper, opt.idSkip, opt.idY, opt.header);
+	else if(opt.dataset == "list")
+		dl.bindParameterVarLen(opt.sepper, opt.lenUnit, opt.idY);
+	DataHolder dh = dl.load(opt.fnData, opt.dataTrainPart);
 	if(opt.normalize)
 		dh.normalize(false);
 

@@ -58,7 +58,10 @@ int main(int argc, char* argv[]){
 		try{
 			DataLoader dl;
 			dl.init(opt.dataset, opt.nw, lid, true);
-			dl.bindParameter(opt.sepper, opt.idSkip, opt.idY, opt.header);
+			if(opt.dataset == "csv" || opt.dataset == "tsv" || opt.dataset == "customize")
+				dl.bindParameterTable(opt.sepper, opt.idSkip, opt.idY, opt.header);
+			else if(opt.dataset == "list")
+				dl.bindParameterVarLen(opt.sepper, opt.lenUnit, opt.idY);
 			VLOG(1) << "Loading data";
 			size_t localk = opt.topk / opt.nw + (lid < opt.topk%opt.nw ? 1 : 0);
 			dh = dl.load(opt.fnData, opt.trainPart, localk);

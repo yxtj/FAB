@@ -38,7 +38,6 @@ DataPoint parseLineVarLen(const std::string& line, const std::string& sepper,
 	const int lenUnit, const std::unordered_set<int>& yIds)
 {
 	vector<vector<double>> x;
-	x.reserve(xIds.size());
 	vector<double> y;
 	y.reserve(yIds.size());
 	size_t p = line.find(sepper);

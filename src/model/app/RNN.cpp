@@ -57,7 +57,7 @@ int RNN::lengthParameter() const
 std::vector<double> RNN::predict(
 	const std::vector<std::vector<double>>& x, const std::vector<double>& w) const
 {
-	return net.predict(x, w);
+	return net.predict(x[0], w);
 }
 
 int RNN::classify(const double p) const
@@ -65,7 +65,7 @@ int RNN::classify(const double p) const
 	return p >= 0.5 ? 1 : 0;
 }
 
-double RNN::loss(const std::vector<std::vector<double>>& pred, const std::vector<double>& label) const {
+double RNN::loss(const std::vector<double>& pred, const std::vector<double>& label) const {
 	double res = 0.0;
 	for(size_t i = 0; i < pred.size(); ++i){
 		double t = pred[i] - label[i];
