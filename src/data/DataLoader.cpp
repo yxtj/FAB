@@ -24,6 +24,10 @@ void DataLoader::bindParameter(const std::string & sepper,
 	this->header = header;
 }
 
+void bindParameterVarLen(const int lenUnit){
+	this->lunit = lenUnit;
+}
+
 DataHolder DataLoader::load(
 	const std::string & path, const bool trainPart, const size_t topk)
 {

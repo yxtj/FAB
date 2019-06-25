@@ -22,7 +22,8 @@ int TopicModel::lengthParameter() const
 	return nWeight;
 }
 
-std::vector<double> TopicModel::predict(const std::vector<double>& x, const std::vector<double>& w) const
+std::vector<double> TopicModel::predict(
+	const std::vector<std::vector<double>>& x, const std::vector<double>& w) const
 {
 	return std::vector<double>();
 }
@@ -37,7 +38,7 @@ double TopicModel::loss(const std::vector<double>& pred, const std::vector<doubl
 	return 0.0;
 }
 
-std::vector<double> TopicModel::gradient(const std::vector<double>& x,
+std::vector<double> TopicModel::gradient(const std::vector<std::vector<double>>& x,
 	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const
 {
 	return std::vector<double>();

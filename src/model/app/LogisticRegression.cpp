@@ -35,11 +35,11 @@ int LogisticRegression::lengthParameter() const
 }
 
 std::vector<double> LogisticRegression::predict(
-	const std::vector<double>& x, const std::vector<double>& w) const 
+	const std::vector<std::vector<double>>& x, const std::vector<double>& w) const
 {
 	double t = w.back();
 	for (int i = 0; i < xlength; ++i) {
-		t += x[i] * w[i];
+		t += x[0][i] * w[i];
 	}
 	return { sigmoid(t) };
 }
@@ -71,7 +71,7 @@ double LogisticRegression::loss(
 		return -cost;
 }
 
-std::vector<double> LogisticRegression::gradient(const std::vector<double>& x,
+std::vector<double> LogisticRegression::gradient(const std::vector<std::vector<double>>& x,
 	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const
 {
 	// s'(x) = s(x)*(1-s(x))
@@ -81,7 +81,7 @@ std::vector<double> LogisticRegression::gradient(const std::vector<double>& x,
 	double g0 = pred - y[0];
 	vector<double> grad(w.size(), g0);
 	for (size_t i = 0; i < xlength; ++i) {
-		grad[i] *= x[i];
+		grad[i] *= x[0][i];
 	}
 	return grad;
 }

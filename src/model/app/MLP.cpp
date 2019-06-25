@@ -39,10 +39,10 @@ int MLP::lengthParameter() const
 }
 
 std::vector<double> MLP::predict(
-	const std::vector<double>& x, const std::vector<double>& w) const
+	const std::vector<std::vector<double>>& x, const std::vector<double>& w) const
 {
 	proxy.bind(&w);
-	vector<double> mid = activateLayer(x, w, 0);
+	vector<double> mid = activateLayer(x[0], w, 0);
 	for(int l = 1; l < nLayer - 1; ++l){
 		mid = activateLayer(mid, w, l);
 	}
@@ -66,7 +66,7 @@ double MLP::loss(const std::vector<double>& pred, const std::vector<double>& lab
 	return res;
 }
 
-std::vector<double> MLP::gradient(const std::vector<double>& x,
+std::vector<double> MLP::gradient(const std::vector<std::vector<double>>& x,
 	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const
 {
 	proxy.bind(&w);
@@ -74,7 +74,7 @@ std::vector<double> MLP::gradient(const std::vector<double>& x,
 	vector<vector<double>> buffer; // buffer for <pred>
 	buffer.reserve(nLayer); // important: make sure earlier iterators valid all the time
 	vector<const vector<double>*> output; // the output of each layer
-	output.push_back(&x); // layer 0 same as x, the rest are <buffer>
+	output.push_back(&x[0]); // layer 0 same as x, the rest are <buffer>
 	for(int l = 0; l < nLayer - 1; ++l){
 		vector<double> mid = activateLayer(*output[l], w, l);
 		buffer.push_back(move(mid));

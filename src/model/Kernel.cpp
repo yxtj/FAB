@@ -18,7 +18,7 @@ int Kernel::lengthHidden() const{
 	return 0;
 }
 
-void Kernel::initVariables(const std::vector<double>& x,
+void Kernel::initVariables(const std::vector<std::vector<double>>& x,
 	std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph)
 {
 }

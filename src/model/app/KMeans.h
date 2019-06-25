@@ -13,15 +13,15 @@ public:
 	bool needInitParameterByData() const;
 
 	int lengthHidden() const;
-	void initVariables(const std::vector<double>& x,
+	void initVariables(const std::vector<std::vector<double>>& x,
 		std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph);
 
-	std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w) const;
+	std::vector<double> predict(const std::vector<std::vector<double>>& x, const std::vector<double>& w) const;
 	int classify(const double p) const;
 
 	double loss(const std::vector<double>& pred, const std::vector<double>& label) const;
 	// ph stores the current assignment of the node
-	std::vector<double> gradient(const std::vector<double>& x,
+	std::vector<double> gradient(const std::vector<std::vector<double>>& x,
 		const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const;
 
 private:

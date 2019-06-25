@@ -5,8 +5,8 @@
 
 using namespace std;
 
-DataHolder::DataHolder(const size_t nparts, const size_t localid)
-	:  npart(nparts), pid(localid)
+DataHolder::DataHolder(const size_t nparts, const size_t localid, const bool varx)
+	:  npart(nparts), pid(localid), varx(varx)
 {}
 
 void DataHolder::setLength(const size_t lx, const size_t ly){
@@ -84,16 +84,25 @@ void DataHolder::load(const std::string& fpath, const std::string& sepper,
 }
 
 void DataHolder::add(const std::vector<double>& x, const std::vector<double>& y){
-	DataPoint dp;
-	dp.x = x;
-	dp.y = y;
+	DataPoint dp{ {x},y };
 	data.push_back(move(dp));
 }
 
 void DataHolder::add(std::vector<double>&& x, std::vector<double>&& y){
 	DataPoint dp;
-	dp.x = move(x);
+	dp.x.resize(1);
+	dp.x[0] = move(x);
 	dp.y = move(y);
+	data.push_back(move(dp));
+}
+
+void add(const std::vector<std::vector<double>>& x, const std::vector<double>& y){
+	DataPoint dp{ x,y };
+	data.push_back(move(dp));
+}
+
+void add(std::vector<std::vector<double>>&& x, std::vector<double>&& y){
+	DataPoint dp{ move(x), move(y) };
 	data.push_back(move(dp));
 }
 
@@ -122,28 +131,36 @@ void DataHolder::normalize(const bool onY)
 	vector<double> max_y = data.front().y;
 	vector<double> min_y = data.front().y;
 	for(const auto& d : data){
-		for(size_t i = 0; i < nx; ++i){
-			if(d.x[i] > max_x[i])
-				max_x[i] = d.x[i];
-			else if(d.x[i] < min_x[i])
-				min_x[i] = d.x[i];
+		for(auto& x : d.x){
+			for(size_t i = 0; i < nx; ++i){
+				if(x[i] > max_x[i])
+					max_x[i] = x[i];
+				else if(x[i] < min_x[i])
+					min_x[i] = x[i];
+			}
 		}
 		if(onY){
-			if(d.y > max_y)
-				max_y = d.y;
-			else if(d.y < min_y)
-				min_y = d.y;
+			for(size_t i = 0; i < ny; ++i){
+				if(d.y[i] > max_y[i])
+					max_y[i] = d.y[i];
+				else if(d.y[i] < min_y[i])
+					min_y[i] = d.y[i];
+			}
 		}
 	}
 	vector<double> range_x(nx);
 	vector<double> range_y(ny);
-	for(size_t i = 0; i < nx; ++i)
+	for(size_t i = 0; i < nx; ++i){
 		range_x[i] = max_x[i] - min_x[i];
+		if(range_x[i] == 0.0)
+			range_x[i] = 1.0;
+	}
 	for(size_t i = 0; i < ny; ++i)
 		range_y[i] = max_y[i] - min_y[i];
 	for(auto&d : data){
-		for(size_t i = 0; i < nx; ++i)
-			d.x[i] = 2 * (d.x[i] - min_x[i]) / range_x[i] - 1;
+		for(auto& x : data.x)
+			for(size_t i = 0; i < nx; ++i)
+				x[i] = 2 * (x[i] - min_x[i]) / range_x[i] - 1;
 		if(onY){
 			for(size_t i = 0; i < ny; ++i)
 				d.y[i] = 2 * (d.y[i] - min_y[i]) / range_y[i] - 1;

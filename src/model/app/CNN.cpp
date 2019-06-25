@@ -55,9 +55,9 @@ int CNN::lengthParameter() const
 }
 
 std::vector<double> CNN::predict(
-	const std::vector<double>& x, const std::vector<double>& w) const
+	const std::vector<std::vector<double>>& x, const std::vector<double>& w) const
 {
-	return net.predict(x, w);
+	return net.predict(x[0], w);
 }
 
 int CNN::classify(const double p) const
@@ -84,10 +84,10 @@ std::vector<double> CNN::gradLoss(const std::vector<double>& pred, const std::ve
 	return res;
 }
 
-std::vector<double> CNN::gradient(const std::vector<double>& x,
+std::vector<double> CNN::gradient(const std::vector<std::vector<double>>& x,
 	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const
 {
-	return net.gradient(x, w, y);
+	return net.gradient(x[0], w, y);
 }
 
 std::string CNN::preprocessParam(const std::string & param)

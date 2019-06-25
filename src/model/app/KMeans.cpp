@@ -49,7 +49,7 @@ bool KMeans::needInitParameterByData() const
 	return true;
 }
 
-void KMeans::initVariables(const std::vector<double>& x,
+void KMeans::initVariables(const std::vector<std::vector<double>>& x,
 	std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph)
 {
 	static uniform_int_distribution<int> dist(0, static_cast<int>(ncenter) - 1);
@@ -58,19 +58,19 @@ void KMeans::initVariables(const std::vector<double>& x,
 	(*ph)[0] = static_cast<double>(c);
 	size_t off = c * (dim + 1);
 	for(size_t i = 0; i < dim; ++i){
-		w[off + i] += x[i];
+		w[off + i] += x[0][i];
 	}
 	w[off + dim] += 1;
 }
 
 std::vector<double> KMeans::predict(
-	const std::vector<double>& x, const std::vector<double>& w) const
+	const std::vector<std::vector<double>>& x, const std::vector<double>& w) const
 {
 	size_t min_id = ncenter;
 	double min_v;
 	size_t off = 0;
 	for(size_t i = 0; i < ncenter; ++i){
-		double d = dist(x.begin(), x.end(), w.begin() + off, w[off + dim]);
+		double d = dist(x[0].begin(), x[0].end(), w.begin() + off, w[off + dim]);
 		off += dim + 1;
 		if(min_id == ncenter || d < min_v){
 			min_id = i;
@@ -91,19 +91,19 @@ double KMeans::loss(
 	return pred[1];
 }
 
-std::vector<double> KMeans::gradient(const std::vector<double>& x,
+std::vector<double> KMeans::gradient(const std::vector<std::vector<double>>& x,
 	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const
 {
 	vector<double> grad(parlen, 0.0);
 	size_t oldp = static_cast<int>((*ph)[0]);
-	size_t newp = quickPredict(x, w);
+	size_t newp = quickPredict(x[0], w);
 	(*ph)[0] = static_cast<double>(newp);
 	if(oldp != newp){
 		oldp *= dim + 1;
 		newp *= dim + 1;
 		for(size_t i = 0; i < dim; ++i){
-			grad[oldp + i] -= x[i];
-			grad[newp + i] += x[i];
+			grad[oldp + i] -= x[0][i];
+			grad[newp + i] += x[0][i];
 		}
 		grad[oldp + dim] -= 1;
 		grad[newp + dim] += 1;
