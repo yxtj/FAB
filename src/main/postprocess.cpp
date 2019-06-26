@@ -171,7 +171,12 @@ int main(int argc, char* argv[]){
 		}
 		ParameterIO io(opt.alg, "");
 		string tmp;
-		tie(tmp, reference) = io.load(finr);
+		try{
+			tie(tmp, reference) = io.load(finr);
+		} catch(exception& e){
+			cerr << e.what() << endl;
+			return 6;
+		}
 		if(tmp != algParam){
 			cerr << "Warning: given parameter does not match the one read from parameter file" << endl;
 		}

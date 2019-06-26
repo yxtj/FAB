@@ -40,7 +40,7 @@ std::vector<std::tuple<int, NodeTypeGeneral, std::string>> VectorNetwork::parse(
 	regex rf(R"((\d+):?f?)"); // fully-connected layer, i.e.: 4f
 
 	std::vector<std::tuple<int, NodeTypeGeneral, std::string>> res;
-	vector<string> strParam = getStringList(param, getRegSep());
+	vector<string> strParam = getStringList(param, getRawSep());
 	bool hasInput = false;
 	for(string& str : strParam){
 		smatch m;
