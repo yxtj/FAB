@@ -146,8 +146,16 @@ VectorNetwork::~VectorNetwork()
 }
 
 std::vector<double> VectorNetwork::predict(
-	const std::vector<double>& x, const std::vector<double>& w) const
+	const std::vector<double>& x, const std::vector<double>& w)
 {
+	// reset
+	for(int i = 0; i < nLayer; ++i){
+		if(typeLayer[i] == NodeType::RecrSig || typeLayer[i] == NodeType::RecrTanh){
+			for(auto& p : nodes[i])
+				p->reset();
+		}
+	}
+	// forward
 	vector<vector<double>> input; // k features of n-dimension
 	vector<vector<double>> output;
 	input.push_back(x);
@@ -176,6 +184,13 @@ std::vector<double> VectorNetwork::predict(
 std::vector<double> VectorNetwork::gradient(
 	const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y)
 {
+	// reset
+	for(int i = 0; i < nLayer; ++i){
+		if(typeLayer[i] == NodeType::RecrSig || typeLayer[i] == NodeType::RecrTanh){
+			for(auto& p : nodes[i])
+				p->reset();
+		}
+	}
 	// forward
 	vector<vector<vector<double>>> mid; // layer -> feature -> value
 	mid.reserve(nLayer); // intermediate result of all layers

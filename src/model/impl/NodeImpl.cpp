@@ -230,6 +230,12 @@ std::vector<int> RecurrentNodeBase::outShape(const std::vector<int>& inShape) co
 	return { k };
 }
 
+void RecurrentNodeBase::reset()
+{
+	last_pred.assign(n, 0.0);
+	last_grad.assign(n, 0.0);
+}
+
 std::vector<double> RecurrentNodeBase::predictCalcOnly(const std::vector<double>& x, const std::vector<double>& w)
 {
 	std::vector<double> res(k);

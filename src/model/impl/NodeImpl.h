@@ -73,6 +73,7 @@ struct RecurrentNodeBase
 	std::vector<double> last_pred, last_grad; // store the last output (k-dim) for both predict and gradient
 	RecurrentNodeBase(const size_t offset, const std::vector<int>& shape); // shape = {n,k}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
+	virtual void reset();
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
 	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);

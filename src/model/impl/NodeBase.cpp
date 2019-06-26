@@ -28,6 +28,11 @@ std::vector<int> NodeBase::outShape(const std::vector<int>& inShape) const
 	return inShape;
 }
 
+void NodeBase::reset()
+{
+	// empty by default
+}
+
 // ---- Fully-Connected Node ----
 
 FCNode::FCNode(const size_t offset, const std::vector<int>& shape)

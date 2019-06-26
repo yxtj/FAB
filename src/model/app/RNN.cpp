@@ -57,7 +57,10 @@ int RNN::lengthParameter() const
 std::vector<double> RNN::predict(
 	const std::vector<std::vector<double>>& x, const std::vector<double>& w) const
 {
-	return net.predict(x[0], w);
+	vector<double> res;
+	for(auto& line : x)
+		res = net.predict(line, w);
+	return res;
 }
 
 int RNN::classify(const double p) const
@@ -87,7 +90,13 @@ std::vector<double> RNN::gradLoss(const std::vector<double>& pred, const std::ve
 std::vector<double> RNN::gradient(const std::vector<std::vector<double>>& x,
 	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const
 {
-	return net.gradient(x[0], w, y);
+	vector<double> res(net.lenFeatureLayer[0], 0.0);
+	for(auto& line : x){
+		auto temp = net.gradient(line, w, y);
+		for(size_t i = 0; i < temp.size(); ++i)
+			res[i] += temp[i];
+	}
+	return res;
 }
 
 std::string RNN::preprocessParam(const std::string & param)

@@ -49,7 +49,7 @@ public:
 	void bindGradLossFunc(std::function<feature_t(const feature_t& p, const feature_t& y)> glFun);
 	int lengthParameter() const;
 
-	std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w) const;
+	std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
 	std::vector<double> gradient(
 		const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y);
 

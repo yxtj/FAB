@@ -30,6 +30,7 @@ struct NodeBase {
 	size_t nweight() const;
 
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
+	virtual void reset(); // reset internal state
 
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w) = 0;
 	// input: x, w, y, product of previous partial gradients.
