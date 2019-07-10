@@ -27,34 +27,38 @@ void PriorityHolderKeep::update(const size_t id, const unsigned ver, const float
 void PriorityHolderExpLinear::init(const size_t size)
 {
 	priority.resize(size);
-	factor.resize(size, -1.0f);
-	alpha = 0.8f;
+	theta = 0.8f;
 }
 
 float PriorityHolderExpLinear::get(const size_t id, const unsigned ver)
 {
-	return priority[id].first * exp(factor[id] * (ver - priority[id].second));
+	const Item& item = priority[id];
+	return item.p * exp(item.a * (ver - item.n));
 }
 
 void PriorityHolderExpLinear::set(const size_t id, const unsigned ver, const float prio)
 {
-	priority[id] = make_pair(prio, ver);
+	Item& item = priority[id];
+	item.p = prio;
+	item.n = ver;
 }
 
 void PriorityHolderExpLinear::update(const size_t id, const unsigned ver, const float prio)
 {
-	unsigned dn = ver - priority[id].second;
+	Item& item = priority[id];
+	unsigned dn = ver - item.n;
 	if(dn == 0)
 		return;
 	// priority->p2, parameter->p1
 	// log(p1/p2) = a(n1-n2)
-	float dp = prio / priority[id].first;
-	if(dp <= 0)
+	float dp = prio / item.p;
+	if(item.p == 0.0f || dp <= 0)
 		dp = 0;
 	else
 		dp = log(dp);
-	factor[id] = alpha * (dp / dn) + (1 - alpha)*factor[id];
-	priority[id] = make_pair(prio, ver);
+	item.a = theta * (dp / dn) + (1 - theta)*item.a;
+	item.p = prio;
+	item.n = ver;
 }
 
 // exp-twice
