@@ -61,11 +61,7 @@ Trainer::DeltaResult PSGD_log::batchDelta(
 	const size_t start, const size_t cnt, const bool avg)
 {
 	// dump priority
-	vector<float> priority(pd->size());
-	for(size_t i = 0; i < pd->size(); ++i){
-		priority[i] = prhd->get(i, wver);
-	}
-	pdump.dump(priority);
+	pdump.dump(priority); // dump priority
 	priority.clear();
 	size_t end = min(start + cnt, pd->size());
 	Timer tmr;
@@ -77,50 +73,26 @@ Trainer::DeltaResult PSGD_log::batchDelta(
 	tmr.restart();
 	vector<double> grad2 = phaseCalculateGradient(topSize);
 	// variation
-	if(varAvgGradTop){
+	if(varAggAverage){
 		updateAvgGrad(grad2, static_cast<double>(topSize) / cnt);
 	}
 	stat_t_update += tmr.elapseSd();
 	// phase 3: post-process
 	tmr.restart();
 	moveWver();
-	if(varRptGradAll){
+	if(varAggReport){
 		for(size_t j = 0; j < paramWidth; ++j)
 			grad2[j] += grad1[j];
 	}
 	double factor = -rate;
-	if(avg)
-		factor /= topSize;
+	if(avg){
+		if(varAggReport)
+			factor = factor * 2 / (renewSize + topSize);
+		else
+			factor /= topSize;
+	}
 	for(auto& v : grad2)
 		v *= factor;
 	stat_t_post += tmr.elapseSd();
 	return { cnt, topSize, move(grad2) };
-}
-
-std::vector<double> PSGD_log::phaseCalculateGradient(const size_t k)
-{
-	Timer tmr;
-	vector<double> grad(paramWidth, 0.0);
-	vector<int> topk;
-	getTopK(k);
-	stat_t_u_topk += tmr.elapseSd();
-	// update gradient and priority of data-points
-	for(size_t i = 0; i < k; ++i){
-		size_t id = priorityIdx[i];
-		// calculate gradient
-		tmr.restart();
-		auto&& g = pm->gradient(pd->get(id));
-		stat_t_u_grad += tmr.elapseSd();
-		// calcualte priority
-		tmr.restart();
-		float p = calcPriority(g);
-		prhd->update(i, wver, p);
-		stat_t_u_prio += tmr.elapseSd();
-		tmr.restart();
-		// accumulate gradient result
-		for(size_t j = 0; j < paramWidth; ++j)
-			grad[j] += g[j];
-		stat_t_u_merge += tmr.elapseSd();
-	}
-	return grad;
 }

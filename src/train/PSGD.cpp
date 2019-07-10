@@ -49,6 +49,7 @@ void PSGD::prepare()
 		}
 	}
 	// local paraemters
+	priority.resize(pd->size());
 	prhd->init(pd->size());
 	avgGrad.resize(paramWidth, 0.0);
 	renewSize = static_cast<size_t>(pd->size() * renewRatio);
@@ -116,20 +117,20 @@ Trainer::DeltaResult PSGD::batchDelta(
 	tmr.restart();
 	vector<double> grad2 = phaseCalculateGradient(topSize);
 	// variation
-	if(varAvgGradTop){
+	if(varAggAverage){
 		updateAvgGrad(grad2, static_cast<double>(topSize) / cnt);
 	}
 	stat_t_update += tmr.elapseSd();
 	// phase 3: post-process
 	tmr.restart();
 	moveWver();
-	if(varRptGradAll){
+	if(varAggReport){
 		for(size_t j = 0; j < paramWidth; ++j)
 			grad2[j] += grad1[j];
 	}
 	double factor = -rate;
 	if(avg){
-		if(varRptGradAll)
+		if(varAggReport)
 			factor = factor * 2 / (renewSize + topSize);
 		else
 			factor /= topSize;
@@ -166,7 +167,6 @@ std::vector<double> PSGD::phaseCalculateGradient(const size_t k)
 {
 	Timer tmr;
 	vector<double> grad(paramWidth, 0.0);
-	vector<int> topk;
 	getTopK(k);
 	stat_t_u_topk += tmr.elapseSd();
 	// update gradient and priority of data-points
@@ -177,12 +177,14 @@ std::vector<double> PSGD::phaseCalculateGradient(const size_t k)
 		auto&& g = pm->gradient(pd->get(id));
 		stat_t_u_grad += tmr.elapseSd();
 		// calcualte priority
-		tmr.restart();
-		float p = calcPriority(g);
-		prhd->update(i, wver, p);
-		stat_t_u_prio += tmr.elapseSd();
-		tmr.restart();
+		if(varAggLearn){
+			tmr.restart();
+			float p = calcPriority(g);
+			prhd->update(i, wver, p);
+			stat_t_u_prio += tmr.elapseSd();
+		}
 		// accumulate gradient result
+		tmr.restart();
 		for(size_t j = 0; j < paramWidth; ++j)
 			grad[j] += g[j];
 		stat_t_u_merge += tmr.elapseSd();
@@ -232,11 +234,13 @@ bool PSGD::parseDecay(const std::string & type)
 
 bool PSGD::parseVariation(const std::string & str)
 {
-	if(str.find('j') != string::npos || str.find("rj") != string::npos)
-		varRptGradAll = true;
-	if(str.find('t') != string::npos || str.find("at") != string::npos)
-		varAvgGradTop= true;
-	if(str.find('p') != string::npos || str.find("vp") != string::npos)
+	if(str.find('r') != string::npos)
+		varAggReport = true;
+	if(str.find('l') != string::npos)
+		varAggLearn = true;
+	if(str.find('a') != string::npos)
+		varAggAverage = true;
+	if(str.find('p') != string::npos || str.find('d') != string::npos)
 		varVerDP = true;
 	return true;
 }
@@ -263,11 +267,13 @@ void PSGD::getTopK(const size_t k)
 	if(priorityIdx.size() <= k){
 		return;
 	}
+	for(size_t i = 0; i < pd->size(); ++i)
+		priority[i] = prhd->get(i, wver);
 	auto it = priorityIdx.begin() + k;
 	//partial_sort(res.begin(), it, res.end(),
 	nth_element(priorityIdx.begin(), it, priorityIdx.end(), 
 		[&](const int l, const int r){
-		return prhd->get(l, wver) > prhd->get(r, wver);
+		return priority[l] > priority[r];
 	});
 }
 

@@ -4,6 +4,7 @@
 
 class PSGD : public Trainer
 {
+protected:
 	// parameters
 	double rate = 1.0;
 	double topRatio = 1.0;
@@ -20,17 +21,18 @@ class PSGD : public Trainer
 		ExpLinear, // pi=exp(a+bi), pi=pj*exp(b(i-j))
 		ExpQuadratic, // pi=exp(a+bi+ci^2), pi=pj*exp(b(i-j)+c(i^2-j^2))
 	};
-//	std::vector<float> priority;
 	PriorityHolder* prhd = nullptr;
+	std::vector<float> priority; // buffer for priorities in current iteration
 	std::vector<int> priorityIdx; // for top-k
 	unsigned wver; // parameter version
 
 	// gradient
 	std::vector<double> avgGrad;
 	// variations
-	bool varRptGradAll = false; // also report gradient using all gradients of renew phase
-	bool varAvgGradTop = false; // also update average gradient using gradients of the top data points
-	bool varVerDP = false; // also update average gradient using gradients of the top data points
+	bool varAggReport= false; // also report gradient from the priority-update phase
+	bool varAggLearn = false; // also calculate and learn the data points from the parameter-update phase
+	bool varAggAverage = false; // also update average gradient using gradients from the parameter-update phase
+	bool varVerDP = false; // use data points number or iteration as version
 
 	size_t paramWidth; // parameter width
 
