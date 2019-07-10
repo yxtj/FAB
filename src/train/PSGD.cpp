@@ -128,8 +128,12 @@ Trainer::DeltaResult PSGD::batchDelta(
 			grad2[j] += grad1[j];
 	}
 	double factor = -rate;
-	if(avg)
-		factor /= topSize;
+	if(avg){
+		if(varRptGradAll)
+			factor = factor * 2 / (renewSize + topSize);
+		else
+			factor /= topSize;
+	}
 	for(auto& v : grad2)
 		v *= factor;
 	stat_t_post += tmr.elapseSd();
