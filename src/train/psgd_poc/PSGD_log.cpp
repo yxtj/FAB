@@ -80,19 +80,21 @@ Trainer::DeltaResult PSGD_log::batchDelta(
 	// phase 3: post-process
 	tmr.restart();
 	moveWver();
-	if(varAggReport){
-		for(size_t j = 0; j < paramWidth; ++j)
-			grad2[j] += grad1[j];
-	}
-	double factor = -rate;
+	const double factor = -rate;
 	if(avg){
-		if(varAggReport)
-			factor = factor * 2 / (renewSize + topSize);
-		else
-			factor /= topSize;
+		if(varAggReport){
+			for(size_t j = 0; j < paramWidth; ++j)
+				grad2[j] = factor * (grad1[j] / renewSize + grad2[j] / topSize);
+		} else{
+			for(size_t j = 0; j < paramWidth; ++j)
+				grad2[j] *= factor / topSize;
+		}
+	} else{
+		if(varAggReport){
+			for(size_t j = 0; j < paramWidth; ++j)
+				grad2[j] += grad1[j];
+		}
 	}
-	for(auto& v : grad2)
-		v *= factor;
 	stat_t_post += tmr.elapseSd();
 	return { cnt, topSize, move(grad2) };
 }
