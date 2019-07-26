@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import myio
 import util
 
+from util import genFL
+
 #os.chdir('E:/Code/FSB/score/')
 #os.chdir('E:/Code/FSB/score/lr/10-100k/1000-0.1')
 #os.chdir('E:/Code/FSB/score/mlp/10,15,1-100k/1000-0.1')
@@ -98,14 +100,14 @@ def drawListCmp(prefix, mList1, mList2, mList3=None, n=None, ncol=1, ver=1, xlbl
     for i in range(llen):
         c=None
         if i < len(mList1) and mList1[i]:
-            c,nc=plotUnit(lgd, prefix+mList1[i]+'.txt', mList1[i], '-', c, n, idx1, idx2)
+            c,xyr=plotUnit(lgd, prefix+mList1[i]+'.txt', mList1[i], '-', c, n, idx1, idx2)
         if mList2 and i < len(mList2) and mList2[i]:
-            c,nc=plotUnit(lgd, prefix+mList2[i]+'.txt', mList2[i], '--', c, n, idx1, idx2)
+            c,xyr=plotUnit(lgd, prefix+mList2[i]+'.txt', mList2[i], '--', c, n, idx1, idx2)
         if mList3 and i < len(mList3) and mList3[i]:
-            c,nc=plotUnit(lgd, prefix+mList3[i]+'.txt', mList3[i], '-.', c, n, idx1, idx2)
+            c,xyr=plotUnit(lgd, prefix+mList3[i]+'.txt', mList3[i], '-.', c, n, idx1, idx2)
     #plt.hold(True)
     plt.legend(myio.renameLegend(lgd), ncol=ncol)
-    xr,yr = myio.getxyLabel(idx1, idx2, nc)
+    xr,yr = xyr
     xlbl=xlbl if xlbl is not None else xr
     ylbl=ylbl if ylbl is not None else yr
     plt.xlabel(xlbl)
