@@ -136,7 +136,10 @@ Trainer::DeltaResult PSGD::batchDelta(
 	} else{
 		if(varAggReport){
 			for(size_t j = 0; j < paramWidth; ++j)
-				grad2[j] += grad1[j];
+				grad2[j] = factor * (grad1[j] + grad2[j]);
+		} else{
+			for(size_t j = 0; j < paramWidth; ++j)
+				grad2[j] *= factor;
 		}
 	}
 	stat_t_post += tmr.elapseSd();
