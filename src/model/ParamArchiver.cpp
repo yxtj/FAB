@@ -160,9 +160,12 @@ bool ParamArchiver::load_last_text(int & iter, double & time, Parameter & p)
 
 bool ParamArchiver::load_last_binary(int & iter, double & time, Parameter & p)
 {
-	fs.seekg(-binUnitLen, ios_base::end);
-	if(fs.tellg() == 0)
+	fs.seekg(0, ios::end);
+	size_t pos = fs.tellg();
+	size_t n = pos / binUnitLen;
+	if(n == 0)
 		return false;
+	fs.seekg(n*binUnitLen, ios_base::beg);
 	load_binary(iter, time, p);
 	return false;
 }
