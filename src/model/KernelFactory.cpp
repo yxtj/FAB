@@ -6,6 +6,8 @@
 #include "app/TopicModel.h"
 #include "app/KMeans.h"
 #include <stdexcept>
+#include <algorithm>
+
 using namespace std;
 
 std::vector<std::string> KernelFactory::supportList()
