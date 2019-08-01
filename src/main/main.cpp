@@ -1,11 +1,11 @@
 #include "logging/logging.h"
-#include "common/Option.h"
 #include "network/NetworkThread.h"
 #include "data/DataLoader.h"
 #include "data/DataHolder.h"
 #include "distr/Master.h"
 #include "distr/Worker.h"
 #include "message/MType.h"
+#include "Option.h"
 #include <string>
 #include <vector>
 #include <iostream>
@@ -25,19 +25,19 @@ int main(int argc, char* argv[]){
 	}
 	DLOG(INFO) << "size=" << net->size() << " id=" << net->id();
 	if(net->id() == 0){
-		LOG(INFO) << "Infromation:\nDataset: " << opt.dataset << "\tLocation: " << opt.fnData
-			<< "\n  Normalize: " << opt.normalize << "\tRandom Shuffle: " << opt.shuffle
-			<< "\tTrainPart: " << opt.trainPart
-			<< "\n  Separator: " << opt.sepper << "\tIdx-y: " << opt.idY << "\tIdx-skip: " << opt.idSkip
-			<< "\nAlgorithm: " << opt.algorighm << "\tParam: " << opt.algParam << "\tSeed: " << opt.seed
-			<< "\n  Interval Estimator: " << opt.intervalParam << "\tMulticast: " << opt.mcastParam
-			<< "\nRecord file: " << opt.fnOutput << "\tBinary: " << opt.binary
-			<< "\nTraining configurations:\n  Mode: " << opt.mode
-			<< "\tOptimizer: " << opt.optimizer << "\tParam: " << opt.optimizerParam
-			<< "\tBatch-size: " << opt.batchSize << "\tWorker-#: " << opt.nw
-			<< "\nTerminating condition:\n  Max-iteration: " << opt.tcIter << "\tMax-time: " << opt.tcTime
-			<< "\nArchive iteration: " << opt.arvIter << "\tinterval: " << opt.arvTime
-			<< "\nLog iteration: " << opt.logIter;
+		LOG(INFO) << "Infromation:\nDataset: " << opt.conf.dataset << "\tLocation: " << opt.conf.fnData
+			<< "\n  Normalize: " << opt.conf.normalize << "\tRandom Shuffle: " << opt.conf.shuffle
+			<< "\tTrainPart: " << opt.conf.trainPart
+			<< "\n  Separator: " << opt.conf.sepper << "\tIdx-y: " << opt.conf.idY << "\tIdx-skip: " << opt.conf.idSkip
+			<< "\nAlgorithm: " << opt.conf.algorighm << "\tParam: " << opt.conf.algParam << "\tSeed: " << opt.conf.seed
+			<< "\n  Interval Estimator: " << opt.conf.intervalParam << "\tMulticast: " << opt.conf.mcastParam
+			<< "\nRecord file: " << opt.conf.fnOutput << "\tBinary: " << opt.conf.binary
+			<< "\nTraining configurations:\n  Mode: " << opt.conf.mode
+			<< "\tOptimizer: " << opt.conf.optimizer << "\tParam: " << opt.conf.optimizerParam
+			<< "\tBatch-size: " << opt.conf.batchSize << "\tWorker-#: " << opt.conf.nw
+			<< "\nTerminating condition:\n  Max-iteration: " << opt.conf.tcIter << "\tMax-time: " << opt.conf.tcTime
+			<< "\nArchive iteration: " << opt.conf.arvIter << "\tinterval: " << opt.conf.arvTime
+			<< "\nLog iteration: " << opt.conf.logIter;
 	}
 #if !defined(NDEBUG) || defined(_DEBUG)
 	if(net->id()==0){
@@ -48,34 +48,34 @@ int main(int argc, char* argv[]){
 	iostream::sync_with_stdio(false);
 	if(net->id()==0){
 		Master m;
-		m.init(&opt, 0);
+		m.init(&opt.conf, 0);
 		m.run();
 	} else{
 		size_t lid = net->id()-1;
 		Worker w;
-		w.init(&opt, lid);
+		w.init(&opt.conf, lid);
 		DataHolder dh;
 		try{
 			DataLoader dl;
-			dl.init(opt.dataset, opt.nw, lid, true);
-			if(opt.dataset == "csv" || opt.dataset == "tsv" || opt.dataset == "customize")
-				dl.bindParameterTable(opt.sepper, opt.idSkip, opt.idY, opt.header);
-			else if(opt.dataset == "list")
-				dl.bindParameterVarLen(opt.sepper, opt.lenUnit, opt.idY);
+			dl.init(opt.conf.dataset, opt.conf.nw, lid, true);
+			if(opt.conf.dataset == "csv" || opt.conf.dataset == "tsv" || opt.conf.dataset == "customize")
+				dl.bindParameterTable(opt.conf.sepper, opt.conf.idSkip, opt.conf.idY, opt.conf.header);
+			else if(opt.conf.dataset == "list")
+				dl.bindParameterVarLen(opt.conf.sepper, opt.conf.lenUnit, opt.conf.idY);
 			VLOG(1) << "Loading data";
-			size_t localk = opt.topk / opt.nw + (lid < opt.topk%opt.nw ? 1 : 0);
-			dh = dl.load(opt.fnData, opt.trainPart, localk);
+			size_t localk = opt.conf.topk / opt.conf.nw + (lid < opt.conf.topk%opt.conf.nw ? 1 : 0);
+			dh = dl.load(opt.conf.fnData, opt.conf.trainPart, localk);
 			DVLOG(2) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;
-			if(opt.normalize){
+			if(opt.conf.normalize){
 				dh.normalize(false);
 				DVLOG(2) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;
 			}
 			VLOG(1) << "Shuffle data";
-			if(opt.shuffle){
+			if(opt.conf.shuffle){
 				dh.shuffle();
 			}
 		} catch(exception& e){
-			LOG(FATAL) << "Error in loading data file: " << opt.fnData << "\n" << e.what() << endl;
+			LOG(FATAL) << "Error in loading data file: " << opt.conf.fnData << "\n" << e.what() << endl;
 		}
 		w.bindDataset(&dh);
 		w.run();

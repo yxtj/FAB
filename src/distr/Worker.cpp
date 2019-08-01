@@ -1,5 +1,4 @@
 #include "Worker.h"
-#include "common/Option.h"
 #include "network/NetworkThread.h"
 #include "message/MType.h"
 #include "logging/logging.h"
@@ -21,29 +20,29 @@ Worker::Worker() : Runner() {
 	exitTrain = false;
 }
 
-void Worker::init(const Option* opt, const size_t lid)
+void Worker::init(const ConfData* conf, const size_t lid)
 {
-	this->opt = opt;
-	nWorker = opt->nw;
+	this->conf = conf;
+	nWorker = conf->nw;
 	localID = lid;
-	trainer = TrainerFactory::generate(opt->optimizer, opt->optimizerParam);
+	trainer = TrainerFactory::generate(conf->optimizer, conf->optimizerParam);
 	LOG_IF(trainer == nullptr, FATAL) << "Trainer is not set correctly";
-	ln = opt->logIter;
+	ln = conf->logIter;
 	logName = "W"+to_string(localID);
 	setLogThreadName(logName);
-	model.init(opt->algorighm, opt->algParam);
+	model.init(conf->algorighm, conf->algParam);
 
-	if(opt->mode == "bsp"){
+	if(conf->mode == "bsp"){
 		bspInit();
-	} else if(opt->mode == "tap"){
+	} else if(conf->mode == "tap"){
 		tapInit();
-	} else if(opt->mode == "ssp"){
+	} else if(conf->mode == "ssp"){
 		sspInit();
-	} else if(opt->mode == "sap"){
+	} else if(conf->mode == "sap"){
 		sapInit();
-	} else if(opt->mode == "fsp"){
+	} else if(conf->mode == "fsp"){
 		fspInit();
-	} else if(opt->mode == "aap"){
+	} else if(conf->mode == "aap"){
 		aapInit();
 	}
 }
@@ -53,8 +52,8 @@ void Worker::bindDataset(const DataHolder* pdh)
 	VLOG(1) << "Bind dataset with " << pdh->size() << " data points";
 	trainer->bindDataset(pdh);
 	// separated the mini-batch among all workers
-	localBatchSize = opt->batchSize / nWorker;
-	if(opt->batchSize % nWorker > localID)
+	localBatchSize = conf->batchSize / nWorker;
+	if(conf->batchSize % nWorker > localID)
 		++localBatchSize;
 	if(localBatchSize <= 0)
 		localBatchSize = 1;
@@ -83,7 +82,7 @@ void Worker::run()
 	sendReady();
 	waitStart();
 
-	DLOG(INFO) << "start training with mode: " << opt->mode << ", local batch size: " << localBatchSize;
+	DLOG(INFO) << "start training with mode: " << conf->mode << ", local batch size: " << localBatchSize;
 	iter = 1;
 	iterParam = 1;
 	//try{
@@ -91,17 +90,17 @@ void Worker::run()
 	//} catch(exception& e){
 	//	LOG(FATAL) << e.what();
 	//}
-	if(opt->mode == "bsp"){
+	if(conf->mode == "bsp"){
 		bspProcess();
-	} else if(opt->mode == "tap"){
+	} else if(conf->mode == "tap"){
 		tapProcess();
-	} else if(opt->mode == "ssp"){
+	} else if(conf->mode == "ssp"){
 		sspProcess();
-	} else if(opt->mode == "sap"){
+	} else if(conf->mode == "sap"){
 		sapProcess();
-	} else if(opt->mode == "fsp"){
+	} else if(conf->mode == "fsp"){
 		fspProcess();
-	} else if(opt->mode == "aap"){
+	} else if(conf->mode == "aap"){
 		aapProcess();
 	}
 
@@ -209,7 +208,7 @@ void Worker::sendDelta(std::vector<double>& delta, const size_t cnt)
 
 void Worker::initializeParameter()
 {
-	if(!opt->resume){
+	if(!conf->resume){
 		if(model.getKernel()->needInitParameterByData()){
 			// model.param is set in trainer->ready()
 			net->send(masterNID, MType::DParameter, model.getParameter().weights);

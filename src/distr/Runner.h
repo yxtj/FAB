@@ -6,16 +6,16 @@
 #include "model/Model.h"
 #include "train/TrainerFactory.h"
 #include "common/Statistics.h"
+#include "common/ConfData.h"
 #include <string>
 #include <thread>
 //#include <chrono>
 
 class NetworkThread;
-struct Option;
 
 class Runner{
 public:
-	const Option* opt;
+	const ConfData* conf;
 	size_t nWorker;
 	size_t localID; // local logic id
 	int iter;
@@ -25,7 +25,7 @@ public:
 	
 public:
 	Runner();
-	virtual void init(const Option* opt, const size_t lid) = 0;
+	virtual void init(const ConfData* conf, const size_t lid) = 0;
 	virtual void run() = 0;
 
 	void startMsgLoop(const std::string& name = "");

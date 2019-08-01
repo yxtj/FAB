@@ -14,6 +14,9 @@ class DataLoader{
 	std::vector<int> skips, yIds;
 	bool header = false;
 public:
+	static std::vector<std::string> supportList();
+	static bool isSupported(const std::string& name);
+
 	void init(const std::string& dataset, const size_t nparts = 1,
 		const size_t localid = 0, const bool localOnly = true);
 

@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <boost/program_options.hpp>
 #include "util/Util.h"
+#include "data/DataLoader.h"
+#include "model/KernelFactory.h"
+#include "train/TrainerFactory.h"
 
 using namespace std;
 
@@ -23,12 +26,13 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 	int tmp_v;
 	if(pimpl == nullptr)
 		pimpl = new Impl(getScreenSize().first);
+
 	using boost::program_options::value;
 	using boost::program_options::bool_switch;
 	pimpl->desc.add_options()
 		("help,h", "Print help messages")
 		// parallel
-		("mode,m", value(&mode)->required(), "The parallel mode: bsp, tap, ssp:<n>, sap:<n>, fsp, aap")
+		("mode,m", value(&conf.mode)->default_value("bsp"), "The parallel mode: bsp, tap, ssp:<n>, sap:<n>, fsp, aap")
 		// parallel - broadcast
 		("cast_mode,c", value(&tmp_cast)->default_value("broadcast"),
 			"The method to send out new parameters. Supports: broadcast/all, ring:k, random:k,seed, hash:k")
@@ -38,59 +42,59 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 			"Supports: interval:x(x is in seconds), portion:x(x in 0~1), "
 			"improve:x,t (x: avg. imporovement, t: max waiting time), balance:w (num. of windows)")
 		// app - algorithm
-		("algorithm,a", value(&algorighm)->required(), "The algorithm to run. "
+		("algorithm,a", value(&conf.algorighm)->required(), "The algorithm to run. "
 			"Support: lr, mlp, cnn, rnn, tm, km.")
-		("parameter,p", value(&algParam)->required(),
+		("parameter,p", value(&conf.algParam)->required(),
 			"The parameter of the algorithm, usually the shape of the algorithm")
-		("seed", value(&seed)->default_value(123456U), "The seed to initialize parameters")
+		("seed", value(&conf.seed)->default_value(123456U), "The seed to initialize parameters")
 		// app - training
 		("batch_size,s", value(&tmp_bs)->required(), "The global batch size. Support suffix: k, m, g")
-		//("learning_rate,l", value(&lrate)->required(), "The learning rate")
-		("optimizer,o", value(&optimizer)->required()->default_value("gd:0.01"),
+		//("learning_rate,l", value(&conf.lrate)->required(), "The learning rate")
+		("optimizer,o", value(&conf.optimizer)->required()->default_value("gd:0.01"),
 			"The optimizer to train. Support: gd:<lr>, em:<lr>, kmeans, "
 			"psgd:<lr>:<k-ratio>:<global/square>:<r-ratio>:<use-rg>, "
 			"psgdb:<lr>:<k-ratio>:<blk-size>:<r-ratio>:<use-rg>, "
 			"psgdd:<lr>:<k-ratio>:<decay-factor>:<r-ratio>:<use-rg>")
 		// file - input
-		("dataset", value(&dataset)->default_value("csv"),
+		("dataset", value(&conf.dataset)->default_value("csv"),
 			"The dataset/type to use. Give dataset name (mnist) or "
 			"type (csv, tsv, customize, list (variable length x)).")
-		("trainpart", bool_switch(&trainPart)->default_value(true),
+		("trainpart", bool_switch(&conf.trainPart)->default_value(true),
 			"Whether to use the trainning part of the dateset.")
-		("data_file,d", value(&fnData)->required(), "The file name of the input data.")
-		("topk,k", value(&topk)->default_value(0), "Only use the first <k> data points. (0 means all)")
-		("normalize,n", bool_switch(&normalize)->default_value(false),
+		("data_file,d", value(&conf.fnData)->required(), "The file name of the input data.")
+		("topk,k", value(&conf.topk)->default_value(0), "Only use the first <k> data points. (0 means all)")
+		("normalize,n", bool_switch(&conf.normalize)->default_value(false),
 			"Whether to do normailzation on the input file.")
-		("shuffle", bool_switch(&shuffle)->default_value(false), "Randomly shuffle the dataset.")
+		("shuffle", bool_switch(&conf.shuffle)->default_value(false), "Randomly shuffle the dataset.")
 		// file - input - table
-		("header", bool_switch(&header)->default_value(false), 
+		("header", bool_switch(&conf.header)->default_value(false), 
 			"Whether the input file contain a header line")
-		("sepper", value(&sepper)->default_value(","), "Separator for customized dataset.")
+		("sepper", value(&conf.sepper)->default_value(","), "Separator for customized dataset.")
 		("skip", value(&tmp_ids)->default_value({}, ""),
 			"The columns to skip in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)")
 		// file - input - list (variable-length x)
-		("unit", value(&lenUnit)->default_value(0), "Length of one x unit for the variable length input (RNN).")
+		("unit", value(&conf.lenUnit)->default_value(0), "Length of one x unit for the variable length input (RNN).")
 		("ylist,y", value(&tmp_idy)->default_value({}, ""),
 			"The columns to be used as y in the data file. "
 			"A space/comma separated list of integers and a-b (a, a+1, a+2, ..., b)")
 		// file - output
-		("record_file,r", value(&fnOutput)->required(), "The file name of the archived parameter.")
-		("binary,b", bool_switch(&binary)->default_value(false), "Whether to output using binary IO.")
-		("resume", bool_switch(&resume)->default_value(false), "Whether to resume from the last output item.")
+		("record_file,r", value(&conf.fnOutput)->required(), "The file name of the archived parameter.")
+		("binary,b", bool_switch(&conf.binary)->default_value(false), "Whether to output using binary IO.")
+		("resume", bool_switch(&conf.resume)->default_value(false), "Whether to resume from the last output item.")
 		// termination
 		("term_iter", value(&tmp_t_iter)->required(), "Termination condition: maximum iteration.")
-		("term_time", value(&tcTime)->required(), "Termination condition: maximum training time.")
+		("term_time", value(&conf.tcTime)->required(), "Termination condition: maximum training time.")
 		// archive
 		("arch_iter", value(&tmp_a_iter)->default_value("1000"), "Progress archiving condition: maximum iteration.")
-		("arch_time", value(&arvTime)->default_value(1.0), "Progress archiving condition: maximum training time.")
+		("arch_time", value(&conf.arvTime)->default_value(1.0), "Progress archiving condition: maximum training time.")
 		// log
 		("log_iter", value(&tmp_l_iter)->default_value("100"), "Log training step every <log_iter> iterations.")
 		("v", value(&tmp_v), "Verbose level.")
 		;
 
 	boost::program_options::variables_map vm;
-	this->nw = nWorker;
+	conf.nw = nWorker;
 	try {
 		auto p = boost::program_options::command_line_parser(argc, argv).
 			//options(pimpl->desc).allow_unregistered().run();
@@ -98,14 +102,14 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		boost::program_options::store(p, vm);
 		boost::program_options::notify(vm);
 
-		mcastParam = getStringList(tmp_cast, ":,; ");
-		intervalParam = getStringList(tmp_interval, ":,; ");
-		idSkip = getIntListByRange(tmp_ids);
-		idY = getIntListByRange(tmp_idy);
-		batchSize = stoiKMG(tmp_bs);
-		tcIter = stoiKMG(tmp_t_iter);
-		arvIter = stoiKMG(tmp_a_iter);
-		logIter = stoiKMG(tmp_l_iter);
+		conf.mcastParam = getStringList(tmp_cast, ":,; ");
+		conf.intervalParam = getStringList(tmp_interval, ":,; ");
+		conf.idSkip = getIntListByRange(tmp_ids);
+		conf.idY = getIntListByRange(tmp_idy);
+		conf.batchSize = stoiKMG(tmp_bs);
+		conf.tcIter = stoiKMG(tmp_t_iter);
+		conf.arvIter = stoiKMG(tmp_a_iter);
+		conf.logIter = stoiKMG(tmp_l_iter);
 	} catch(exception& e){
 		cerr << "Error in parsing parameter: " << e.what() << endl;
 		return false;
@@ -115,19 +119,19 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 
 	// check and preprocess
 	if(!processMode()){
-		cerr << "Error: mode not supported: " << mode << endl;
+		cerr << "Error: mode not supported: " << conf.mode << endl;
 		return false;
 	}
 	if(!processDataset()){
-		cerr << "Error: dataset not supported: " << dataset << endl;
+		cerr << "Error: dataset not supported: " << conf.dataset << endl;
 		return false;
 	}
 	if(!processAlgorithm()){
-		cerr << "Error: algorithm not supported: " << algorighm << endl;
+		cerr << "Error: algorithm not supported: " << conf.algorighm << endl;
 		return false;
 	}
 	if(!processOptimizer()){
-		cerr << "Error: optimizer not supported: " << optimizer << endl;
+		cerr << "Error: optimizer not supported: " << conf.optimizer << endl;
 		return false;
 	}
 	// error handling
@@ -142,63 +146,49 @@ void Option::showUsage() const {
 }
 
 bool Option::processMode(){
-	for(char& ch : mode){
+	for(char& ch : conf.mode){
 		if(ch >= 'A' && ch <= 'Z')
 			ch += 'a' - 'A';
 	}
-	vector<string> t = getStringList(mode, ":-, ");
+	vector<string> t = getStringList(conf.mode, ":-, ");
 	vector<string> supported = { "bsp", "tap", "ssp", "sap", "fsp", "aap" };
 	auto it = find(supported.begin(), supported.end(), t[0]);
 	if(it == supported.end())
 		return false;
-	mode = t[0];
+	conf.mode = t[0];
 	if(t[0] == "ssp" || t[0] == "sap"){
 		if(t.size() > 1)
-			staleGap = stoi(t[1]);
+			conf.staleGap = stoi(t[1]);
 		else
-			staleGap = 1;
+			conf.staleGap = 1;
 	} else if(t[0]=="aap"){
-		aapWait = t.size() >= 2 && beTrueOption(t[1]);
+		conf.aapWait = t.size() >= 2 && beTrueOption(t[1]);
 	}
 	return true;
 }
 
 bool Option::processDataset(){
-	for(char& ch : dataset){
+	for(char& ch : conf.dataset){
 		if(ch >= 'A' && ch <= 'Z')
 			ch += 'a' - 'A';
 	}
-	const vector<string> supported{ "customize", "csv", "tsv", "list",
-		"mnist", "cifar10", "cifar100" };
-	auto it = find(supported.begin(), supported.end(), dataset);
-	return it != supported.end();
-
+	return DataLoader::isSupported(conf.dataset);
 }
 
 bool Option::processAlgorithm(){
-	for(char& ch : algorighm){
+	for(char& ch : conf.algorighm){
 		if(ch >= 'A' && ch <= 'Z')
 			ch += 'a' - 'A';
 	}
-	const vector<string> supported = { "lr", "mlp", "cnn", "rnn", "tm", "km" };
-	auto it = find(supported.begin(), supported.end(), algorighm);
-	return it != supported.end();
+	return KernelFactory::isSupported(conf.algorighm);
 }
 
 bool Option::processOptimizer()
 {
-	for(char& ch : optimizer){
+	for(char& ch : conf.optimizer){
 		if(ch >= 'A' && ch <= 'Z')
 			ch += 'a' - 'A';
 	}
-	vector<string> t = getStringList(optimizer, ":;, ");
-	const vector<string> supported = { "gd", "em", "kmeans", "psgd", "psgdb", "psgdd" };
-	auto it = find(supported.begin(), supported.end(), t[0]);
-	if(it == supported.end() && t[0].find("_poc_") == string::npos)
-		return false;
-	optimizer = t[0];
-	for(size_t i = 1; i < t.size(); ++i)
-		optimizerParam.push_back(t[i]);
-	return true;
+	return TrainerFactory::isSupported(conf.optimizer);
 }
 

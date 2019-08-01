@@ -6,6 +6,20 @@ using namespace std;
 
 // -------- DataLoader basic --------
 
+std::vector<std::string> DataLoader::supportList()
+{
+	static vector<string> supported{ "customize", "csv", "tsv", "list",
+		"mnist", "cifar10", "cifar100" };
+	return supported;
+}
+
+bool DataLoader::isSupported(const std::string& name)
+{
+	const auto&& supported = supportList();
+	auto it = find(supported.begin(), supported.end(), name);
+	return it != supported.end();
+}
+
 void DataLoader::init(const std::string & dataset, const size_t nparts,
 	const size_t localid, const bool onlyLocalPart)
 {

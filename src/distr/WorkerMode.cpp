@@ -1,5 +1,4 @@
 #include "Worker.h"
-#include "common/Option.h"
 #include "network/NetworkThread.h"
 #include "message/MType.h"
 #include "logging/logging.h"
@@ -130,7 +129,7 @@ void Worker::sspProcess()
 			break;
 		}
 		VLOG_EVERY_N(ln, 2) << "  wait for new parameter";
-		while(!exitTrain && iter - iterParam > opt->staleGap){
+		while(!exitTrain && iter - iterParam > conf->staleGap){
 			waitParameter();
 		}
 		if(exitTrain == true){
@@ -180,7 +179,7 @@ void Worker::sapProcess()
 			break;
 		}
 		VLOG_EVERY_N(ln, 2) << "  wait for new parameter";
-		while(!exitTrain && iter - iterParam > opt->staleGap){
+		while(!exitTrain && iter - iterParam > conf->staleGap){
 			waitParameter();
 		}
 		if(exitTrain == true){
@@ -277,7 +276,7 @@ void Worker::aapProcess()
 			}
 			stat.t_dlt_calc += tmr.elapseSd();
 			tmr.restart();
-			if(opt->aapWait && iter != 1 && newBatch){
+			if(conf->aapWait && iter != 1 && newBatch){
 				waitParameter();
 				stat.t_par_wait += tmr.elapseSd();
 				tmr.restart();
@@ -292,7 +291,7 @@ void Worker::aapProcess()
 		stat.t_dlt_calc += tmr.elapseSd();
 		VLOG_EVERY_N(ln, 2) << "  send delta";
 		sendDelta(bfDelta, n_used);
-		//if(opt->aapWait)
+		//if(conf->aapWait)
 		//	waitParameter();
 		//stat.t_par_wait += tmr.elapseSd();
 		++iter;

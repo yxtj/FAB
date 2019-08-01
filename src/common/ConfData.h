@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 
-struct Option{
+struct ConfData {
 	std::string dataset;
 	std::string fnData;
 	size_t topk;
@@ -43,21 +43,9 @@ struct Option{
 	size_t arvIter; // every n iterations
 	double arvTime; // every t seconds
 	int logIter;
-	
+
 	// termination condition
 	size_t tcIter; // maximum iteration
 	double tcTime; // maximum training time
 	double tcDiff; // minimum improvement cross iterations
-
-	bool parse(int argc, char* argv[], const size_t nWorker);
-	void showUsage() const;
-
-private:
-	bool processMode();
-	bool processDataset();
-	bool processAlgorithm();
-	bool processOptimizer();
-
-	struct Impl;
-	Impl* pimpl = nullptr;
 };

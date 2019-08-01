@@ -8,6 +8,19 @@
 #include <stdexcept>
 using namespace std;
 
+std::vector<std::string> KernelFactory::supportList()
+{
+	static vector<string> supported = { "lr", "mlp", "cnn", "rnn", "km" }; //, "tm"
+	return supported;
+}
+
+bool KernelFactory::isSupported(const std::string& name)
+{
+	const auto&& supported = supportList();
+	auto it = find(supported.begin(), supported.end(), name);
+	return it != supported.end();
+}
+
 Kernel* KernelFactory::generate(const std::string& name){
 	if(name == "lr")
 		return new LogisticRegression();

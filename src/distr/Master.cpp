@@ -1,5 +1,4 @@
 #include "Master.h"
-#include "common/Option.h"
 #include "network/NetworkThread.h"
 #include "message/MType.h"
 #include "logging/logging.h"
@@ -26,36 +25,36 @@ Master::Master() : Runner() {
 	archDoing = false;
 }
 
-void Master::init(const Option* opt, const size_t lid)
+void Master::init(const ConfData* conf, const size_t lid)
 {
-	this->opt = opt;
-	nWorker = opt->nw;
+	this->conf = conf;
+	nWorker = conf->nw;
 	nPointWorker.assign(nWorker, 0);
-	trainer = TrainerFactory::generate(opt->optimizer, opt->optimizerParam);
+	trainer = TrainerFactory::generate(conf->optimizer, conf->optimizerParam);
 	LOG_IF(trainer == nullptr, FATAL) << "Trainer is not set correctly";
 	trainer->bindModel(&model);
 	localID = lid;
-	ln = opt->logIter;
+	ln = conf->logIter;
 	logName = "M";
 	setLogThreadName(logName);
 	initializeParameter();
 
-	if(opt->mode == "bsp"){
+	if(conf->mode == "bsp"){
 		bspInit();
-	} else if(opt->mode == "tap"){
+	} else if(conf->mode == "tap"){
 		tapInit();
-	} else if(opt->mode == "ssp"){
+	} else if(conf->mode == "ssp"){
 		sspInit();
-	} else if(opt->mode == "sap"){
+	} else if(conf->mode == "sap"){
 		sapInit();
-	} else if(opt->mode == "fsp"){
+	} else if(conf->mode == "fsp"){
 		fspInit();
-		pie =IntervalEstimatorFactory::generate(opt->intervalParam, nWorker, nPoint);
-		LOG_IF(pie == nullptr, FATAL) << "Fail to initialize interval estimator with parameter: " << opt->intervalParam;
-	} else if(opt->mode == "aap"){
+		pie =IntervalEstimatorFactory::generate(conf->intervalParam, nWorker, nPoint);
+		LOG_IF(pie == nullptr, FATAL) << "Fail to initialize interval estimator with parameter: " << conf->intervalParam;
+	} else if(conf->mode == "aap"){
 		aapInit();
-		prs = ReceiverSelectorFactory::generate(opt->mcastParam, nWorker);
-		LOG_IF(prs == nullptr, FATAL) << "Fail to initialize receiver selector with parameter: " << opt->mcastParam;
+		prs = ReceiverSelectorFactory::generate(conf->mcastParam, nWorker);
+		LOG_IF(prs == nullptr, FATAL) << "Fail to initialize receiver selector with parameter: " << conf->mcastParam;
 	}
 }
 
@@ -79,10 +78,10 @@ void Master::run()
 	LOG(INFO) << "Got x-length: " << nx << ", y-length: " << ny << ", data points: " << nPoint;
 	LOG(INFO) << "Model parameter length: " << model.paramWidth();
 	clearAccumulatedDelta();
-	if(!opt->fnOutput.empty()){
+	if(!conf->fnOutput.empty()){
 		doArchive = true;
-		archiver.init_write(opt->fnOutput, model.paramWidth(), opt->binary, opt->resume);
-		LOG_IF(!archiver.valid(), FATAL) << "Cannot write to file: " << opt->fnOutput;
+		archiver.init_write(conf->fnOutput, model.paramWidth(), conf->binary, conf->resume);
+		LOG_IF(!archiver.valid(), FATAL) << "Cannot write to file: " << conf->fnOutput;
 	}
 	iter = 0;
 	LOG(INFO) << "Coordinae initializing parameter";
@@ -96,20 +95,20 @@ void Master::run()
 	tmrTrain.restart();
 	archiveProgress(true);
 
-	LOG(INFO)<<"Start traning with mode: "<<opt->mode;
+	LOG(INFO)<<"Start traning with mode: "<<conf->mode;
 	//tmrTrain.restart();
 	iter = 1;
-	if(opt->mode == "bsp"){
+	if(conf->mode == "bsp"){
 		bspProcess();
-	} else if(opt->mode == "tap"){
+	} else if(conf->mode == "tap"){
 		tapProcess();
-	} else if(opt->mode == "ssp"){
+	} else if(conf->mode == "ssp"){
 		sspProcess();
-	} else if(opt->mode == "sap"){
+	} else if(conf->mode == "sap"){
 		sapProcess();
-	} else if(opt->mode == "fsp"){
+	} else if(conf->mode == "fsp"){
 		fspProcess();
-	} else if(opt->mode == "aap"){
+	} else if(conf->mode == "aap"){
 		aapProcess();
 	}
 	--iter;
@@ -278,8 +277,8 @@ void Master::accumulateDeltaNext(const int d, const std::vector<double>& delta, 
 
 bool Master::terminateCheck()
 {
-	return (iter > opt->tcIter)
-		|| (tmrTrain.elapseSd() > opt->tcTime);
+	return (iter > conf->tcIter)
+		|| (tmrTrain.elapseSd() > conf->tcTime);
 }
 
 void Master::checkDataset()
@@ -290,9 +289,9 @@ void Master::checkDataset()
 
 void Master::initializeParameter()
 {
-	model.init(opt->algorighm, opt->algParam);
+	model.init(conf->algorighm, conf->algParam);
 	Parameter p;
-	if(opt->resume){
+	if(conf->resume){
 		int i;
 		double t;
 		if(archiver.load_last(i, t, p)){
@@ -306,7 +305,7 @@ void Master::initializeParameter()
 		if(model.getKernel()->needInitParameterByData()){
 			p.init(model.paramWidth(), 0.0);
 		} else{
-			p.init(model.paramWidth(), 0.01, 0.01, opt->seed);
+			p.init(model.paramWidth(), 0.01, 0.01, conf->seed);
 		}
 	}
 	model.setParameter(move(p));
@@ -314,7 +313,7 @@ void Master::initializeParameter()
 
 void Master::coordinateParameter()
 {
-	if(!opt->resume){
+	if(!conf->resume){
 		if(model.getKernel()->needInitParameterByData()){
 			suParam.wait_n_reset();
 		}
@@ -357,8 +356,8 @@ bool Master::needArchive()
 {
 	if(!doArchive)
 		return false;
-	if(iter - lastArchIter >= opt->arvIter
-		|| tmrArch.elapseSd() >= opt->arvTime)
+	if(iter - lastArchIter >= conf->arvIter
+		|| tmrArch.elapseSd() >= conf->arvTime)
 	{
 		return true;
 	}

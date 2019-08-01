@@ -1,5 +1,4 @@
 #include "Master.h"
-#include "common/Option.h"
 #include "network/NetworkThread.h"
 #include "message/MType.h"
 #include "logging/logging.h"
@@ -333,7 +332,7 @@ void Master::handleDeltaAap(const std::string & data, const RPCInfo & info)
 	//rph.input(typeDDeltaAll, s);
 	lastDeltaSource = s;
 	rph.input(typeDDeltaAny, s);
-	if(opt->aapWait)
+	if(conf->aapWait)
 		sendReply(info, MType::DDelta);
 	++stat.n_dlt_recv;
 	// broadcast new parameter in main thread

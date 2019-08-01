@@ -8,6 +8,24 @@
 #include "psgd_poc/PSGD_point.h"
 #include "psgd_poc/PSGD_dim.h"
 
+using namespace std;
+
+std::vector<std::string> TrainerFactory::supportList()
+{
+	static vector<string> supported = { "gd", "em", "kmeans", "psgd", "psgdb", "psgdd" };
+	return supported;
+}
+
+bool TrainerFactory::isSupported(const std::string& name)
+{
+	const auto&& supported = supportList();
+	auto it = find(supported.begin(), supported.end(), name);
+	if(it == supported.end() && name.find("_poc_") == string::npos)
+		return false;
+	return true;
+}
+
+
 Trainer * TrainerFactory::generate(
 	const std::string& name, const std::vector<std::string>& param)
 {

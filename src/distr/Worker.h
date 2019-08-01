@@ -7,7 +7,7 @@
 class Worker : public Runner{
 public:
 	Worker();
-	virtual void init(const Option* opt, const size_t lid);
+	virtual void init(const ConfData* conf, const size_t lid);
 	virtual void run();
 	virtual void registerHandlers();
 	void bindDataset(const DataHolder* pdh);
