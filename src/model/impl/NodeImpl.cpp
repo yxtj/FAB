@@ -198,8 +198,8 @@ std::vector<double> ConvNode2D::gradient(std::vector<double>& grad, const std::v
 	int px = 0;
 	for(int i = 0; i < n; ++i) for(int j = 0; j < m; ++j){
 		// lowI/J and upI/J are the coordinates in y
-		int lowi = max(0, i - k1 + 1), lowj = max(0, j - k2 + 1);
-		int upi = min(on - 1, i), upj = min(om - 1, j);
+		int lowi = max(0, i - k1 + 1), upi = min(on - 1, i);
+		int lowj = max(0, j - k2 + 1), upj = min(om - 1, j);
 		for(int pi = lowi; pi <= upi; ++pi){
 			for(int pj = lowj; pj <= upj; ++pj){
 				int py = pi * om + pj;
@@ -208,6 +208,94 @@ std::vector<double> ConvNode2D::gradient(std::vector<double>& grad, const std::v
 				int wj = j - pj;
 				int pw = wi * k2 + wj;
 				res[px] += f * w[pw];
+			}
+		}
+		++px;
+	}
+	return res;
+}
+
+// ---- Convolutional Node: 3D ----
+
+ConvNode3D::ConvNode3D(const size_t offset, const std::vector<int>& shape)
+	: NodeBase(offset, shape), n(shape[0]), m(shape[1]), p(shape[2]),
+	k1(shape[3]), k2(shape[4]), k3(shape[5]),
+	on(n - k1 + 1), om(m - k2 + 1), op(p - k3 + 1)
+{
+	assert(shape.size() == 6);
+	assert(k1 > 0 && k2 > 0 && k3 > 0);
+	nw = k1 * k2 * k3 + 1; // with the constant offset
+}
+
+std::vector<int> ConvNode3D::outShape(const std::vector<int>& inShape) const
+{
+	return { on, om, op };
+}
+
+std::vector<double> ConvNode3D::predict(const std::vector<double>& x, const std::vector<double>& w)
+{
+	const int sizeW = k1 * k2 * k3;
+	std::vector<double> res(on * om);
+	int py = 0;
+	for(int i = 0; i < on; ++i) for(int j = 0; j < om; ++j) for(int k = 0; k < op; ++k)
+	{
+		double t = w[off + sizeW];
+		int pw = off;
+		for(int p1 = 0; p1 < k1; ++p1){
+			for(int p2 = 0; p2 < k2; ++p2){
+				int px = ((i + p1) * m + j)*p + k;
+				for(int p3 = 0; p3 < k3; ++p3){
+					t += w[pw++] * x[px++];
+				}
+			}
+		}
+		res[py] = t;
+		++py;
+	}
+	return res;
+}
+
+std::vector<double> ConvNode3D::gradient(std::vector<double>& grad, const std::vector<double>& x,
+	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+{
+	const int sizeY = on * om;
+	assert(y.size() == sizeY);
+	// dy/dw
+	int py = 0;
+	for(int i = 0; i < on; ++i) for(int j = 0; j < om; ++j) for(int k = 0; j < op; ++k)
+	{
+		double f = pre[py++];
+		int pw = off;
+		for(int p1 = 0; p1 < k1; ++p1){
+			for(int p2 = 0; p2 < k2; ++p2){
+				int px = ((i + p1)*m + j)*p + k;
+				for(int p3 = 0; p3 < k3; ++p3){
+					grad[pw++] += f * x[px++];
+				}
+			}
+		}
+		grad[pw] += f;
+	}
+	// dy/dx
+	std::vector<double> res(n * m);
+	int px = 0;
+	for(int i = 0; i < n; ++i) for(int j = 0; j < m; ++j) for(int k = 0; j < op; ++k)
+	{
+		// lowI/J and upI/J are the coordinates in y
+		int lowi = max(0, i - k1 + 1), upi = min(on - 1, i);
+		int lowj = max(0, j - k2 + 1), upj = min(om - 1, j);
+		int lowk = max(0, k - k3 + 1), upk = min(op - 1, k);
+		for(int pi = lowi; pi <= upi; ++pi){
+			for(int pj = lowj; pj <= upj; ++pj){
+				for(int pk = lowk; pk <= upk; ++pk){
+					int py = (pi * om + pj) * op + pk;
+					const double f = pre[py];
+					int wi = i - pi;
+					int wj = j - pj;
+					int wk = k - pk;
+					int pw = (wi * k2 + wj) * k3 + wk;
+					res[px] += f * w[pw];
+				}
 			}
 		}
 		++px;
@@ -535,6 +623,69 @@ std::vector<double> PoolMaxNode2D::gradient(std::vector<double>& grad, const std
 	return res;
 }
 
+// ---- Pooling Node: 3D max ----
+
+PoolMaxNode3D::PoolMaxNode3D(const size_t offset, const std::vector<int>& shape)
+	: NodeBase(offset, shape), n(shape[0]), m(shape[1]), p(shape[2]),
+	k1(shape[3]), k2(shape[4]), k3(shape[5]),
+	on((n + k1 - 1) / k1), om((m + k2 - 1) / k2), op((p + k3 - 1) / k3)
+{
+	assert(shape.size() == 6);
+	nw = 0;
+}
+
+std::vector<int> PoolMaxNode3D::outShape(const std::vector<int>& inShape) const
+{
+	return { on, om, op };
+}
+
+std::vector<double> PoolMaxNode3D::predict(const std::vector<double>& x, const std::vector<double>& w)
+{
+	vector<double> res(on * om * op, numeric_limits<double>::lowest());
+	int px = 0;
+	for(int i = 0; i < n; ++i){
+		int p1 = i / k1; // in range [0, on)
+		int off = p1 * om * op;
+		for(int j = 0; j < m; ++j){
+			int p2 = j / k2; // in range [0, om)
+			off += p2 * op;
+			for(int k = 0; k < p; ++k){
+				int p3 = k / k3; // in range [0, op)
+				res[off + p3] = max(res[off + p3], x[px]);
+				++px;
+			}
+		}
+	}
+	return res;
+}
+
+std::vector<double> PoolMaxNode3D::gradient(std::vector<double>& grad, const std::vector<double>& x,
+	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+{
+	// no weight -> no change on <grad>
+	// if argmax(x[1],...,x[n]) = i , then dy/dx = 1.0 and 0 for others
+	assert(y.size() == on * om);
+	vector<double> res(x.size(), 0.0);
+	int px = 0;
+	for(int i = 0; i < n; ++i){
+		int p1 = i / k1; // in range [0, on)
+		int off = p1 * om * op;
+		for(int j = 0; j < m; ++j){
+			int p2 = j / k2; // in range [0, om)
+			off += p2 * op;
+			for(int k = 0; k < p; ++k){
+				int p3 = k / k3; // in range [0, op)
+				int py = off + p2;
+				if(y[py] == x[px]){
+					res[px] = pre[py];
+				}
+				++px;
+			}
+		}
+	}
+	return res;
+}
+
 // ---- Pooling Node: 1D min ----
 
 PoolMinNode1D::PoolMinNode1D(const size_t offset, const std::vector<int>& shape)
@@ -629,6 +780,69 @@ std::vector<double> PoolMinNode2D::gradient(std::vector<double>& grad, const std
 				res[px] = pre[py];
 			}
 			++px;
+		}
+	}
+	return res;
+}
+
+// ---- Pooling Node: 3D min ----
+
+PoolMinNode3D::PoolMinNode3D(const size_t offset, const std::vector<int>& shape)
+	: NodeBase(offset, shape), n(shape[0]), m(shape[1]), p(shape[2]),
+	k1(shape[3]), k2(shape[4]), k3(shape[5]),
+	on((n + k1 - 1) / k1), om((m + k2 - 1) / k2), op((p + k3 - 1) / k3)
+{
+	assert(shape.size() == 6);
+	nw = 0;
+}
+
+std::vector<int> PoolMinNode3D::outShape(const std::vector<int>& inShape) const
+{
+	return { on, om, op };
+}
+
+std::vector<double> PoolMinNode3D::predict(const std::vector<double>& x, const std::vector<double>& w)
+{
+	vector<double> res(on * om * op, numeric_limits<double>::lowest());
+	int px = 0;
+	for(int i = 0; i < n; ++i){
+		int p1 = i / k1; // in range [0, on)
+		int off = p1 * om * op;
+		for(int j = 0; j < m; ++j){
+			int p2 = j / k2; // in range [0, om)
+			off += p2 * op;
+			for(int k = 0; k < p; ++k){
+				int p3 = k / k3; // in range [0, op)
+				res[off + p3] = min(res[off + p3], x[px]);
+				++px;
+			}
+		}
+	}
+	return res;
+}
+
+std::vector<double> PoolMinNode3D::gradient(std::vector<double>& grad, const std::vector<double>& x,
+	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+{
+	// no weight -> no change on <grad>
+	// if argmin(x[1],...,x[n]) = i , then dy/dx = 1.0 and 0 for others
+	assert(y.size() == on * om);
+	vector<double> res(x.size(), 0.0);
+	int px = 0;
+	for(int i = 0; i < n; ++i){
+		int p1 = i / k1; // in range [0, on)
+		int off = p1 * om * op;
+		for(int j = 0; j < m; ++j){
+			int p2 = j / k2; // in range [0, om)
+			off += p2 * op;
+			for(int k = 0; k < p; ++k){
+				int p3 = k / k3; // in range [0, op)
+				int py = off + p2;
+				if(y[py] == x[px]){
+					res[px] = pre[py];
+				}
+				++px;
+			}
 		}
 	}
 	return res;

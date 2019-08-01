@@ -315,6 +315,10 @@ void VectorNetwork::createLayerConv(const size_t i, const int n, const std::vect
 		vector<int> shapeParam = shpFeatureLayer[i - 1];
 		shapeParam.insert(shapeParam.end(), shape.begin(), shape.end());
 		coreCreateLayer(i, NodeType::Conv2D, n, shapeParam);
+	} else if(shape.size() == 3){
+		vector<int> shapeParam = shpFeatureLayer[i - 1];
+		shapeParam.insert(shapeParam.end(), shape.begin(), shape.end());
+		coreCreateLayer(i, NodeType::Conv3D, n, shapeParam);
 	}
 }
 
@@ -335,14 +339,18 @@ void VectorNetwork::createLayerPool(const size_t i, const std::string& type, con
 			ntp = NodeType::PoolMax1D;
 		else if(shape.size() == 2)
 			ntp = NodeType::PoolMax2D;
+		else if(shape.size() == 3)
+			ntp = NodeType::PoolMax3D;
 	} else if(type == "min"){
 		if(shape.size() == 1)
 			ntp = NodeType::PoolMin1D;
 		else if(shape.size() == 2)
 			ntp = NodeType::PoolMin2D;
+		else if(shape.size() == 3)
+			ntp = NodeType::PoolMin3D;
 	}
 	vector<int> shapeParam = shape;
-	if(shape.size() == 2)
+	if(shape.size() == 2 || shape.size() == 3)
 		shapeParam.insert(shapeParam.begin(), shpFeatureLayer[i - 1].begin(), shpFeatureLayer[i - 1].end());
 	coreCreateLayer(i, ntp, 1, shapeParam);
 }

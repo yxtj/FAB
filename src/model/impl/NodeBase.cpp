@@ -107,6 +107,9 @@ NodeBase* generateNode(NodeType type, const size_t offset, const std::vector<int
 	case NodeType::Conv2D:
 		p = new ConvNode2D(offset, shape);
 		break;
+	case NodeType::Conv3D:
+		p = new ConvNode3D(offset, shape);
+		break;
 	case NodeType::RecrSig:
 		p = new RecurrentSigmoidNode(offset, shape);
 		break;
@@ -119,11 +122,17 @@ NodeBase* generateNode(NodeType type, const size_t offset, const std::vector<int
 	case NodeType::PoolMax2D:
 		p = new PoolMaxNode2D(offset, shape);
 		break;
+	case NodeType::PoolMax3D:
+		p = new PoolMaxNode3D(offset, shape);
+		break;
 	case NodeType::PoolMin1D:
 		p = new PoolMinNode1D(offset, shape);
 		break;
 	case NodeType::PoolMin2D:
 		p = new PoolMinNode2D(offset, shape);
+		break;
+	case NodeType::PoolMin3D:
+		p = new PoolMinNode3D(offset, shape);
 		break;
 	case NodeType::FC:
 		p = new FCNode(offset, shape);

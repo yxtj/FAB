@@ -13,9 +13,10 @@ enum struct NodeTypeGeneral {
 enum struct NodeType {
 	None, // for error
 	Input, WeightedSum,
-	Conv1D, Conv2D,
+	Conv1D, Conv2D, Conv3D,
 	RecrSig, RecrTanh, //RecrLSTM, RecrGate
-	PoolMax1D, PoolMax2D, PoolMin1D, PoolMin2D,
+	PoolMax1D, PoolMax2D, PoolMax3D,
+	PoolMin1D, PoolMin2D, PoolMin3D,
 	ActRelu, ActSigmoid, ActTanh,
 	FC
 };

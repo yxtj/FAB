@@ -62,6 +62,23 @@ struct ConvNode2D
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
 };
 
+// convolution only, no activation
+// n*m*p => (n-k1+1)*(m-k2+1)*(p-k3+1)
+// vector: y_{n-k1+1,m-k2+1,p-k3+1} = conv(x_{n,m,p} , W_{k1,k2,k3}) + b_{1}
+// individual: y[i][j][k] = sum_{p1:0~k1,p2:0~k2,p3:0~k3} (x[i+p1][j+p2][k+p3] * W[p1][p2][p3]) + b
+struct ConvNode3D
+	: public NodeBase
+{
+	const int n, m, p;
+	const int k1, k2, k3;
+	const int on, om, op;
+	ConvNode3D(const size_t offset, const std::vector<int>& shape); // shape = {n, m, p, k1, k2, k3}
+	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
+	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
+	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
+		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+};
+
 // recurrent node base (no activation). use history state remembering last output
 // n => k
 // vector: y_{k*1} = act( W_{k*n} * x_{n*1} + U_{k*k} * y_{k*1} + b_{k*1} )
@@ -173,6 +190,23 @@ struct PoolMaxNode2D
 		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
 };
 
+// get the max value
+// n,m,p => n/k1,m/k2,p/k3 ; more precisely ceil(n/k1),ceil(m/k2),ceil(p/k3)
+// vector: y_{n/k1,m/k2,p/k3} = max(x_{n,m,p})
+// individual: y[i][j][k] = max_{p1:0~k1,p2:0~k2,p3:0~k3} ( x[i*k1+p1][j*k2+p2][k*k3+p3] )
+struct PoolMaxNode3D
+	: public NodeBase
+{
+	const int n, m, p;
+	const int k1, k2, k3;
+	const int on, om, op;
+	PoolMaxNode3D(const size_t offset, const std::vector<int>& shape); // shape = {n, m, p, k1, k2, k3}
+	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
+	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
+	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
+		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+};
+
 // get the min value
 // n => n/k ; more precisely ceil(n/k)
 // vector: y_{n/k} = min(x_{n})
@@ -199,6 +233,23 @@ struct PoolMinNode2D
 	const int k1, k2;
 	const int on, om;
 	PoolMinNode2D(const size_t offset, const std::vector<int>& shape); // shape = {n, m, k1, k2}
+	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
+	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
+	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
+		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+};
+
+// get the min value
+// n,m,p => n/k1,m/k2,p/k3 ; more precisely ceil(n/k1),ceil(m/k2),ceil(p/k3)
+// vector: y_{n/k1,m/k2,p/k3} = min(x_{n,m,p})
+// individual: y[i][j][k] = min_{p1:0~k1,p2:0~k2,p3:0~k3} ( x[i*k1+p1][j*k2+p2][k*k3+p3] )
+struct PoolMinNode3D
+	: public NodeBase
+{
+	const int n, m, p;
+	const int k1, k2, k3;
+	const int on, om, op;
+	PoolMinNode3D(const size_t offset, const std::vector<int>& shape); // shape = {n, m, p, k1, k2, k3}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
 	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
 	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
