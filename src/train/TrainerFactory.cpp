@@ -7,6 +7,7 @@
 #include "PSGDDecay.h"
 #include "psgd_poc/PSGD_point.h"
 #include "psgd_poc/PSGD_dim.h"
+#include <algorithm>
 
 using namespace std;
 
