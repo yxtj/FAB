@@ -96,7 +96,12 @@ drawList('60000-0.001/',['../3000-0.001/bsp-4','../3600-0.001/bsp-4']+genFL('bsp
 plt.legend(['SGD-5%','SGD-6%','PSGD','PSGD+D','PSGD+D+A'])
 plt.grid(True)
 
-
+drawList('60000-0.001/',['../3600-0.001/bsp-4']+genFL('bsp-4-p0.05-r0.01-lp-l',['','-rl']),ver=1)
+drawList('60000-0.001/',['../2400-0.001/bsp-4']+genFL('bsp-4-p0.01-r0.01-lp-l',['','-rla']),ver=1)
+drawList('60000-0.001/',['../1200-0.001/bsp-4']+genFL('bsp-4-p0.01-r0.01-lp-l',['','-rla']),ver=1)
+plt.xlim([-10,310])
+plt.legend(['SGD','PSGD','A-PSGD'])
+plt.grid(True)
 
 # scale
 l_nw=[1,2,3,4,6,8,12,12,16]
@@ -119,3 +124,6 @@ refcnn='score/cnn/28x28,10c5x5rp2x2,2c5x5rp2x2,10f-60k/60-0.001/tap-4'
 precnn='cnn/28x28,10c5x5rp2x2,2c5x5rp2x2,10f-60k/60000-0.001/'
 drawListCmp('',[refcnn],[None]+genFL('score',['','-e2','-e3','-ee'],'/'+precnn+'tap-4-p0.01-r0-ld'))
 plt.legend(['SGD']+genFL('PSGD',['e1','-e2','-e3','-ee']))
+
+
+drawListCmp('',['60-0.001/bsp-4','600-0.001/bsp-4'],genFL('60000-0.001/bsp-4-p',[0.001,0.01],'-r0-lp-l'),genFL('60000-0.001/bsp-4-p',[0.001,0.01],'-r0-lp-q'),ver=1)

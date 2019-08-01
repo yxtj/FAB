@@ -10,6 +10,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import myio
 
+from util import genFL
+
 def calcPrioritySquare(grad):
     return np.sum(grad*grad,2)
 
@@ -72,31 +74,35 @@ def findLastNonZero(l):
             return i
     return 0
 
+
 # hist on the first dim
+# select some iterations
 def drawDistribution(data, nbins, noTrailingZero=False, cumulative=True, lgd=None):
     assert(data.ndim == 2)
-    n, m = data.shape
-    assert(n>m)
+    n, m = data.shape # n->iter, m->point
+    assert(n<m)
     funone = drawCdfOne if cumulative else drawPdfOne
     low = data.min()
     high = data.max()
     bins = np.linspace(low, high, nbins+1)
     plt.figure()
-    for i in range(m):
-        x = data[:,i]
+    for i in range(n):
+        x = data[i,:]
         funone(x, bins, noTrailingZero)
     plt.grid(True)
     if lgd is not None:
         plt.legend(lgd)
     plt.show()
 
+
+# select some iterations
 def drawContribution(data, nbins, cumulative=True, lgd=None):
     assert(data.ndim == 2)
-    n, m = data.shape # n->point, m->iter
-    assert(n>m)
+    n, m = data.shape # n->iter, m->point
+    assert(n<m)
     x = np.arange(0, nbins+1)/nbins*100
     bins = np.linspace(0, n-1, nbins+1, dtype=int)
-    s = np.cumsum(np.sort(data, 0), 0)[bins, :]
+    s = np.cumsum(np.sort(data.T, 0), 0)[bins, :] # n->point, m->iter
     s[0,:] = 0
     plt.figure()
     if cumulative:
@@ -115,12 +121,13 @@ def drawContribution(data, nbins, cumulative=True, lgd=None):
     plt.show()
 
 
+# select some iterations
 def drawContributionOfTop(data, topPoints, ncol=1):
     assert(data.ndim == 2)
-    n, m = data.shape # n->point, m->iter
-    assert(n>m)
-    bins=np.array((1-np.array(topPoints))*n, dtype=int)
-    data=np.sort(data, 0)
+    n, m = data.shape # n->iter, m->point
+    assert(n<m)
+    bins=np.array((1-np.array(topPoints))*m, dtype=int)
+    data=np.sort(data.T, 0) # n->point, m->iter
     s=data.sum(0)
     plt.figure()
     for b in bins:
@@ -134,13 +141,14 @@ def drawContributionOfTop(data, topPoints, ncol=1):
     plt.show()
 
 
+# select some iterations
 def drawDeltaLoss(data, nbins, lgd=None):
     assert(data.ndim == 2)
-    n, m = data.shape
-    assert(n>m)
+    n, m = data.shape # n->iter, m->point
+    assert(n<m)
     x = np.arange(1, nbins+1)/nbins*100
     binId = np.linspace(0, n-1, nbins+1, dtype=int)[1:]
-    s = np.flip(np.sort(data, 0), 0)
+    s = np.flip(np.sort(data.T, 0), 0) # n->point, m->iter
     sc = np.cumsum(s, 0)[binId, :]
     y = np.zeros_like(sc)
     for i in range(m):
@@ -155,9 +163,11 @@ def drawDeltaLoss(data, nbins, lgd=None):
     plt.tight_layout()
     plt.show()
 
+
+# select some points
 def drawPriorityDiff(data, step=1, stride=1, ratio=True, avg=False, lgd=None):
     assert(data.ndim == 2)
-    n, m = data.shape
+    n, m = data.shape # n->iter, m->point
     assert(n>m)
     plt.figure()
     plt.xlabel(('epoch (x%d)'%stride) if stride != 1 else 'epoch')
@@ -184,17 +194,17 @@ def drawPriorityDiff(data, step=1, stride=1, ratio=True, avg=False, lgd=None):
 #p101=myio.loadPriority('E:/Code/FSB/grad/lr-1000-10k-10000-0.01-1.priority',10000)
 #p10p=myio.loadPriority('E:/Code/FSB/grad/lr-1000-10k-p0.05-r0.01-ld-0.01-1.priority',10000)
 #pm=myio.loadPriority('E:/Code/FSB/grad/mlp-mnist300-bsp-4-b600.priority',60000)
-#r=range(0,250,50);drawDistribution(p10[r,:].T,100,True,False,['epoch-%d'%v for v in r])
+#r=range(0,250,50);drawDistribution(p10[r,:],100,True,False,['epoch-%d'%v for v in r])
 #plt.ylabel('probability');plt.xlabel('priority');plt.grid(True);plt.tight_layout()
 #plt.ylabel('density');plt.xlabel('priority');plt.grid(True);plt.tight_layout()
 #plt.xlabel('gradient length');
 #plt.xlabel('gradient projection');
 #plt.tight_layout()
-#r=range(0,250,50);drawContribution(p10[r,:].T,100,False,['epoch-%d'%v for v in r])
+#r=range(0,250,50);drawContribution(p10[r,:],100,False,['epoch-%d'%v for v in r])
 
-#drawContributionOfTop(pm.T, np.linspace(0.1,0.9,9))
+#drawContributionOfTop(pm, np.linspace(0.1,0.9,9))
 #plt.legend(['top-'+str(v)+'%' for v in range(1,10)])
-#drawContributionOfTop(ps.T, [0.001, 0.01, 0.05, 0.1])
+#drawContributionOfTop(ps, [0.001, 0.01, 0.05, 0.1])
 
 #r=np.random.randint(0,10000,10)
 #r=[9759, 2663, 7733, 1341, 5248,  865, 2810, 3152, 6930,  131]
@@ -246,7 +256,8 @@ def drawTopKDiff(x,ref,ncol=1):
     plt.ylabel('Jacobi Score')
 
 
-def drawDecayTrend(data, diff=False):
+# select some points
+def drawPriorityDecayTrend(data, diff=False):
     assert(data.ndim==2)
     n,m=data.shape # n->iter, m->points
     assert(n>m)
@@ -261,6 +272,70 @@ def drawDecayTrend(data, diff=False):
     plt.xlabel('iteration')
     plt.ylabel(ylbl)
     plt.tight_layout()
+
+
+def sortDimByVariance(data,it):
+    assert(data.ndim==2)
+    n,m=data.shape # n->iter, m->points
+    y=np.log(data[it,:])
+    m=np.mean(y)
+    rel=np.abs(y-m)
+    return rel.argsort()
+
+# select some points
+# return [parameters-low-to-high],fun,residual-mse
+def fitLogPriority(data, interval, deg=2, dynamic=True):
+    assert deg in [0,1,2]
+    n,m=data.shape # n->iter, m->points
+    assert n>m
+    y=data[range(0,n,interval),:]
+    x=np.arange(0,n,interval)
+    #if log:
+    data=np.log(data)
+    if not dynamic:
+        p=np.polyfit(x,y,deg,full=True)
+        r=((np.poly1d(p)(np.arange(0,n))-data)**2).mean()
+        return p,np.poly1d(p),r
+    else: # dynamic
+        if deg==0:
+            a=y[:-1,:]
+            p=[a]
+            fun=lambda x: a[np.array(x/interval,dtype=int),:]
+            r=((fun(np.arange(1,n))-data[1:,:])**2).mean()
+        elif deg==1:
+            a=(y[1:,:]-y[:-1,:])/interval
+            b=y[1:,:]-a*x[1:,:]
+            p=[b,a]
+            def predict(x):
+                if not isinstance(x, np.array):
+                    x=np.array(x)
+                idx=np.array(x/interval,dtype=int)
+                return a[idx,:]*x[:,None] + b[idx,:]
+            fun=predict
+            r=((fun(np.arange(1,n))-data[1:,:])**2).mean()
+        elif deg==2:
+            y1=y[2:,:]
+            y2=y[1:-1,:]
+            y3=y[:-2,:]
+            dy1=y1-y2
+            dy2=y2-y3
+            dx11=x[2:]-x[1:-1]
+            dx12=x[2:]**2-x[1:-1]**2
+            dx21=x[1:-1]-x[:-2]
+            dx22=x[1:-1]**2-x[:-2]**2
+            t=dx11*dx22 - dx12*dx21
+            a=(dy1*dx21[:,None] - dy2*dx11[:,None])/-t[:,None]
+            b=(dy1*dx22[:,None] - dy2*dx12[:,None])/t[:,None]
+            c=y3-a*(x[2:,None]**2)-b*x[2:,None]
+            p=[c,b,a]
+            def predict(x):
+                if not isinstance(x, np.array):
+                    x=np.array(x)
+                idx=np.array(x/interval,dtype=int)
+                return a[idx,:]*x[:,None]**2 + b[idx,:]*x[:,None]+ c[idx,:]
+            fun=predict
+            r=((fun(np.arange(2,n))-data[2:,:])**2).mean()
+        return p,fun,r
     
     
 #plr=myio.loadPriority('lr-1000-10k-10000-0.01-1.priority',10000)
@@ -273,5 +348,5 @@ def drawDecayTrend(data, diff=False):
 
 #r=np.random.randint(0,60000,10)
 #r=np.array([ 9372,  3584, 40396, 34916,  3171, 13232, 31886,  3578, 25493, 29979])
-#drawDecayTrend(pmlp2[:,r],False)
-#drawDecayTrend(pmlp2[:,r],True)
+#drawPriorityDecayTrend(pmlp2[:,r],False)
+#drawPriorityDecayTrend(pmlp2[:,r],True)

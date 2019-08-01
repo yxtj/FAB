@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 from draw import *
 
 plt.rcParams["figure.figsize"] = [4,3]
-
+plt.rcParams["font.size"]=12
+plt.rcParams["font.size"]=14
 
 ln=[1,2,4,8,12,16,20,24]
 ln2=[4,8,12,16,20,24]
@@ -114,6 +115,7 @@ plt.legend(genFL('decay-',ld))
 # k-r combination
 drawListCmp('10000-0.01/krd/bsp-4-',['p0.02-r0.01-d0.8','p0.03-r0.01-d0.8','p0.05-r0.01-d0.8'],['p0.01-r0.02-d0.8','p0.01-r0.03-d0.8','p0.01-r0.05-d0.8'],ver=1)
 plt.ylim([0,2.5])
+plt.grid(True)
 plt.legend(['k:2%,r1%','k:1%,r2%','k:3%,r1%','k:1%,r3%','k:5%,r1%','k:1%,r5%'])
 
 drawListCmp('10000-0.01/bsp-4-',['p0.02-r0.01-ld','p0.03-r0.01-ld','p0.05-r0.01-ld'],['p0.01-r0.02-ld','p0.01-r0.03-ld','p0.01-r0.05-ld'],ver=1)

@@ -130,22 +130,22 @@ def drawScale(prefix, l_nw, nameList, value, speedup=False, ref=False, fit=False
     plt.xlabel('number of workers')
     if speedup:
         su=points[refIdx]/points*x[refIdx]
-        plt.plot(x, su, '*-', label='actual')
+        plt.plot(x, su, '*-', label='experiment')
         if ref:
             plt.plot(x, x, '-', label='optimal')
         if fit:
             z=np.polyfit(x, su, 1)
             fun=np.poly1d(z)
-            plt.plot(x, fun(x), '--', label='fit')
+            plt.plot(x, fun(x), '--', label='exp.-ref.')
         plt.ylabel('speed-up')
     else:
-        plt.plot(x, points, '*-', label='actual')
+        plt.plot(x, points, '*-', label='experiment')
         if ref:
             plt.plot(x, points[refIdx]*x[refIdx]/x, '-', label='optimal')
         if fit:
             z=np.polyfit(x, 1/points, 1)
             fun=np.poly1d(z)
-            plt.plot(x, 1/fun(l_nw), '--', label='fit')
+            plt.plot(x, 1/fun(l_nw), '--', label='exp.-ref.')
         plt.ylabel('time (s)')
     plt.ylim([0,None])
     plt.grid(True)

@@ -77,18 +77,34 @@ drawList('60000-0.001/',['../600-0.001/bsp-4']+genFL('tap-4-p0.04-r0.01-',['lp',
 plt.legend(['SGD','PSGD','PSGD+D','PSGD+D+A'])
 plt.grid(True)
 
+drawList('60000-0.001/',genFL('../',[900],'-0.001/tap-4')+genFL('tap-4-p0.01-r0.01-lp-l',['','-rla']),ver=1)
+drawList('60000-0.001/',genFL('../',[3000],'-0.001/tap-4')+genFL('tap-4-p0.04-r0.01-lp-l',['','-rla']),ver=1)
+plt.xlim([-10,310])
+plt.legend(['SGD','PSGD','A-PSGD'])
+plt.grid(True)
+
+# fix r=1%, range k
+lk=[0.01,0.02,0.03]
+drawListCmp('60000-0.001/',genFL('../',[str(prio2bs(bs0,p)) for p in lk],'-0.001/tap-4'),genFL('tap-4-p',lk,'-r0.01-lp-l'),ver=1)
+plt.xlim([-10,310])
+plt.legend(['SGD-1%','PSGD-k:1%,r:1%','SGD-2%','PSGD-k:2%,r:1%','SGD-3%','PSGD-k:3%,r:1%'])
+plt.grid(True)
+
+
 # fix k+r = 5%
 drawListCmp('60000-0.001/',['../3000-0.001/tap-4'],[None]+['tap-4-p0.01-r0.04-ld','tap-4-p0.02-r0.03-ld','tap-4-p0.03-r0.02-ld','tap-4-p0.04-r0.01-ld'],ver=1)
 plt.xlim([-10,310])
 plt.ylim([0.5,3])
+drawListCmp('60000-0.001/',['../3000-0.001/tap-4'],[None]+genFL('tap-4-',['p0.01-r0.04','p0.02-r0.03','p0.03-r0.02','p0.04-r0.01'],'-lp-l-rla'),ver=1)
 plt.legend(['SGD-5%','PSGD-k:1%,r:4%','PSGD-k:2%,r:3%','PSGD-k:3%,r:2%','PSGD-k:4%,r:1%'])
 plt.grid(True)
 
-# compare r-k combination
+# compare k-r combination
 drawListCmp('60000-0.001/',['tap-4-p0.01-r0.03-ld','tap-4-p0.01-r0.04-ld','tap-4-p0.02-r0.03-ld'],['tap-4-p0.03-r0.01-ld','tap-4-p0.04-r0.01-ld','tap-4-p0.03-r0.02-ld'],ver=1)
 plt.ylim([0.5,3])
-plt.legend(np.array([['PSGD-k:%d,r:%d'%(k,r),'PSGD-k:%d,r:%d'%(r,k)] for k,r in [(1,3),(1,4),(2,3)]]).flatten())
 plt.grid(True)
+plt.legend(np.array([['PSGD-k:%d,r:%d'%(k,r),'PSGD-k:%d,r:%d'%(r,k)] for k,r in [(1,3),(1,4),(2,3)]]).flatten())
+plt.legend(np.array([['k:%d%%,r:%d%%'%(k,r),'k:%d%%,r:%d%%'%(r,k)] for k,r in [(1,3),(1,4),(2,3)]]).flatten())
 
 # speed: fix k = 1%, 2%, 3%
 drawListCmp('60000-0.001/',genFL('../',[6,12,18,24],'00-0.001/tap-4'),genFL('tap-4-p',[0.01,0.02,0.03,0.04],'-r0.01-ld'),ver=1)
@@ -119,3 +135,11 @@ plt.xticks(range(0,17,4))
 drawScale('60000-0.001/',l_nw,genFL('tap-',l_nw,'-p0.05-r0.01-ld'),0.87,False)
 plt.xticks(range(0,17,4))
 
+
+# compare priority estimation method
+refcnn='score/cnn/28x28,10c5x5rp2x2,2c5x5rp2x2,10f-60k/60-0.001/tap-4'
+precnn='cnn/28x28,10c5x5rp2x2,2c5x5rp2x2,10f-60k/60000-0.001/'
+drawListCmp('',[refcnn],[None]+genFL('score',['','-e2','-e3','-ee'],'/'+precnn+'tap-4-p0.01-r0-ld'))
+plt.legend(['SGD']+genFL('PSGD',['e1','-e2','-e3','-ee']))
+
+drawListCmp('',['60-0.001/tap-4','120-0.001/tap-4','600-0.001/tap-4'],genFL('60000-0.001/tap-4-p',[0.001,0.002,0.01],'-r0-lp-l'),genFL('60000-0.001/tap-4-p',[0.001,0.002,0.01],'-r0-lp-q'),ver=1)

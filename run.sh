@@ -6,6 +6,7 @@ RESBASEDIR=~/Code/FSB/result/
 SCRBASEDIR=~/Code/FSB/score/
 LOGBASEDIR=~/Code/FSB/log/
 MPICMD="mpirun -n $((i+1))"
+MPICMD="mpirun --mca btl_tcp_if_include 192.168.0.0/24 -n $((i+1))"
 
 DATASET=mnist
 RESBASEDIR=~/efs/result/$DATASET
@@ -127,7 +128,21 @@ DLIST=$(echo "0.7 0.8 0.9 $dk" | tr ' ' '\n' | sort -nu)
 for d in $DLIST; do
 for r in 0.001 0.01 0.05; do
 fn=$m-$i-p$k-r$r-d$d; echo priority-$bs-$fn - $(date);
-mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d $DATA_TRAIN -r $RESDIR/$fn.csv -y $YLIST -o psgdd:$lr:$k:$d:$r -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time $ARVTIME --log_iter 100 --v=2 > $LOGDIR/$fn; killall main;
+mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d $DATA_TRAIN -r $RESDIR/$fn.csv -y $YLIST -o psgd:$lr:$k:$d:$r -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time $ARVTIME --log_iter 100 --v=2 > $LOGDIR/$fn; killall main;
 src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$fn.csv -d $DATA_TEST -y $YLIST -b -o $SCRDIR/$fn.txt $DO_ACCURACY -w 6;
 done done
 done
+
+# loop on (k,r) pairs
+for kr in 0.01,0.04 0.02,0.03 0.03,0.02 0.04,0.01; do
+k=$(echo $kr | sed 's/,.*//'); r=$(echo $kr | sed 's/.*,//');
+fn=$m-$i-p$k-r$r-lp-l; echo $fn - $(date);
+mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM -d $DATA_TRAIN -r $RESDIR/$fn.csv -y $YLIST -o psgd:$lr:$k:$r:l:p:l -s $bs -b --term_iter 10k --term_time 600 --arch_iter 10 --arch_time $ARVTIME --log_iter 100 --v=2 > $LOGDIR/$fn; killall main;
+src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$fn.csv -d $DATA_TEST -y $YLIST -b -o $SCRDIR/$fn.txt $DO_ACCURACY -w 6;
+done
+
+# using predefined dataset: mnist
+mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM --dataset mnist -d $DATA_TRAIN -r $RESDIR/$fn.csv -o psgd:$lr:$k:$r:l:p:l -s $bs -b --term_iter 10k --term_time 300 --arch_iter 10 --arch_time $ARVTIME --log_iter 100 --v=2 > $LOGDIR/$fn; killall main;
+src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$fn.csv --dataset mnist -d $DATA_TEST -b -o $SCRDIR/$fn.txt $DO_ACCURACY -w 6;
+
+
