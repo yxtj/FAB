@@ -16,6 +16,15 @@ struct Option::Impl{
 	{}
 };
 
+static string VecToString(const vector<string>& vec){
+	string res;
+	for(auto& v : vec)
+		res += v + " ";
+	if(!vec.empty())
+		res.pop_back();
+	return res;
+}
+
 bool Option::parse(int argc, char * argv[], const size_t nWorker)
 {
 	string tmp_cast;
@@ -26,6 +35,14 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 	int tmp_v;
 	if(pimpl == nullptr)
 		pimpl = new Impl(getScreenSize().first);
+
+	string desc_alg = "The algorithm/model to run/train. "
+		"Support: " + VecToString(KernelFactory::supportList());
+	string desc_opt = "The optimizer to adopt. "
+		"Support: " + VecToString(TrainerFactory::supportList());
+	string desc_dl = "The dataset/type to use. Give dataset name (mnist) or "
+		"type (csv, tsv, customize, list (variable length x)). "
+		"Support: " + VecToString(DataLoader::supportList());;
 
 	using boost::program_options::value;
 	using boost::program_options::bool_switch;
@@ -42,23 +59,16 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 			"Supports: interval:x(x is in seconds), portion:x(x in 0~1), "
 			"improve:x,t (x: avg. imporovement, t: max waiting time), balance:w (num. of windows)")
 		// app - algorithm
-		("algorithm,a", value(&conf.algorighm)->required(), "The algorithm to run. "
-			"Support: lr, mlp, cnn, rnn, tm, km.")
+		("algorithm,a", value(&conf.algorighm)->required(), desc_alg.c_str())
 		("parameter,p", value(&conf.algParam)->required(),
 			"The parameter of the algorithm, usually the shape of the algorithm")
 		("seed", value(&conf.seed)->default_value(123456U), "The seed to initialize parameters")
 		// app - training
 		("batch_size,s", value(&tmp_bs)->required(), "The global batch size. Support suffix: k, m, g")
 		//("learning_rate,l", value(&conf.lrate)->required(), "The learning rate")
-		("optimizer,o", value(&conf.optimizer)->required()->default_value("gd:0.01"),
-			"The optimizer to train. Support: gd:<lr>, em:<lr>, kmeans, "
-			"psgd:<lr>:<k-ratio>:<global/square>:<r-ratio>:<use-rg>, "
-			"psgdb:<lr>:<k-ratio>:<blk-size>:<r-ratio>:<use-rg>, "
-			"psgdd:<lr>:<k-ratio>:<decay-factor>:<r-ratio>:<use-rg>")
+		("optimizer,o", value(&conf.optimizer)->required()->default_value("gd:0.01"), desc_opt.c_str())
 		// file - input
-		("dataset", value(&conf.dataset)->default_value("csv"),
-			"The dataset/type to use. Give dataset name (mnist) or "
-			"type (csv, tsv, customize, list (variable length x)).")
+		("dataset", value(&conf.dataset)->default_value("csv"), desc_dl.c_str())
 		("trainpart", bool_switch(&conf.trainPart)->default_value(true),
 			"Whether to use the trainning part of the dateset.")
 		("data_file,d", value(&conf.fnData)->required(), "The file name of the input data.")
