@@ -199,6 +199,12 @@ bool Option::processOptimizer()
 		if(ch >= 'A' && ch <= 'Z')
 			ch += 'a' - 'A';
 	}
-	return TrainerFactory::isSupported(conf.optimizer);
+	vector<string> t = getStringList(conf.optimizer, ":;, ");
+	if(t.empty() || !TrainerFactory::isSupported(t[0]))
+		return false;
+	conf.optimizer = t[0];
+	for(size_t i = 1; i < t.size(); ++i)
+		conf.optimizerParam.push_back(t[i]);
+	return true;
 }
 
