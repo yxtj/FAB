@@ -95,6 +95,13 @@ plt.grid(True)
 drawListCmp('60000-0.001/',['../3000-0.001/tap-4'],[None]+['tap-4-p0.01-r0.04-ld','tap-4-p0.02-r0.03-ld','tap-4-p0.03-r0.02-ld','tap-4-p0.04-r0.01-ld'],ver=1)
 plt.xlim([-10,310])
 plt.ylim([0.5,3])
+plt.grid(True)
+plt.legend(['SGD-5%','PSGD-k:1%,r:4%','PSGD-k:2%,r:3%','PSGD-k:3%,r:2%','PSGD-k:4%,r:1%'])
+
+drawList('60000-0.001/',['tap-4-p0.01-r0.04-ld','tap-4-p0.02-r0.03-ld','tap-4-p0.03-r0.02-ld','tap-4-p0.04-r0.01-ld'],ver=1)
+plt.legend(['k:1%,r:4%','k:2%,r:3%','k:3%,r:2%','k:4%,r:1%'])
+
+
 drawListCmp('60000-0.001/',['../3000-0.001/tap-4'],[None]+genFL('tap-4-',['p0.01-r0.04','p0.02-r0.03','p0.03-r0.02','p0.04-r0.01'],'-lp-l-rla'),ver=1)
 plt.legend(['SGD-5%','PSGD-k:1%,r:4%','PSGD-k:2%,r:3%','PSGD-k:3%,r:2%','PSGD-k:4%,r:1%'])
 plt.grid(True)
