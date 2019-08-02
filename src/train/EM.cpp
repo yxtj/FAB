@@ -1,5 +1,6 @@
 #include "EM.h"
-#include <exception>
+#include <stdexcept>
+
 using namespace std;
 
 void EM::init(const std::vector<std::string>& param)
