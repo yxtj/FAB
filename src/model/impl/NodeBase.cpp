@@ -6,14 +6,14 @@ using namespace std;
 
 // ---- NodeBase ----
 
-NodeBase::NodeBase(const size_t offset, const std::vector<int>& shape)
-	: off(offset), shape(shape)
+NodeBase::NodeBase(const size_t offset, const std::vector<int>& param)
+	: off(offset), param(param)
 {
-	if(shape.empty()){
+	if(param.empty()){
 		nw = 0;
 	}else{
 		nw = 1;
-		for(auto& v : shape)
+		for(auto& v : param)
 			nw *= v;
 	}
 }
@@ -33,6 +33,26 @@ void NodeBase::reset()
 	// empty by default
 }
 
+std::vector<feature_t> NodeBase::predict(const std::vector<feature_t>& x, const std::vector<double>& w)
+{
+	std::vector<feature_t> res;
+	for(auto& f : x){
+		res.push_back(predict(f, w));
+	}
+	return res;
+}
+
+std::vector<feature_t> NodeBase::gradient(std::vector<feature_t>& grad, const std::vector<feature_t>& x,
+	const std::vector<double>& w, const feature_t& y, const std::vector<feature_t>& pre)
+{
+	std::vector<feature_t> res;
+	for(size_t i=0;i<x.size();++i){
+		res.push_back(gradient(grad[i], x[i], w, y, pre[i]));
+	}
+	return res;
+}
+
+/*
 // ---- Fully-Connected Node ----
 
 FCNode::FCNode(const size_t offset, const std::vector<int>& shape)
@@ -81,6 +101,7 @@ std::vector<std::vector<double>> FCNode::gradient(
 	grad[p] += f; // the constant offset
 	return pg;
 }
+*/
 
 NodeBase* generateNode(NodeType type, const size_t offset, const std::vector<int>& shape){
 	NodeBase* p = nullptr;

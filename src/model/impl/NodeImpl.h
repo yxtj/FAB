@@ -9,9 +9,27 @@ struct InputNode
 	: public NodeBase
 {
 	InputNode(const size_t offset, const std::vector<int>& shape); // shape = {n}
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
+};
+
+// transform each input feature to <on> output features, each output of shape <ofshape>
+// n => <on> * <ofshape>
+struct TransNode
+	: public NodeBase
+{
+	const int on; // number of output features for each input feature
+	const std::vector<int> ofshape; // shape of each output feature
+	TransNode(const size_t offset, const std::vector<int>& shape); // shape = {on, ofshape}
+	// dummy feature-wise function
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w){}
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre){}
+		
+	virtual std::vector<feature_t> predict(const std::vector<feature_t>& x, const std::vector<double>& w);
+	virtual std::vector<feature_t> gradient(std::vector<feature_t>& grad, const std::vector<feature_t>& x,
+		const std::vector<double>& w, const std::vector<feature_t>& y, const std::vector<feature_t>& pre);
 };
 
 // do weighted summation
@@ -24,9 +42,28 @@ struct WeightedSumNode
 	const int n, k;
 	WeightedSumNode(const size_t offset, const std::vector<int>& shape); // shape = {n,k}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
+};
+
+// merge all <k> features (n-dimension) into one value, activate with sigmoid
+// not a typical node.
+// k*n => 1
+// vector: y_{1*1} = sum ( W_{k*n} * x_{k*n} )
+// individual: y = max_{i:0~k,j:0~n} ( W[i,j]*x[i,j] )
+struct FCNode
+	: public NodeBase
+{
+	const int n, k;
+	FCNode(const size_t offset, const std::vector<int>& shape); // shape = {k,n}
+	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w); // dummy
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre); // dummy
+	virtual std::vector<feature_t> predict(const std::vector<feature_t>& x, const std::vector<double>& w);
+	virtual std::vector<feature_t> gradient(std::vector<feature_t>& grad, const std::vector<feature_t>& x,
+		const std::vector<double>& w, const feature_t& y, const std::vector<feature_t>& pre);
 };
 
 // convolution only, no activation
@@ -40,9 +77,9 @@ struct ConvNode1D
 	const int k;
 	ConvNode1D(const size_t offset, const std::vector<int>& shape); // shape = {k}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
 };
 
 // convolution only, no activation
@@ -57,9 +94,9 @@ struct ConvNode2D
 	const int on, om;
 	ConvNode2D(const size_t offset, const std::vector<int>& shape); // shape = {n, m, k1, k2}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
 };
 
 // convolution only, no activation
@@ -74,9 +111,9 @@ struct ConvNode3D
 	const int on, om, op;
 	ConvNode3D(const size_t offset, const std::vector<int>& shape); // shape = {n, m, p, k1, k2, k3}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
 };
 
 // recurrent node base (no activation). use history state remembering last output
@@ -91,9 +128,9 @@ struct RecurrentNodeBase
 	RecurrentNodeBase(const size_t offset, const std::vector<int>& shape); // shape = {n,k}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
 	virtual void reset();
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
 
 	std::vector<double> predictCalcOnly(const std::vector<double>& x, const std::vector<double>& w);
 };
@@ -105,9 +142,9 @@ struct RecurrentSigmoidNode
 	: public RecurrentNodeBase
 {
 	RecurrentSigmoidNode(const size_t offset, const std::vector<int>& shape); // shape = {n,k}
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
 };
 
 // recurrent node using tanh activation
@@ -117,9 +154,9 @@ struct RecurrentTanhNode
 	: public RecurrentNodeBase
 {
 	RecurrentTanhNode(const size_t offset, const std::vector<int>& shape); // shape = {n,k}
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
 };
 
 // n => n
@@ -129,9 +166,9 @@ struct ReluNode
 	: public NodeBase
 {
 	ReluNode(const size_t offset, const std::vector<int>& shape); // shape = {1}
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
 };
 
 // n => n
@@ -141,9 +178,9 @@ struct SigmoidNode
 	: public NodeBase
 {
 	SigmoidNode(const size_t offset, const std::vector<int>& shape); // shape = {1}
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
 };
 
 // n => n
@@ -153,9 +190,9 @@ struct TanhNode
 	: public NodeBase
 {
 	TanhNode(const size_t offset, const std::vector<int>& shape); // shape = {1}
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
 };
 
 // get the max value
@@ -168,9 +205,9 @@ struct PoolMaxNode1D
 	const size_t k;
 	PoolMaxNode1D(const size_t offset, const std::vector<int>& shape); // shape = {k}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
 };
 
 // get the max value
@@ -185,9 +222,9 @@ struct PoolMaxNode2D
 	const int on, om;
 	PoolMaxNode2D(const size_t offset, const std::vector<int>& shape); // shape = {n, m, k1, k2}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
 };
 
 // get the max value
@@ -202,9 +239,9 @@ struct PoolMaxNode3D
 	const int on, om, op;
 	PoolMaxNode3D(const size_t offset, const std::vector<int>& shape); // shape = {n, m, p, k1, k2, k3}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
 };
 
 // get the min value
@@ -217,9 +254,9 @@ struct PoolMinNode1D
 	const size_t k;
 	PoolMinNode1D(const size_t offset, const std::vector<int>& shape); // shape = {k}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
 };
 
 // get the min value
@@ -234,9 +271,9 @@ struct PoolMinNode2D
 	const int on, om;
 	PoolMinNode2D(const size_t offset, const std::vector<int>& shape); // shape = {n, m, k1, k2}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
 };
 
 // get the min value
@@ -251,7 +288,7 @@ struct PoolMinNode3D
 	const int on, om, op;
 	PoolMinNode3D(const size_t offset, const std::vector<int>& shape); // shape = {n, m, p, k1, k2, k3}
 	virtual std::vector<int> outShape(const std::vector<int>& inShape) const;
-	virtual std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
-	virtual std::vector<double> gradient(std::vector<double>& grad, const std::vector<double>& x,
-		const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre);
+	virtual feature_t predict(const feature_t& x, const std::vector<double>& w);
+	virtual feature_t gradient(std::vector<double>& grad, const feature_t& x,
+		const std::vector<double>& w, const feature_t& y, const feature_t& pre);
 };

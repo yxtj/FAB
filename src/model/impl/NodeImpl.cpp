@@ -15,13 +15,13 @@ InputNode::InputNode(const size_t offset, const std::vector<int>& shape)
 	nw = 0;
 }
 
-std::vector<double> InputNode::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t InputNode::predict(const feature_t& x, const std::vector<double>& w)
 {
 	return x;
 }
 
-std::vector<double> InputNode::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t InputNode::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	return std::vector<double>();
 }
@@ -43,7 +43,7 @@ std::vector<int> WeightedSumNode::outShape(const std::vector<int>& inShape) cons
 	return { k };
 }
 
-std::vector<double> WeightedSumNode::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t WeightedSumNode::predict(const feature_t& x, const std::vector<double>& w)
 {
 	assert(x.size() == n);
 	vector<double> res(k);
@@ -59,8 +59,8 @@ std::vector<double> WeightedSumNode::predict(const std::vector<double>& x, const
 	return res;
 }
 
-std::vector<double> WeightedSumNode::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t WeightedSumNode::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	assert(x.size() == n);
 	assert(y.size() == k);
@@ -79,6 +79,62 @@ std::vector<double> WeightedSumNode::gradient(std::vector<double>& grad, const s
 	return res;
 }
 
+// ---- Fully-Connected Node ----
+
+FCNode::FCNode(const size_t offset, const std::vector<int>& shape)
+	: NodeBase(offset, shape), k(shape[0]), n(shape[1])
+{
+	nw += 1;
+}
+
+std::vector<int> FCNode::outShape(const std::vector<int>& inShape) const
+{
+	return { 1 };
+}
+
+feature_t FCNode::predict(const feature_t& x, const std::vector<double>& w)
+{
+	return feature_t(); // dummy
+}
+
+feature_t FCNode::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
+{
+	return feature_t(); // dummy
+}
+
+std::vector<feature_t> FCNode::predict(const std::vector<feature_t>& x, const std::vector<double>& w)
+{
+	double res = 0.0;
+	size_t p = off;
+	for(size_t i = 0; i < k; ++i) {
+		for(size_t j = 0; j < n; ++j)
+			res += x[i][j] * w[p++];
+	}
+	res = sigmoid(res + w[p]);
+	return { {res} };
+}
+
+std::vector<feature_t> FCNode::gradient(std::vector<feature_t>& grad, const std::vector<feature_t>& x,
+	const std::vector<double>& w, const feature_t& y, const std::vector<feature_t>& pre)
+{
+	//assert(y.size() == 1 && pre.size() == 1);
+	assert(x.size() == k && x.front().size() == n);
+	const double d = sigmoid_derivative(0.0, y[0]);
+	const double f = pre[0][0] * d;
+	std::vector<std::vector<double>> pg(k, vector<double>(n));
+	size_t p = off;
+	for(size_t i = 0; i < k; ++i) {
+		for(size_t j = 0; j < n; ++j) {
+			grad[0][p] += x[i][j] * f; // pre * dy/dw
+			pg[i][j] = w[p] * f; // pre * dy/dx
+			++p;
+		}
+	}
+	grad[0][p] += f; // the constant offset
+	return pg;
+}
+
 // ---- Convolutional Node: 1D ----
 
 ConvNode1D::ConvNode1D(const size_t offset, const std::vector<int>& shape)
@@ -94,7 +150,7 @@ std::vector<int> ConvNode1D::outShape(const std::vector<int>& inShape) const
 	return { inShape[0] - k + 1 };
 }
 
-std::vector<double> ConvNode1D::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t ConvNode1D::predict(const feature_t& x, const std::vector<double>& w)
 {
 	const size_t ny = x.size() - k + 1;
 	std::vector<double> res(ny);
@@ -107,8 +163,8 @@ std::vector<double> ConvNode1D::predict(const std::vector<double>& x, const std:
 	return res;
 }
 
-std::vector<double> ConvNode1D::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t ConvNode1D::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	assert(x.size() == y.size() + k - 1);
 	assert(y.size() == pre.size());
@@ -155,7 +211,7 @@ std::vector<int> ConvNode2D::outShape(const std::vector<int>& inShape) const
 	return { on, om };
 }
 
-std::vector<double> ConvNode2D::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t ConvNode2D::predict(const feature_t& x, const std::vector<double>& w)
 {
 	const int sizeW = k1 * k2;
 	std::vector<double> res(on * om);
@@ -175,8 +231,8 @@ std::vector<double> ConvNode2D::predict(const std::vector<double>& x, const std:
 	return res;
 }
 
-std::vector<double> ConvNode2D::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t ConvNode2D::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	const int sizeY = on * om;
 	assert(y.size() == sizeY);
@@ -232,7 +288,7 @@ std::vector<int> ConvNode3D::outShape(const std::vector<int>& inShape) const
 	return { on, om, op };
 }
 
-std::vector<double> ConvNode3D::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t ConvNode3D::predict(const feature_t& x, const std::vector<double>& w)
 {
 	const int sizeW = k1 * k2 * k3;
 	std::vector<double> res(on * om);
@@ -255,8 +311,8 @@ std::vector<double> ConvNode3D::predict(const std::vector<double>& x, const std:
 	return res;
 }
 
-std::vector<double> ConvNode3D::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t ConvNode3D::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	const int sizeY = on * om;
 	assert(y.size() == sizeY);
@@ -343,15 +399,15 @@ std::vector<double> RecurrentNodeBase::predictCalcOnly(const std::vector<double>
 	return res;
 }
 
-std::vector<double> RecurrentNodeBase::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t RecurrentNodeBase::predict(const feature_t& x, const std::vector<double>& w)
 {
 	auto res = predict(x, w);
 	last_pred = res;
 	return res;
 }
 
-std::vector<double> RecurrentNodeBase::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t RecurrentNodeBase::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	assert(x.size() == n);
 	assert(y.size() == k);
@@ -380,7 +436,7 @@ RecurrentSigmoidNode::RecurrentSigmoidNode(const size_t offset, const std::vecto
 	: RecurrentNodeBase(offset, shape)
 {}
 
-std::vector<double> RecurrentSigmoidNode::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t RecurrentSigmoidNode::predict(const feature_t& x, const std::vector<double>& w)
 {
 	auto res = predictCalcOnly(x, w);
 	for(auto& v : res)
@@ -389,8 +445,8 @@ std::vector<double> RecurrentSigmoidNode::predict(const std::vector<double>& x, 
 	return res;
 }
 
-std::vector<double> RecurrentSigmoidNode::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t RecurrentSigmoidNode::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	auto actPre = pre;
 	for(size_t i=0;i<pre.size();++i)
@@ -404,7 +460,7 @@ RecurrentTanhNode::RecurrentTanhNode(const size_t offset, const std::vector<int>
 	: RecurrentNodeBase(offset, shape)
 {}
 
-std::vector<double> RecurrentTanhNode::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t RecurrentTanhNode::predict(const feature_t& x, const std::vector<double>& w)
 {
 	auto res = predictCalcOnly(x, w);
 	for(auto& v : res)
@@ -413,8 +469,8 @@ std::vector<double> RecurrentTanhNode::predict(const std::vector<double>& x, con
 	return res;
 }
 
-std::vector<double> RecurrentTanhNode::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t RecurrentTanhNode::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	auto actPre = pre;
 	for(size_t i = 0; i < pre.size(); ++i)
@@ -430,7 +486,7 @@ ReluNode::ReluNode(const size_t offset, const std::vector<int>& shape)
 	nw = 0;
 }
 
-std::vector<double> ReluNode::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t ReluNode::predict(const feature_t& x, const std::vector<double>& w)
 {
 	const size_t n = x.size();
 	std::vector<double> res(n);
@@ -440,8 +496,8 @@ std::vector<double> ReluNode::predict(const std::vector<double>& x, const std::v
 	return res;
 }
 
-std::vector<double> ReluNode::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t ReluNode::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	assert(x.size() == y.size());
 	const size_t n = y.size();
@@ -463,7 +519,7 @@ SigmoidNode::SigmoidNode(const size_t offset, const std::vector<int>& shape)
 	nw = 0;
 }
 
-std::vector<double> SigmoidNode::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t SigmoidNode::predict(const feature_t& x, const std::vector<double>& w)
 {
 	const size_t n = x.size();
 	std::vector<double> res(n);
@@ -473,8 +529,8 @@ std::vector<double> SigmoidNode::predict(const std::vector<double>& x, const std
 	return res;
 }
 
-std::vector<double> SigmoidNode::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t SigmoidNode::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	assert(x.size() == y.size());
 	const size_t n = y.size();
@@ -497,7 +553,7 @@ TanhNode::TanhNode(const size_t offset, const std::vector<int>& shape)
 	nw = 0;
 }
 
-std::vector<double> TanhNode::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t TanhNode::predict(const feature_t& x, const std::vector<double>& w)
 {
 	const size_t n = x.size();
 	std::vector<double> res(n);
@@ -507,8 +563,8 @@ std::vector<double> TanhNode::predict(const std::vector<double>& x, const std::v
 	return res;
 }
 
-std::vector<double> TanhNode::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t TanhNode::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	assert(x.size() == y.size());
 	const size_t n = y.size();
@@ -538,7 +594,7 @@ std::vector<int> PoolMaxNode1D::outShape(const std::vector<int>& inShape) const
 	return { n };
 }
 
-std::vector<double> PoolMaxNode1D::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t PoolMaxNode1D::predict(const feature_t& x, const std::vector<double>& w)
 {
 	const size_t n = (x.size() + k - 1) / k;
 	vector<double> res(n);
@@ -552,8 +608,8 @@ std::vector<double> PoolMaxNode1D::predict(const std::vector<double>& x, const s
 	return res;
 }
 
-std::vector<double> PoolMaxNode1D::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t PoolMaxNode1D::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	// no weight -> no change on <grad>
 	// if argmax(x[1],...,x[n]) = i , then dy/dx = 1.0 and 0 for others
@@ -584,7 +640,7 @@ std::vector<int> PoolMaxNode2D::outShape(const std::vector<int>& inShape) const
 	return { on, om };
 }
 
-std::vector<double> PoolMaxNode2D::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t PoolMaxNode2D::predict(const feature_t& x, const std::vector<double>& w)
 {
 	vector<double> res(on * om, numeric_limits<double>::lowest());
 	int p = 0;
@@ -600,8 +656,8 @@ std::vector<double> PoolMaxNode2D::predict(const std::vector<double>& x, const s
 	return res;
 }
 
-std::vector<double> PoolMaxNode2D::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t PoolMaxNode2D::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	// no weight -> no change on <grad>
 	// if argmax(x[1],...,x[n]) = i , then dy/dx = 1.0 and 0 for others
@@ -639,7 +695,7 @@ std::vector<int> PoolMaxNode3D::outShape(const std::vector<int>& inShape) const
 	return { on, om, op };
 }
 
-std::vector<double> PoolMaxNode3D::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t PoolMaxNode3D::predict(const feature_t& x, const std::vector<double>& w)
 {
 	vector<double> res(on * om * op, numeric_limits<double>::lowest());
 	int px = 0;
@@ -659,8 +715,8 @@ std::vector<double> PoolMaxNode3D::predict(const std::vector<double>& x, const s
 	return res;
 }
 
-std::vector<double> PoolMaxNode3D::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t PoolMaxNode3D::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	// no weight -> no change on <grad>
 	// if argmax(x[1],...,x[n]) = i , then dy/dx = 1.0 and 0 for others
@@ -700,7 +756,7 @@ std::vector<int> PoolMinNode1D::outShape(const std::vector<int>& inShape) const
 	return std::vector<int>();
 }
 
-std::vector<double> PoolMinNode1D::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t PoolMinNode1D::predict(const feature_t& x, const std::vector<double>& w)
 {
 	const size_t n = (x.size() + k - 1) / k;
 	vector<double> res(n);
@@ -714,8 +770,8 @@ std::vector<double> PoolMinNode1D::predict(const std::vector<double>& x, const s
 	return res;
 }
 
-std::vector<double> PoolMinNode1D::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t PoolMinNode1D::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	// no weight -> no change on <grad>
 	// if argmin(x[1],...,x[n]) = i , then dy/dx = 1.0 and 0 for others
@@ -746,7 +802,7 @@ std::vector<int> PoolMinNode2D::outShape(const std::vector<int>& inShape) const
 	return { on, om };
 }
 
-std::vector<double> PoolMinNode2D::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t PoolMinNode2D::predict(const feature_t& x, const std::vector<double>& w)
 {
 	vector<double> res(on * om, numeric_limits<double>::max());
 	int p = 0;
@@ -762,8 +818,8 @@ std::vector<double> PoolMinNode2D::predict(const std::vector<double>& x, const s
 	return res;
 }
 
-std::vector<double> PoolMinNode2D::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t PoolMinNode2D::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	// no weight -> no change on <grad>
 	// if argmin(x[1],...,x[n]) = i , then dy/dx = 1.0 and 0 for others
@@ -801,7 +857,7 @@ std::vector<int> PoolMinNode3D::outShape(const std::vector<int>& inShape) const
 	return { on, om, op };
 }
 
-std::vector<double> PoolMinNode3D::predict(const std::vector<double>& x, const std::vector<double>& w)
+feature_t PoolMinNode3D::predict(const feature_t& x, const std::vector<double>& w)
 {
 	vector<double> res(on * om * op, numeric_limits<double>::lowest());
 	int px = 0;
@@ -821,8 +877,8 @@ std::vector<double> PoolMinNode3D::predict(const std::vector<double>& x, const s
 	return res;
 }
 
-std::vector<double> PoolMinNode3D::gradient(std::vector<double>& grad, const std::vector<double>& x,
-	const std::vector<double>& w, const std::vector<double>& y, const std::vector<double>& pre)
+feature_t PoolMinNode3D::gradient(std::vector<double>& grad, const feature_t& x,
+	const std::vector<double>& w, const feature_t& y, const feature_t& pre)
 {
 	// no weight -> no change on <grad>
 	// if argmin(x[1],...,x[n]) = i , then dy/dx = 1.0 and 0 for others
@@ -847,3 +903,4 @@ std::vector<double> PoolMinNode3D::gradient(std::vector<double>& grad, const std
 	}
 	return res;
 }
+
