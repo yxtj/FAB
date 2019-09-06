@@ -252,6 +252,11 @@ void Worker::fetchParmeter()
 	++stat.n_dlt_recv;
 }
 
+void Worker::sendReport(const int cnt)
+{
+	net->send(masterNID, MType::DReport, cnt);
+}
+
 void Worker::pauseTrain()
 {
 	allowTrain = false;
@@ -328,6 +333,12 @@ void Worker::handleContinue(const std::string & data, const RPCInfo & info)
 {
 	resumeTrain();
 	sendReply(info, MType::CTrainContinue);
+}
+
+void Worker::handleDeltaRequest(const std::string& data, const RPCInfo& info)
+{
+	pauseTrain();
+	reqDelta = true;
 }
 
 void Worker::handleImmediateControl(const std::string & data, const RPCInfo & info)

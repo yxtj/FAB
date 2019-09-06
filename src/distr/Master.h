@@ -33,6 +33,8 @@ private:
 	void fspProcess();
 	void aapInit();
 	void aapProcess();
+	void papInit();
+	void papProcess();
 
 // local logic
 private:
@@ -82,6 +84,7 @@ public:
 	void handleClosed(const std::string& data, const RPCInfo& info);
 
 	void handleParameter(const std::string& data, const RPCInfo& info);
+	void handleReport(const std::string& data, const RPCInfo& info);
 
 	void handleDelta(const std::string& data, const RPCInfo& info);
 	void handleDeltaTap(const std::string& data, const RPCInfo& info);
@@ -89,6 +92,7 @@ public:
 	void handleDeltaSap(const std::string& data, const RPCInfo& info);
 	void handleDeltaFsp(const std::string& data, const RPCInfo& info);
 	void handleDeltaAap(const std::string& data, const RPCInfo& info);
+	void handleDeltaPap(const std::string& data, const RPCInfo& info);
 	void handleDeltaTail(const std::string& data, const RPCInfo& info);
 
 private:

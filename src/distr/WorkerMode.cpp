@@ -3,6 +3,7 @@
 #include "message/MType.h"
 #include "logging/logging.h"
 #include "util/Timer.h"
+#include <random>
 
 using namespace std;
 
@@ -298,6 +299,101 @@ void Worker::aapProcess()
 	}
 }
 
+// ---- progressive asynchronous parallel
+
+void Worker::papInit()
+{
+	reqDelta = false;
+	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterPap));
+	regDSPProcess(MType::DRDelta, localCBBinder(&Worker::handleDeltaRequest));
+}
+
+void Worker::papProcess()
+{
+	double sendT = 0;
+	mt19937 gen(conf->seed + localID);
+	double lambda = stod(conf->speedRandomParam[3]);
+	exponential_distribution<double> distribution(lambda);
+
+	double dly = lambda > 0 ? distribution(gen) : 0; /// random seed......
+	dly = dly > 1 || dly < 0.1 ? 0 : dly * range;
+	// size_t remaincnt = localBatchSize;
+	while(!exitTrain){
+		Timer tmr;
+		// DVLOG(3) << "current parameter: " << model.getParameter().weights;
+		// try to use localBatchSize data-points, the actual usage is returned via cnt 
+		size_t cnt = 0;
+		int remainCnt = reportSize;
+		if(opt->mode.find("pasp1") != std::string::npos)
+			remainCnt = reportSize - curCnt;
+
+		Trainer::DeltaResult dr = trainer->batchDelta(dataPointer, left, false);
+		//tie(cnt, bfDelta) = trainer->batchDelta(allowTrain, dataPointer, remainCnt, dly, -1);
+		updatePointer(dr.n_scanned, dr.n_reported);
+
+		copyDelta(bufferDeltaExt, bfDelta);
+		curCnt += cnt;
+		curCalT += tmr.elapseSd();
+		stat.t_dlt_calc += tmr.elapseSd();
+
+		if(!allowTrain){
+			VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
+			tmr.restart();
+			if(reqDelta){
+				DVLOG(3) << "send delta pasp: " << curCnt << "; " << bfDelta.size() << "; " << bfDelta;
+				sendDelta(bufferDeltaExt, curCnt);
+				reqDelta = false;
+				++iter;
+				VLOG_IF(iter < 5 && (localID < 3), 1) << "iter " << iter << " CALT: " << curCalT
+					<< "; unit dp " << curCnt << " : " << curCalT / curCnt << " dly: " << dly
+					<< " sendT: " << sendT / curCnt;
+				bufferDeltaExt.clear();
+				curCnt = 0;
+				curCalT = 0;
+			}
+			if(hasNewParam){
+				tmr.restart();
+				applyBufferParameter();
+				hasNewParam = false;
+				double updateParamT = tmr.elapseSd();
+				stat.t_par_calc += tmr.elapseSd();
+				VLOG_IF(iter < 5 && (localID < 3), 1) << "iter " << iter << " interrupt CALT: " << curCalT
+					<< "; unit dp " << cnt << " : " << curCalT / cnt << " dly: " << dly
+					<< " ParamT: " << updateParamT;
+
+				dly = lambda > 0 ? distribution(gen) : 0;
+				dly = dly > 1 || dly < 0.1 ? 0 : dly * range;
+			}
+			allowTrain = true;
+
+		} else{
+			tmr.restart();
+			// VLOG_EVERY_N(ln, 2) << "  send delta";
+			if(opt->mode.find("pasp1") != std::string::npos ||
+				opt->mode.find("pasp5") != std::string::npos){
+				sendDelta(bfDelta, curCnt);
+				VLOG_IF(iter < 5 && (localID < 3), 1) << "iter " << iter << " CALT: " << curCalT
+					<< "; unit dp " << curCnt << " : " << curCalT / curCnt << " dly: " << dly
+					<< " sendT: " << sendT / curCnt;
+				bfDelta.clear();
+				curCnt = 0;
+			} else {// if (opt->mode.find("pasp") !=std::string::npos)
+				sendReport(cnt);
+			}
+			if(opt->mode.find("pasp2") != std::string::npos)
+				model.accumulateParameter(bfDelta, factorDelta);
+
+			sendT += tmr.elapseSd();
+			stat.t_dlt_send += tmr.elapseSd();
+			// remaincnt = localBatchSize;
+		}
+		if(exitTrain == true){
+			break;
+		}
+	}
+}
+
+
 // ---- handlers ----
 
 void Worker::handleParameter(const std::string & data, const RPCInfo & info)
@@ -356,4 +452,8 @@ void Worker::handleParameterAap(const std::string & data, const RPCInfo & info)
 	pauseTrain();
 	//applyBufferParameter();
 	++stat.n_par_recv;
+}
+
+void Worker::handleParameterPap(const std::string& data, const RPCInfo& info)
+{
 }

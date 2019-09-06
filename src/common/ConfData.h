@@ -32,6 +32,12 @@ struct ConfData {
 	std::string algorighm;
 	std::string algParam;
 
+	bool adjustSpeed;
+	double speedRandomMin; // the minimum of adjustment factor
+	double speedRandomMax; // the maximum of adjustment factor (larger values are reset to 0)
+	std::vector<std::string> speedRandomParam;
+	std::vector<double> speedHeterogenerity;
+
 	std::string optimizer;
 	std::vector<std::string> optimizerParam;
 	//double lrate; // learning rate

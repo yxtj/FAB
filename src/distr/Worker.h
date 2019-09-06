@@ -26,6 +26,8 @@ private:
 	void fspProcess();
 	void aapInit();
 	void aapProcess();
+	void papInit();
+	void papProcess();
 	//void generalProcess();
 
 	void updatePointer(const size_t scan, const size_t report);
@@ -40,11 +42,14 @@ private:
 	void averageDelta(const size_t size);
 	void accumulateDelta(const std::vector<double>& delta);
 	void sendDelta(std::vector<double>& delta, const size_t cnt);
+
 	void initializeParameter();
 	void bufferParameter(Parameter& p);
 	void applyBufferParameter(); // using the buffer
 	void waitParameter();
 	void fetchParmeter();
+
+	void sendReport(const int cnt);
 
 	void pauseTrain();
 	void resumeTrain();
@@ -57,6 +62,7 @@ public:
 	void handleStart(const std::string& data, const RPCInfo& info);
 	void handlePause(const std::string& data, const RPCInfo& info);
 	void handleContinue(const std::string& data, const RPCInfo& info);
+	void handleDeltaRequest(const std::string& data, const RPCInfo& info);
 
 	void handleImmediateControl(const std::string& data, const RPCInfo& info);
 	void handleTerminate(const std::string& data, const RPCInfo& info);
@@ -65,6 +71,7 @@ public:
 	void handleParameterSsp(const std::string& data, const RPCInfo& info);
 	void handleParameterFsp(const std::string& data, const RPCInfo& info);
 	void handleParameterAap(const std::string& data, const RPCInfo& info);
+	void handleParameterPap(const std::string& data, const RPCInfo& info);
 		
 
 private:
@@ -86,6 +93,7 @@ private:
 
 	std::vector<double> bfDelta;
 	size_t bfDeltaDpCount; // the number of data points used for current bfDelta
+	bool reqDelta; // whether a delat is being requested now
 
 	int iterParam;
 

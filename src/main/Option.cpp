@@ -49,7 +49,7 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 	pimpl->desc.add_options()
 		("help,h", "Print help messages")
 		// parallel
-		("mode,m", value(&conf.mode)->default_value("bsp"), "The parallel mode: bsp, tap, ssp:<n>, sap:<n>, fsp, aap")
+		("mode,m", value(&conf.mode)->default_value("bsp"), "The parallel mode: bsp, tap, ssp:<n>, sap:<n>, fsp, aap, pap")
 		// parallel - broadcast
 		("cast_mode,c", value(&tmp_cast)->default_value("broadcast"),
 			"The method to send out new parameters. Supports: broadcast/all, ring:k, random:k,seed, hash:k")
@@ -58,6 +58,15 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 			"The method to decide update interval for FSP. "
 			"Supports: interval:x(x is in seconds), portion:x(x in 0~1), "
 			"improve:x,t (x: avg. imporovement, t: max waiting time), balance:w (num. of windows)")
+		// setting - machine speed
+		("speed_random," value(&conf.speedRandomParam), 
+			"The random worker speed difference (how much slower than normal). "
+			"Format: <type> <min> <max> <distribution parameters...>.\n"
+			"<type> supports: none, exp, pl, norm")
+		("speed_hetero," value(&conf.speedHeterogenerity),
+			"The fixed worker speed difference (how much slower than normal). "
+			"Format: <n1>-<m1>:<p1>,<m1>-<m2>:<p2>,... "
+			"It means worker n1,n1+1,...,m1 are p1 slower than normal. The abscent workers are assumed working normally")
 		// app - algorithm
 		("algorithm,a", value(&conf.algorighm)->required(), desc_alg.c_str())
 		("parameter,p", value(&conf.algParam)->required(),
@@ -161,7 +170,7 @@ bool Option::processMode(){
 			ch += 'a' - 'A';
 	}
 	vector<string> t = getStringList(conf.mode, ":-, ");
-	vector<string> supported = { "bsp", "tap", "ssp", "sap", "fsp", "aap" };
+	vector<string> supported = { "bsp", "tap", "ssp", "sap", "fsp", "aap", "pap" };
 	auto it = find(supported.begin(), supported.end(), t[0]);
 	if(it == supported.end())
 		return false;

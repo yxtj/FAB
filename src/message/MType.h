@@ -28,10 +28,12 @@ struct MType {
 	static constexpr int CClosed = 21;
 
 	// Data and data Request (30-39)
-	static constexpr int DParameter = 30;
-	static constexpr int DRParameter = 31;
-	static constexpr int DDelta = 35;
-	static constexpr int DRDelta = 36;
+	static constexpr int DParameter = 30; // data for parametr
+	static constexpr int DRParameter = 31; // data request for parameter
+	static constexpr int DDelta = 34;
+	static constexpr int DRDelta = 35;
+	static constexpr int DReport= 36;
+	static constexpr int DRReport= 37;
 
 	// Process and Progress for Termination (40-49)
 	static constexpr int PApply = 40;
