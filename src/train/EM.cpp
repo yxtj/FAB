@@ -1,4 +1,6 @@
 #include "EM.h"
+#include "util/Timer.h"
+#include <thread>
 #include <stdexcept>
 
 using namespace std;
@@ -98,3 +100,30 @@ Trainer::DeltaResult EM::batchDelta(
 	return { i - start, i - start, move(grad) };
 }
 
+Trainer::DeltaResult EM::batchDelta(std::atomic<bool>& cond,
+	const size_t start, const size_t cnt, const bool avg, const double adjust)
+{
+	size_t end = start + cnt;
+	if(end > pd->size())
+		end = pd->size();
+	size_t nx = pm->paramWidth();
+	vector<double> grad(nx, 0.0);
+	size_t i;
+	for(i = start; i < end && cond.load(); ++i){
+		Timer tt;
+		auto g = pm->gradient(pd->get(i), &h[i]);
+		for(size_t j = 0; j < nx; ++j)
+			grad[j] += g[j];
+		double time = tt.elapseSd();
+		this_thread::sleep_for(chrono::duration<double>(time));
+	}
+	if(i != start){
+		// this is gradient DESCENT, so rate is set to negative
+		double factor = -rate;
+		if(avg)
+			factor /= (i - start);
+		for(auto& v : grad)
+			v *= factor;
+	}
+	return { i - start, i - start, move(grad) };
+}

@@ -1,4 +1,6 @@
 #include "EM_KMeans.h"
+#include "util/Timer.h"
+#include <thread>
 #include <exception>
 using namespace std;
 
@@ -64,6 +66,26 @@ Trainer::DeltaResult EM_KMeans::batchDelta(
 		auto g = pm->gradient(pd->get(i), &h[i]);
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
+	}
+	return { i - start, i - start, move(grad) };
+}
+
+Trainer::DeltaResult EM_KMeans::batchDelta(std::atomic<bool>& cond,
+	const size_t start, const size_t cnt, const bool avg, const double adjust)
+{
+	size_t end = start + cnt;
+	if(end > pd->size())
+		end = pd->size();
+	size_t nx = pm->paramWidth();
+	vector<double> grad(nx, 0.0);
+	size_t i;
+	for(i = start; i < end && cond.load(); ++i){
+		Timer tt;
+		auto g = pm->gradient(pd->get(i), &h[i]);
+		for(size_t j = 0; j < nx; ++j)
+			grad[j] += g[j];
+		double time = tt.elapseSd();
+		this_thread::sleep_for(chrono::duration<double>(time));
 	}
 	return { i - start, i - start, move(grad) };
 }

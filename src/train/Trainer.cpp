@@ -41,6 +41,12 @@ double Trainer::loss(const size_t topn) const {
 	return res / static_cast<double>(n);
 }
 
+Trainer::DeltaResult Trainer::batchDelta(std::atomic<bool>& cond,
+	const size_t start, const size_t cnt, const bool avg, const double slow)
+{
+	return batchDelta(cond, start, cnt, avg);
+}
+
 void Trainer::applyDelta(const vector<double>& delta, const double factor)
 {
 	pm->accumulateParameter(delta, factor);

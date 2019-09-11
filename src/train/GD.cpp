@@ -1,7 +1,9 @@
 #include "GD.h"
 #include "util/Timer.h"
 #include "logging/logging.h"
+#include <thread> // for sleep
 #include <exception>
+
 using namespace std;
 
 void GD::init(const std::vector<std::string>& param)
@@ -94,6 +96,38 @@ Trainer::DeltaResult GD::batchDelta(std::atomic<bool>& cond,
 		auto g = pm->gradient(pd->get(i));
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
+	}
+	stat_t_grad_calc += tmr.elapseSd();
+	tmr.restart();
+	if(i != start){
+		// this is gradient DESCENT, so rate is set to negative
+		double factor = -rate;
+		if(avg)
+			factor /= (i - start);
+		for(auto& v : grad)
+			v *= factor;
+	}
+	stat_t_grad_post += tmr.elapseSd();
+	return { i - start, i - start, move(grad) };
+}
+
+Trainer::DeltaResult GD::batchDelta(std::atomic<bool>& cond,
+	const size_t start, const size_t cnt, const bool avg, const double adjust)
+{
+	Timer tmr;
+	size_t end = start + cnt;
+	if(end > pd->size())
+		end = pd->size();
+	size_t nx = pm->paramWidth();
+	vector<double> grad(nx, 0.0);
+	size_t i;
+	for(i = start; i < end && cond.load(); ++i){
+		Timer tt;
+		auto g = pm->gradient(pd->get(i));
+		for(size_t j = 0; j < nx; ++j)
+			grad[j] += g[j];
+		double time = tt.elapseSd();
+		this_thread::sleep_for(chrono::duration<double>(time));
 	}
 	stat_t_grad_calc += tmr.elapseSd();
 	tmr.restart();

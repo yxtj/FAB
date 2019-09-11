@@ -17,6 +17,8 @@ public:
 		const size_t start, const size_t cnt, const bool avg = true);
 	virtual DeltaResult batchDelta(std::atomic<bool>& cond,
 		const size_t start, const size_t cnt, const bool avg = true);
+	virtual DeltaResult batchDelta(std::atomic<bool>& cond,
+		const size_t start, const size_t cnt, const bool avg, const double adjust);
 
 };
 

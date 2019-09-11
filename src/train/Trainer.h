@@ -42,6 +42,9 @@ public:
 	// return the number of used data points.
 	virtual DeltaResult batchDelta(std::atomic<bool>& cond,
 		const size_t start, const size_t cnt, const bool avg = true) = 0;
+	// slowdown the processing by <slow> of the normal processing time
+	virtual DeltaResult batchDelta(std::atomic<bool>& cond,
+		const size_t start, const size_t cnt, const bool avg, const double slow);
 
 	// apply the delta values to the model parameter, parameter += delat*factor
 	virtual void applyDelta(const std::vector<double>& delta, const double factor = 1.0);

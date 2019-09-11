@@ -346,7 +346,7 @@ void Worker::papProcess()
 		clearDelta();
 		while(exitTrain == false && !requestingDelta){
 			resumeTrain();
-			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false);
+			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
 			//tie(cnt, bfDelta) = trainer->batchDelta(allowTrain, dataPointer, remainCnt, dly, -1);
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
