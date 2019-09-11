@@ -32,7 +32,8 @@ struct ConfData {
 	std::string algorighm;
 	std::string algParam;
 
-	bool adjustSpeed;
+	bool adjustSpeedRandom;
+	bool adjustSpeedHetero;
 	double speedRandomMin; // the minimum of adjustment factor
 	double speedRandomMax; // the maximum of adjustment factor (larger values are reset to 0)
 	std::vector<std::string> speedRandomParam;

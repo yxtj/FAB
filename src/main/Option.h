@@ -12,6 +12,8 @@ private:
 	bool processDataset();
 	bool processAlgorithm();
 	bool processOptimizer();
+	bool processSpeedRandom(const std::string& srandom);
+	bool processSpeedHeterogenerity(const std::string& shetero);
 
 	struct Impl;
 	Impl* pimpl = nullptr;

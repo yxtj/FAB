@@ -537,6 +537,20 @@ void Master::handleParameter(const std::string & data, const RPCInfo & info)
 	rph.input(MType::DParameter, s);
 }
 
+void Master::handleReport(const std::string& data, const RPCInfo& info)
+{
+	int wid = wm.nid2lid(info.source);
+	int cnt = deserialize<int>(data);
+	{
+		lock_guard<mutex> lg(mp);
+		int t = processedEach[wid];
+		processedEach[wid] = cnt;
+		processedTotal += cnt - t;
+		if(processedTotal > conf->batchSize)
+			reachBroadcast = true;
+	}
+}
+
 void Master::handleDeltaTail(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;

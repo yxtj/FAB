@@ -2,6 +2,7 @@
 #include <vector>
 #include <iostream>
 #include <algorithm>
+#include <regex>
 #include <boost/program_options.hpp>
 #include "util/Util.h"
 #include "data/DataLoader.h"
@@ -31,6 +32,7 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 	string tmp_interval;
 	string tmp_ids, tmp_idy;
 	string tmp_bs;
+	string tmp_sr, tmp_sh;
 	string tmp_t_iter, tmp_a_iter, tmp_l_iter;
 	int tmp_v;
 	if(pimpl == nullptr)
@@ -59,14 +61,13 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 			"Supports: interval:x(x is in seconds), portion:x(x in 0~1), "
 			"improve:x,t (x: avg. imporovement, t: max waiting time), balance:w (num. of windows)")
 		// setting - machine speed
-		("speed_random," value(&conf.speedRandomParam), 
-			"The random worker speed difference (how much slower than normal). "
-			"Format: <type> <min> <max> <distribution parameters...>.\n"
-			"<type> supports: none, exp, pl, norm")
-		("speed_hetero," value(&conf.speedHeterogenerity),
-			"The fixed worker speed difference (how much slower than normal). "
-			"Format: <n1>-<m1>:<p1>,<m1>-<m2>:<p2>,... "
-			"It means worker n1,n1+1,...,m1 are p1 slower than normal. The abscent workers are assumed working normally")
+		("speed_random", value(&tmp_sr)->default_value(""),
+			"The random worker speed difference (how much slower than normal).\n"
+			"Format: <type>:<min>:<max>:<distribution parameters...>. "
+			"<type> supports: <empty>, none, exp, norm")
+		("speed_hetero", value(&tmp_sh)->default_value(""), "The fixed worker speed difference (how much slower than normal).\n"
+			"Format: <n1>-<m1>:<p1>,<n2>-<m2>:<p2>,<n3>:<p3>,... "
+			"<n1>-<m1>:<p1> means worker n1,n1+1,...,m1 are p1 slower than normal. The abscent workers are assumed 0 (working normally)")
 		// app - algorithm
 		("algorithm,a", value(&conf.algorighm)->required(), desc_alg.c_str())
 		("parameter,p", value(&conf.algParam)->required(),
@@ -153,6 +154,14 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		cerr << "Error: optimizer not supported: " << conf.optimizer << endl;
 		return false;
 	}
+	if(!processSpeedRandom(tmp_sr)){
+		cerr << "Error: speed adjustment (random) not supported: " << tmp_sr << endl;
+		return false;
+	}
+	if(!processSpeedHeterogenerity(tmp_sh)){
+		cerr << "Error: speed adjustment (heterogenerity) not supported: " << tmp_sh << endl;
+		return false;
+	}
 	// error handling
 
 	return true;
@@ -214,6 +223,75 @@ bool Option::processOptimizer()
 	conf.optimizer = t[0];
 	for(size_t i = 1; i < t.size(); ++i)
 		conf.optimizerParam.push_back(t[i]);
+	return true;
+}
+
+bool Option::processSpeedRandom(const std::string& srandom)
+{
+	conf.adjustSpeedRandom = false;
+	if(srandom.empty())
+		return false;
+	vector<string> vec = getStringList(srandom, ", ");
+	for(string& str : vec){
+		for(char& ch : str){
+			if(ch >= 'A' && ch <= 'Z')
+				ch += 'a' - 'A';
+		}
+	}
+	if(vec[0] == "none")
+		return true;
+	vector<pair<string, int>> supported = { {"exp", 1}, {"norm", 2}, {"uni", 2} };
+	for(auto& p : supported){
+		if(vec[0] == p.first){
+			if(vec.size() != static_cast<size_t>(3 + p.second)){
+				cerr << "Error in parsing speed randomness parameter for: " << p.first << endl;
+				return false;
+			}
+			conf.speedRandomParam.push_back(vec[0]);
+			conf.adjustSpeedRandom = true;
+			for(size_t i = 3; i < vec.size(); ++i)
+				conf.speedRandomParam.push_back(vec[i]);
+		}
+	}
+	if(conf.adjustSpeedRandom == false){
+		return false;
+	}else{
+		try{
+			conf.speedRandomMin = stod(vec[1]);
+			conf.speedRandomMax = stod(vec[2]);
+		} catch(exception& e){
+			cerr << "Error in parsing speed randomness bound: " << endl;
+			return false;
+		}
+	}
+	return true;
+}
+
+bool Option::processSpeedHeterogenerity(const std::string& shetero)
+{
+	conf.adjustSpeedHetero = false;
+	conf.speedHeterogenerity.assign(conf.nw, 0);
+	if(!shetero.empty()){
+		conf.adjustSpeedHetero = true;
+		vector<string> vec= getStringList(shetero, ", ");
+		regex reg1("(\\d+)\\:(\\d*.?\\d+)");
+		regex reg2("(\\d+)-(\\d+)\\:(\\d*.?\\d+)");
+		smatch m;
+		for(string& s : vec){
+			if(regex_match(s, m, reg1)){
+				int f = stoi(m[1]);
+				conf.speedHeterogenerity[f] = stod(m[2]);
+			} else if(regex_match(s, m, reg2)){
+				int f = stoi(m[1]);
+				int l = stoi(m[2]);
+				double v = stod(m[3]);
+				for(; f <= l; ++f)
+					conf.speedHeterogenerity[f] = v;
+			} else{
+				return false;
+			}
+		}
+	}
 	return true;
 }
 

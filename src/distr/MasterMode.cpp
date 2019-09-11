@@ -234,6 +234,9 @@ void Master::aapProcess()
 void Master::papInit()
 {
 	factorDelta = 1.0;
+	processedEach.assign(nWorker, 0);
+	processedTotal = 0;
+	reachBroadcast = false;
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaPap));
 	regDSPProcess(MType::DReport, localCBBinder(&Master::handleReport));
 }
@@ -269,7 +272,6 @@ void Master::papProcess()
 		}
 	}
 }
-
 
 // ---- handlers ----
 

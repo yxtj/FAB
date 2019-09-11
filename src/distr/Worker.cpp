@@ -13,7 +13,7 @@ Worker::Worker() : Runner() {
 	iter = 0;
 	iterParam = 0;
 	localBatchSize = 1;
-	bfDeltaDpCount = 0;
+	//bfDeltaDpCount = 0;
 
 	hasNewParam = false;
 	allowTrain = true;
@@ -337,8 +337,8 @@ void Worker::handleContinue(const std::string & data, const RPCInfo & info)
 
 void Worker::handleDeltaRequest(const std::string& data, const RPCInfo& info)
 {
+	requestingDelta = true;
 	pauseTrain();
-	reqDelta = true;
 }
 
 void Worker::handleImmediateControl(const std::string & data, const RPCInfo & info)

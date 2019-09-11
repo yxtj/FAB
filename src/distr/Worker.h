@@ -49,7 +49,7 @@ private:
 	void waitParameter();
 	void fetchParmeter();
 
-	void sendReport(const int cnt);
+	void sendReport(const int cnt); // pap progress
 
 	void pauseTrain();
 	void resumeTrain();
@@ -92,8 +92,8 @@ private:
 	//std::mutex mModel; // whether the model is in use
 
 	std::vector<double> bfDelta;
-	size_t bfDeltaDpCount; // the number of data points used for current bfDelta
-	bool reqDelta; // whether a delat is being requested now
+	//size_t bfDeltaDpCount; // the number of data points used for current bfDelta
+	bool requestingDelta; // pap: whether a delat is being requested now
 
 	int iterParam;
 

@@ -4,6 +4,7 @@
 #include "logging/logging.h"
 #include "util/Timer.h"
 #include <random>
+#include <functional>
 
 using namespace std;
 
@@ -211,7 +212,7 @@ void Worker::fspProcess()
 		size_t n_used = 0;
 		clearDelta();
 		while(exitTrain == false && allowTrain && left != 0) {
-			Trainer::DeltaResult dr = trainer->batchDelta(dataPointer, left, false);
+			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false);
 			accumulateDelta(dr.delta);
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
@@ -266,7 +267,7 @@ void Worker::aapProcess()
 		while(!exitTrain && left != 0){
 			tmr.restart();
 			resumeTrain();
-			Trainer::DeltaResult dr = trainer->batchDelta(dataPointer, left, false);
+			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false);
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
@@ -303,93 +304,69 @@ void Worker::aapProcess()
 
 void Worker::papInit()
 {
-	reqDelta = false;
+	requestingDelta = false;
 	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterPap));
 	regDSPProcess(MType::DRDelta, localCBBinder(&Worker::handleDeltaRequest));
 }
 
+static function<double()> makeRandomFunction(const size_t seed, const vector<string>& param){
+	mt19937 gen(seed);
+	if(param[0] == "exp"){
+		exponential_distribution<double> dist(stod(param[1]));
+		return [=](){ return dist(gen); };
+	} else if(param[1] == "norm"){
+		normal_distribution<double> dist(stod(param[1]), stod(param[2]));
+		return [=](){ return dist(gen); };
+	} else if(param[1] == "uni"){
+		uniform_real_distribution<double> dist(stod(param[1]), stod(param[2]));
+		return [=](){ return dist(gen); };
+	}
+	return [](){return 0.0; };
+}
+
 void Worker::papProcess()
 {
-	double sendT = 0;
-	mt19937 gen(conf->seed + localID);
-	double lambda = stod(conf->speedRandomParam[3]);
-	exponential_distribution<double> distribution(lambda);
+	const double speedSlowFactor = conf->adjustSpeedHetero ? conf->speedHeterogenerity[localID] : 0.0;
+	function<double()> speedRandomFun = [](){return 0.0; };
+	if(conf->adjustSpeedRandom)
+		speedRandomFun = makeRandomFunction(conf->seed + 123 + localID, conf->speedRandomParam);
 
-	double dly = lambda > 0 ? distribution(gen) : 0; /// random seed......
-	dly = dly > 1 || dly < 0.1 ? 0 : dly * range;
-	// size_t remaincnt = localBatchSize;
+	double sendT = 0;
+	localBatchSize = trainer->pd->size(); 
 	while(!exitTrain){
 		Timer tmr;
 		// DVLOG(3) << "current parameter: " << model.getParameter().weights;
 		// try to use localBatchSize data-points, the actual usage is returned via cnt 
-		size_t cnt = 0;
-		int remainCnt = reportSize;
-		if(opt->mode.find("pasp1") != std::string::npos)
-			remainCnt = reportSize - curCnt;
-
-		Trainer::DeltaResult dr = trainer->batchDelta(dataPointer, left, false);
-		//tie(cnt, bfDelta) = trainer->batchDelta(allowTrain, dataPointer, remainCnt, dly, -1);
-		updatePointer(dr.n_scanned, dr.n_reported);
-
-		copyDelta(bufferDeltaExt, bfDelta);
-		curCnt += cnt;
-		curCalT += tmr.elapseSd();
-		stat.t_dlt_calc += tmr.elapseSd();
-
-		if(!allowTrain){
-			VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
-			tmr.restart();
-			if(reqDelta){
-				DVLOG(3) << "send delta pasp: " << curCnt << "; " << bfDelta.size() << "; " << bfDelta;
-				sendDelta(bufferDeltaExt, curCnt);
-				reqDelta = false;
-				++iter;
-				VLOG_IF(iter < 5 && (localID < 3), 1) << "iter " << iter << " CALT: " << curCalT
-					<< "; unit dp " << curCnt << " : " << curCalT / curCnt << " dly: " << dly
-					<< " sendT: " << sendT / curCnt;
-				bufferDeltaExt.clear();
-				curCnt = 0;
-				curCalT = 0;
+		size_t n_used = 0;
+		double dly = speedSlowFactor + speedRandomFun();
+		clearDelta();
+		resumeTrain();
+		while(exitTrain == false && !requestingDelta){
+			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, localBatchSize, false);
+			//tie(cnt, bfDelta) = trainer->batchDelta(allowTrain, dataPointer, remainCnt, dly, -1);
+			updatePointer(dr.n_scanned, dr.n_reported);
+			n_used += dr.n_reported;
+			//DVLOG(3) <<"tmp: "<< tmp;
+			VLOG_EVERY_N(ln, 2) << "  calculate delta with " << dr.n_scanned << " data points";
+			if(dr.n_scanned != 0){
+				accumulateDelta(dr.delta);
 			}
+			stat.t_dlt_calc += tmr.elapseSd();
 			if(hasNewParam){
 				tmr.restart();
 				applyBufferParameter();
-				hasNewParam = false;
-				double updateParamT = tmr.elapseSd();
 				stat.t_par_calc += tmr.elapseSd();
-				VLOG_IF(iter < 5 && (localID < 3), 1) << "iter " << iter << " interrupt CALT: " << curCalT
-					<< "; unit dp " << cnt << " : " << curCalT / cnt << " dly: " << dly
-					<< " ParamT: " << updateParamT;
-
-				dly = lambda > 0 ? distribution(gen) : 0;
-				dly = dly > 1 || dly < 0.1 ? 0 : dly * range;
 			}
-			allowTrain = true;
-
-		} else{
+		}
+		if(requestingDelta){
 			tmr.restart();
-			// VLOG_EVERY_N(ln, 2) << "  send delta";
-			if(opt->mode.find("pasp1") != std::string::npos ||
-				opt->mode.find("pasp5") != std::string::npos){
-				sendDelta(bfDelta, curCnt);
-				VLOG_IF(iter < 5 && (localID < 3), 1) << "iter " << iter << " CALT: " << curCalT
-					<< "; unit dp " << curCnt << " : " << curCalT / curCnt << " dly: " << dly
-					<< " sendT: " << sendT / curCnt;
-				bfDelta.clear();
-				curCnt = 0;
-			} else {// if (opt->mode.find("pasp") !=std::string::npos)
-				sendReport(cnt);
-			}
-			if(opt->mode.find("pasp2") != std::string::npos)
-				model.accumulateParameter(bfDelta, factorDelta);
-
-			sendT += tmr.elapseSd();
-			stat.t_dlt_send += tmr.elapseSd();
-			// remaincnt = localBatchSize;
+			if(trainer->needAveragedDelta())
+				averageDelta(n_used);
+			stat.t_dlt_calc += tmr.elapseSd();
+			VLOG_EVERY_N(ln, 2) << "  send delta";
+			sendDelta(bfDelta, n_used);
 		}
-		if(exitTrain == true){
-			break;
-		}
+		++iter;
 	}
 }
 
@@ -456,4 +433,5 @@ void Worker::handleParameterAap(const std::string & data, const RPCInfo & info)
 
 void Worker::handleParameterPap(const std::string& data, const RPCInfo& info)
 {
+	handleParameterAap(data, info);
 }

@@ -120,6 +120,12 @@ private:
 	double timeOffset; // used for accounting time if resumed
 	Timer tmrTrain;
 
+	// progressive async
+	std::mutex mp;
+	vector<int> processedEach;
+	int processedTotal;
+	bool reachBroadcast;
+
 	SyncUnit suOnline;
 	SyncUnit suWorker;
 	SyncUnit suAllClosed;

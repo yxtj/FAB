@@ -12,6 +12,31 @@
 
 using namespace std;
 
+string makeSpeedString(const ConfData& conf){
+	string tmpSpeed;
+	if(conf.adjustSpeed){
+		tmpSpeed = "\tRandom: ";
+		for(auto& s : conf.speedRandomParam)
+			tmpSpeed += s + ",";
+		if(!conf.speedRandomParam.empty())
+			tmpSpeed.pop_back();
+		tmpSpeed += "\tRandom Min: " + to_string(conf.speedRandomMin)
+			+ "\tRandom Max: " + to_string(conf.speedRandomMax);
+		tmpSpeed += "\n  Heterogenerity: ";
+		double v = conf.speedHeterogenerity[0];
+		size_t f = 0;
+		for(size_t i = 1; i < conf.nw; ++i){
+			if(conf.speedHeterogenerity[i] != v){
+				tmpSpeed += to_string(f) + "-" + to_string(i - 1) + ":" + to_string(v) + ",";
+				v = conf.speedHeterogenerity[i];
+				f = i;
+			}
+		}
+		tmpSpeed += to_string(f) + "-" + to_string(conf.nw - 1) + ":" + to_string(v);
+	}
+	return tmpSpeed;
+}
+
 int main(int argc, char* argv[]){
 	initLogger(argc, argv);
 	NetworkThread::Init(argc, argv);
@@ -25,10 +50,12 @@ int main(int argc, char* argv[]){
 	}
 	DLOG(INFO) << "size=" << net->size() << " id=" << net->id();
 	if(net->id() == 0){
+		string tmpSpeed = makeSpeedString(opt.conf);
 		LOG(INFO) << "Infromation:\nDataset: " << opt.conf.dataset << "\tLocation: " << opt.conf.fnData
 			<< "\n  Normalize: " << opt.conf.normalize << "\tRandom Shuffle: " << opt.conf.shuffle
 			<< "\tTrainPart: " << opt.conf.trainPart
 			<< "\n  Separator: " << opt.conf.sepper << "\tIdx-y: " << opt.conf.idY << "\tIdx-skip: " << opt.conf.idSkip
+			<< "\nCluster speed adjust: " << opt.conf.adjustSpeed << tmpSpeed
 			<< "\nAlgorithm: " << opt.conf.algorighm << "\tParam: " << opt.conf.algParam << "\tSeed: " << opt.conf.seed
 			<< "\n  Interval Estimator: " << opt.conf.intervalParam << "\tMulticast: " << opt.conf.mcastParam
 			<< "\nRecord file: " << opt.conf.fnOutput << "\tBinary: " << opt.conf.binary
