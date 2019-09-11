@@ -49,7 +49,7 @@ private:
 	void waitParameter();
 	void fetchParmeter();
 
-	void sendReport(const int cnt); // pap progress
+	void sendReport(const vector<double>& cnt); // pap progress
 
 	void pauseTrain();
 	void resumeTrain();

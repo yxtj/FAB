@@ -306,52 +306,68 @@ void Worker::papInit()
 {
 	requestingDelta = false;
 	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterPap));
-	regDSPProcess(MType::DRDelta, localCBBinder(&Worker::handleDeltaRequest));
-}
-
-static function<double()> makeRandomFunction(const size_t seed, const vector<string>& param){
-	mt19937 gen(seed);
-	if(param[0] == "exp"){
-		exponential_distribution<double> dist(stod(param[1]));
-		return [=](){ return dist(gen); };
-	} else if(param[1] == "norm"){
-		normal_distribution<double> dist(stod(param[1]), stod(param[2]));
-		return [=](){ return dist(gen); };
-	} else if(param[1] == "uni"){
-		uniform_real_distribution<double> dist(stod(param[1]), stod(param[2]));
-		return [=](){ return dist(gen); };
-	}
-	return [](){return 0.0; };
 }
 
 void Worker::papProcess()
 {
+	// initialize speed adjustment generator
 	const double speedSlowFactor = conf->adjustSpeedHetero ? conf->speedHeterogenerity[localID] : 0.0;
-	function<double()> speedRandomFun = [](){return 0.0; };
-	if(conf->adjustSpeedRandom)
-		speedRandomFun = makeRandomFunction(conf->seed + 123 + localID, conf->speedRandomParam);
+	mt19937 gen(conf->seed + 123 + localID);
+	exponential_distribution<double> distExp;
+	normal_distribution<double> distNorm;
+	uniform_real_distribution<double> distUni;
+	function<double()> speedRandomFun = [](){ return 0.0; };
+	if(conf->adjustSpeedRandom){
+		const vector<string>& param = conf->speedRandomParam;
+		if(param[0] == "exp"){
+			distExp.param(typename exponential_distribution<double>::param_type(1));
+			speedRandomFun = [&](){ return distExp(gen); };
+		} else if(param[0] == "norm"){
+			distNorm.param(normal_distribution<double>::param_type(stod(param[1]), stod(param[2])));
+			speedRandomFun = [&](){ return distNorm(gen); };
+		} else if(param[0] == "uni"){
+			//distUni = uniform_real_distribution<double>(stod(param[1]), stod(param[2]));
+			distUni.param(uniform_real_distribution<double>::param_type(stod(param[1]), stod(param[2])));
+			speedRandomFun = [&](){ return distUni(gen); };
+		}
+	}
 
-	double sendT = 0;
-	localBatchSize = trainer->pd->size(); 
+	double t_data = 0.0, t_report = 0.0, t_delta = 0.0;
+	size_t n_report = 0, n_delta = 0;
+	size_t report_size = stoi(conf->algParam);
+
 	while(!exitTrain){
 		Timer tmr;
 		// DVLOG(3) << "current parameter: " << model.getParameter().weights;
-		// try to use localBatchSize data-points, the actual usage is returned via cnt 
 		size_t n_used = 0;
+		t_data = 0.0;
+		size_t left = report_size;
 		double dly = speedSlowFactor + speedRandomFun();
 		clearDelta();
-		resumeTrain();
 		while(exitTrain == false && !requestingDelta){
-			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, localBatchSize, false);
+			resumeTrain();
+			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false);
 			//tie(cnt, bfDelta) = trainer->batchDelta(allowTrain, dataPointer, remainCnt, dly, -1);
 			updatePointer(dr.n_scanned, dr.n_reported);
+			left -= dr.n_scanned;
 			n_used += dr.n_reported;
-			//DVLOG(3) <<"tmp: "<< tmp;
 			VLOG_EVERY_N(ln, 2) << "  calculate delta with " << dr.n_scanned << " data points";
 			if(dr.n_scanned != 0){
 				accumulateDelta(dr.delta);
 			}
-			stat.t_dlt_calc += tmr.elapseSd();
+			auto t= tmr.elapseSd();
+			t_data += t;
+			stat.t_dlt_calc += t;
+			if(left == 0){
+				tmr.restart();
+				vector<double> report = { static_cast<double>(n_used),
+					t_data / n_used, t_report / n_report, t_delta / n_delta };
+				// format: #-processed-data-points, time-per-data-point, time-per-report-sending, time-per-delta-sending
+				sendReport(report);
+				++n_report;
+				t_report += tmr.elapseSd();
+				left = localBatchSize;
+			}
 			if(hasNewParam){
 				tmr.restart();
 				applyBufferParameter();
@@ -364,7 +380,11 @@ void Worker::papProcess()
 				averageDelta(n_used);
 			stat.t_dlt_calc += tmr.elapseSd();
 			VLOG_EVERY_N(ln, 2) << "  send delta";
+			tmr.restart();
 			sendDelta(bfDelta, n_used);
+			requestingDelta = false;
+			++n_delta;
+			t_delta += tmr.elapseSd();
 		}
 		++iter;
 	}

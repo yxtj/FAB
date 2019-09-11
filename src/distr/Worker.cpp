@@ -252,9 +252,9 @@ void Worker::fetchParmeter()
 	++stat.n_dlt_recv;
 }
 
-void Worker::sendReport(const int cnt)
+void Worker::sendReport(const vector<double>& report)
 {
-	net->send(masterNID, MType::DReport, cnt);
+	net->send(masterNID, MType::DReport, report);
 }
 
 void Worker::pauseTrain()
@@ -287,6 +287,10 @@ void Worker::handleNormalControl(const std::string & data, const RPCInfo & info)
 	case MType::CTrainContinue:
 		handleContinue(data.substr(sizeof(int)), info);
 		break;
+	case MType::DRDelta:
+		handleDeltaRequest(data.substr(sizeof(int)), info);
+		break;
+		// MType::DParameter is handled directly by message type
 	}
 }
 
