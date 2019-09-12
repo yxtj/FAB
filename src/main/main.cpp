@@ -14,14 +14,16 @@ using namespace std;
 
 string makeSpeedString(const ConfData& conf){
 	string tmpSpeed;
-	if(conf.adjustSpeed){
-		tmpSpeed = "\tRandom: ";
+	if(conf.adjustSpeedRandom){
+		tmpSpeed = "\n  Random: ";
 		for(auto& s : conf.speedRandomParam)
 			tmpSpeed += s + ",";
 		if(!conf.speedRandomParam.empty())
 			tmpSpeed.pop_back();
 		tmpSpeed += "\tRandom Min: " + to_string(conf.speedRandomMin)
 			+ "\tRandom Max: " + to_string(conf.speedRandomMax);
+	}
+	if(conf.adjustSpeedHetero){
 		tmpSpeed += "\n  Heterogenerity: ";
 		double v = conf.speedHeterogenerity[0];
 		size_t f = 0;
@@ -55,13 +57,14 @@ int main(int argc, char* argv[]){
 			<< "\n  Normalize: " << opt.conf.normalize << "\tRandom Shuffle: " << opt.conf.shuffle
 			<< "\tTrainPart: " << opt.conf.trainPart
 			<< "\n  Separator: " << opt.conf.sepper << "\tIdx-y: " << opt.conf.idY << "\tIdx-skip: " << opt.conf.idSkip
-			<< "\nCluster speed adjust: " << opt.conf.adjustSpeed << tmpSpeed
+			<< "\nCluster: " << "\tWorker-#: " << opt.conf.nw << "\tSpeed random: " << opt.conf.adjustSpeedRandom
+			<< "\tSpeed heterogenerity: " << opt.conf.adjustSpeedHetero << tmpSpeed
 			<< "\nAlgorithm: " << opt.conf.algorighm << "\tParam: " << opt.conf.algParam << "\tSeed: " << opt.conf.seed
 			<< "\n  Interval Estimator: " << opt.conf.intervalParam << "\tMulticast: " << opt.conf.mcastParam
 			<< "\nRecord file: " << opt.conf.fnOutput << "\tBinary: " << opt.conf.binary
 			<< "\nTraining configurations:\n  Mode: " << opt.conf.mode
 			<< "\tOptimizer: " << opt.conf.optimizer << "\tParam: " << opt.conf.optimizerParam
-			<< "\tBatch-size: " << opt.conf.batchSize << "\tWorker-#: " << opt.conf.nw
+			<< "\tBatch-size: " << opt.conf.batchSize
 			<< "\nTerminating condition:\n  Max-iteration: " << opt.conf.tcIter << "\tMax-time: " << opt.conf.tcTime
 			<< "\nArchive iteration: " << opt.conf.arvIter << "\tinterval: " << opt.conf.arvTime
 			<< "\nLog iteration: " << opt.conf.logIter;
