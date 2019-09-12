@@ -62,7 +62,7 @@ private:
 
 	size_t estimateGlobalBatchSize();
 	void broadcastBatchSize(const size_t gbs); // global batch size
-	size_t estimateLocalReportSize();
+	size_t estimateLocalReportSize(const bool quick = false);
 	void broadcastReportSize(const size_t lrs); // local report size
 	void broadcastSizeConf(const size_t gbs, const size_t lrs);
 
@@ -122,9 +122,12 @@ private:
 	int ln; // log-every-n times
 
 	//size_t iter; // [defined in Runner] current iteration being executate now (not complete)
+	double mtUpdateSum; // master side time for processing all delta
 	size_t nUpdate; // # of received delta, usually used for asynchronous cases
 	double timeOffset; // used for accounting time if resumed from previous archive
 	Timer tmrTrain;
+	double mtParameterSum; // master side time for sending all parameters
+	double mtOther; // time other than processing/sending parameter, delta and report. include: archive, log
 
 	// progressive async
 	double mtReportSum; // master side time for processing all reports
@@ -133,8 +136,8 @@ private:
 	std::vector<int> reportProcEach; // how many data point is processed
 	int reportProcTotal;
 	SyncUnit suPap; // reported count reached a batch
-	double mtUpdateSum; // master side time for processing all reports
-	//size_t nDelat; // is nUpdate
+	size_t localreportSize;
+	size_t globalBatchSize;
 
 	std::vector<double> wtDatapoint; // worker side time per data point
 	std::vector<double> wtDelta; // worker side time per delta sending

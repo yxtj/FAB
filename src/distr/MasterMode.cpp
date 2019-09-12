@@ -247,8 +247,6 @@ void Master::papInit()
 
 void Master::papProcess()
 {
-	//double t_parameter = 0.0, t_report = 0.0, t_delta = 0.0, t_other = 0.0;
-	double t_parameter = 0.0, t_other = 0.0; // t_report and t_delta are calculated in their handlers
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
 		Timer tmr;
@@ -259,19 +257,17 @@ void Master::papProcess()
 			VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl);
 			tl = t;
 		}
-		t_other += tmr.elapseSd();
+		mtOther += tmr.elapseSd();
 		// wait until the report counts reach a global mini batch
 		suPap.wait();
 		gatherDelta();
 		stat.t_dlt_wait += tmr.elapseSd();
-		tmr.restart();
 		broadcastParameter();
-		t_parameter += tmr.elapseSd();
 
 		tmr.restart();
 		archiveProgress();
 		++iter;
-		t_other += tmr.elapseSd();
+		mtOther += tmr.elapseSd();
 	}
 }
 

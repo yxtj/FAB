@@ -4,6 +4,7 @@
 #include "logging/logging.h"
 #include "util/Timer.h"
 #include <future>
+#include <numeric>
 
 using namespace std;
 
@@ -32,6 +33,8 @@ void Master::init(const ConfData* conf, const size_t lid)
 {
 	this->conf = conf;
 	nWorker = conf->nw;
+	globalBatchSize = conf->batchSize;
+	localreportSize = globalBatchSize / nWorker;
 	nPointWorker.assign(nWorker, 0);
 	trainer = TrainerFactory::generate(conf->optimizer, conf->optimizerParam);
 	LOG_IF(trainer == nullptr, FATAL) << "Trainer is not set correctly";
@@ -330,27 +333,33 @@ void Master::coordinateParameter()
 
 void Master::sendParameter(const int target)
 {
+	Timer tmr;
 	DVLOG(3) << "send parameter to " << target << " with: " << model.getParameter().weights;
 	net->send(wm.lid2nid(target), MType::DParameter, model.getParameter().weights);
+	mtParameterSum += tmr.elapseSd();
 	++stat.n_par_send;
 }
 
 void Master::broadcastParameter()
 {
+	Timer tmr;
 	const auto& m = model.getParameter().weights;
 	DVLOG(3) << "broadcast parameter: " << m;
 	net->broadcast(MType::DParameter, m);
+	mtParameterSum += tmr.elapseSd();
 	stat.n_par_send += nWorker;
 }
 
 void Master::multicastParameter(const int source)
 {
+	Timer tmr;
 	const auto& m = model.getParameter().weights;
 	vector<int> targets = prs->getTargets(source);
 	DVLOG(3) << "multicast parameter: " << m << " to " << targets;
 	for(int& v : targets)
 		v=wm.lid2nid(v);
 	net->multicast(targets, MType::DParameter, m);
+	mtParameterSum += tmr.elapseSd();
 	stat.n_par_send += targets.size();
 }
 
@@ -389,9 +398,44 @@ void Master::archiveProgress(const bool force)
 	}, iter, timeOffset + tmrTrain.elapseSd(), ref(model.getParameter()));
 }
 
+size_t Master::estimateGlobalBatchSize()
+{
+	double mtu = mtUpdateSum / nUpdate;
+	double mtb = mtParameterSum / stat.n_par_send;
+	double mtr = mtReportSum / nReport;
+	double mto = mtOther / iter;
+
+	double wtd = accumulate(wtDatapoint.begin(), wtDatapoint.end(), 0.0) / wtDatapoint.size();
+	double wtc = accumulate(wtDelta.begin(), wtDelta.end(), 0.0) / wtDelta.size();
+	double wtr = accumulate(wtReport.begin(), wtReport.end(), 0.0) / wtReport.size();
+
+	double up = nWorker * nWorker * (mtu + mtb) - nWorker * wtc;
+	double down = wtd + (wtr - nWorker * mtr) / localreportSize;
+	return static_cast<size_t>(up / down);
+}
+
 void Master::broadcastBatchSize(const size_t gbs)
 {
 	net->broadcast(CType::NormalControl, make_pair(MType::FGlobalBatchSize, gbs));
+}
+
+size_t Master::estimateLocalReportSize(const bool quick)
+{
+	double mtr = mtReportSum / nReport;
+	double wtr = accumulate(wtReport.begin(), wtReport.end(), 0.0) / wtReport.size();
+	double wtd = accumulate(wtDatapoint.begin(), wtDatapoint.end(), 0.0) / wtDatapoint.size();
+	if(quick){
+		return static_cast<size_t>((nWorker * mtr - wtr) / wtd);
+	} else{
+		double mtu = mtUpdateSum / nUpdate;
+		double mtb = mtParameterSum / stat.n_par_send;
+		double mto = mtOther / iter;
+		double wtc = accumulate(wtDelta.begin(), wtDelta.end(), 0.0) / wtDelta.size();
+
+		double up = globalBatchSize * wtr - nWorker * mtr;
+		double down = nWorker * nWorker * (mtu + mtb) - nWorker * wtc - globalBatchSize * wtd;
+		return static_cast<size_t>(up / down);
+	}
 }
 
 void Master::broadcastReportSize(const size_t lrs)
