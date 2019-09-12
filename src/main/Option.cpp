@@ -233,7 +233,7 @@ bool Option::processSpeedRandom(const std::string& srandom)
 {
 	conf.adjustSpeedRandom = false;
 	if(srandom.empty())
-		return false;
+		return true;
 	vector<string> vec = getStringList(srandom, ", ");
 	for(string& str : vec){
 		for(char& ch : str){

@@ -20,6 +20,8 @@ Master::Master() : Runner() {
 	nReport = 0;
 	mtUpdateSum = 0.0;
 	nUpdate = 0;
+	mtParameterSum = 0.0;
+	mtOther = 0.0;
 	timeOffset = 0.0;
 	pie = nullptr;
 	prs = nullptr;

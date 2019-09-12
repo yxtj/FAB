@@ -2,6 +2,7 @@
 #include "network/NetworkThread.h"
 #include "message/MType.h"
 #include "logging/logging.h"
+#include <numeric>
 using namespace std;
 
 // ---- bulk synchronous parallel
@@ -256,6 +257,17 @@ void Master::papProcess()
 			double t = tmrTrain.elapseSd();
 			VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl);
 			tl = t;
+			double mtu = mtUpdateSum / nUpdate;
+			double mtb = mtParameterSum / stat.n_par_send;
+			double mtr = mtReportSum / nReport;
+			double mto = mtOther / iter;
+
+			double wtd = accumulate(wtDatapoint.begin(), wtDatapoint.end(), 0.0) / wtDatapoint.size();
+			double wtc = accumulate(wtDelta.begin(), wtDelta.end(), 0.0) / wtDelta.size();
+			double wtr = accumulate(wtReport.begin(), wtReport.end(), 0.0) / wtReport.size();
+
+			DVLOG(2) << "mtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto" << mtOther
+				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr;
 		}
 		mtOther += tmr.elapseSd();
 		// wait until the report counts reach a global mini batch

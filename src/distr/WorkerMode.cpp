@@ -363,6 +363,7 @@ void Worker::papProcess()
 				vector<double> report = { static_cast<double>(n_used),
 					t_data / n_used, t_delta / n_delta, t_report / n_report };
 				// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending
+				VLOG_EVERY_N(ln, 2) << "  send report";
 				sendReport(report);
 				++n_report;
 				t_report += tmr.elapseSd();
