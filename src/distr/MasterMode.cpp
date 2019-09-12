@@ -2,7 +2,7 @@
 #include "network/NetworkThread.h"
 #include "message/MType.h"
 #include "logging/logging.h"
-#include <numeric>
+#include "math/accumulate.h"
 using namespace std;
 
 // ---- bulk synchronous parallel
@@ -262,9 +262,9 @@ void Master::papProcess()
 			double mtr = mtReportSum / nReport;
 			double mto = mtOther / iter;
 
-			double wtd = accumulate(wtDatapoint.begin(), wtDatapoint.end(), 0.0) / wtDatapoint.size();
-			double wtc = accumulate(wtDelta.begin(), wtDelta.end(), 0.0) / wtDelta.size();
-			double wtr = accumulate(wtReport.begin(), wtReport.end(), 0.0) / wtReport.size();
+			double wtd = hmean(wtDatapoint);
+			double wtc = mean(wtDelta);
+			double wtr = mean(wtReport);
 
 			DVLOG(2) << "mtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto=" << mtOther
 				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr;
