@@ -271,7 +271,7 @@ void Master::papProcess()
 		}
 		mtOther += tmr.elapseSd();
 		// wait until the report counts reach a global mini batch
-		suPap.wait();
+		suPap.wait_n_reset();
 		gatherDelta();
 		stat.t_dlt_wait += tmr.elapseSd();
 		broadcastParameter();
