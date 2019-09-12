@@ -388,12 +388,18 @@ void Master::archiveProgress(const bool force)
 
 void Master::broadcastBatchSize(const size_t gbs)
 {
-	net->broadcast(CType::Data, make_pair(MType::FGlobalBatchSize, gbs));
+	net->broadcast(CType::NormalControl, make_pair(MType::FGlobalBatchSize, gbs));
 }
 
 void Master::broadcastReportSize(const size_t lrs)
 {
-	net->broadcast(CType::Data, make_pair(MType::FLocalReportSize, lrs));
+	net->broadcast(CType::NormalControl, make_pair(MType::FLocalReportSize, lrs));
+}
+
+void Master::broadcastSizeConf(const size_t gbs, const size_t lrs)
+{
+	pair<size_t, size_t> data{ gbs, lrs };
+	net->broadcast(CType::NormalControl, make_pair(MType::FSizeConf, data));
 }
 
 void Master::broadcastWorkerList()
@@ -557,21 +563,24 @@ void Master::handleReport(const std::string& data, const RPCInfo& info)
 	Timer tmr;
 	int wid = wm.nid2lid(info.source);
 	vector<double> report = deserialize<vector<double>>(data);
+	bool flag = false;
 	// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending
 	{
-		lock_guard<mutex> lg(mp);
-		int t = processedEach[wid];
+		lock_guard<mutex> lg(mReportProc);
+		int t = reportProcEach[wid];
 		int cnt = static_cast<int>(report[0]);
-		processedEach[wid] = cnt;
-		processedTotal += cnt - t;
-		if(processedTotal > conf->batchSize)
-			readhBatch = true;
+		reportProcEach[wid] = cnt;
+		reportProcTotal += cnt - t;
+		if(reportProcTotal > conf->batchSize)
+			flag = true;
 	}
 	if(conf->papSearchBatchSize || conf->papSearchReportFreq){
 		wtDatapoint[wid] = report[1];
 		wtDelta[wid] = report[2];
 		wtReport[wid] = report[3];
 	}
+	if(flag)
+		suPap.notify();
 	reportTime += tmr.elapseSd();
 }
 

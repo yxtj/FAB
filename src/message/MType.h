@@ -43,8 +43,9 @@ struct MType {
 	static constexpr int PFinish = 44;
 
 	// Configuration and Meta data (50-59)
-	static constexpr int FGlobalBatchSize = 50;
-	static constexpr int FLocalReportSize = 51;
+	static constexpr int FSizeConf = 50;
+	static constexpr int FGlobalBatchSize = 51;
+	static constexpr int FLocalReportSize = 52;
 
 	// Staticstics (60-69)
 	static constexpr int SGather = 60;

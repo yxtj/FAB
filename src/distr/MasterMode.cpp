@@ -234,11 +234,11 @@ void Master::aapProcess()
 void Master::papInit()
 {
 	factorDelta = 1.0;
-	processedEach.assign(nWorker, 0);
-	processedTotal = 0;
-	readhBatch = false;
+	reportProcEach.assign(nWorker, 0);
+	reportProcTotal = 0;
 	reportTime = 0.0;
 	reportCount = 0;
+	deltaTime = 0.0;
 	if(conf->papSearchBatchSize || conf->papSearchReportFreq){
 		wtDatapoint.assign(nWorker, 0.0);
 		wtDelta.assign(nWorker, 0.0);
@@ -390,88 +390,13 @@ void Master::handleDeltaAap(const std::string & data, const RPCInfo & info)
 void Master::handleDeltaPap(const std::string& data, const RPCInfo& info)
 {
 	Timer tmr;
-	int s = wm.nid2lid(info.source);
-	auto delta = deserialize<vector<double>>(data);
-	int deltaCnt = delta.back();
-	getDeltaCnt += deltaCnt;
-	delta.pop_back();
-
-	deltaCount[s] += deltaCnt;
-	deltaObj[s] += delta.back();
-	objEsti += delta.back();
-	delta.pop_back();
-	deltaT[s] += tmrDeltaV.elapseSd();
-	objImproEsti += delta.back();
-
+	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
-	applyDelta(delta, s);
-
-	double thread = glbBatchSize;
-	if(opt->mode.find("pasp4") != std::string::npos){
-		thread = glbBatchSize * shrinkFactor;
-	}
-	//// pasp5 send out the interval
-	if(opt->mode.find("pasp5") != std::string::npos && nUpdate == 0){
-		double tt = tmrTrain.elapseSd();
-		VLOG(1) << "Broadcast Interval: " << tt << " for " << deltaCnt << " from " << s;
-		net->broadcast(MType::CTrainInterval, tt * opt->reptr / deltaCnt / nWorker);
-	}
-
-	if(opt->algorighm == "mlp"){
-		double objImprove = l1norm0(delta);
-		staleStats += "_" + std::to_string(s) + "_" + std::to_string(objImprove);
-		objImproEsti += objImprove;
-	}
-
-	VLOG(3) << " Rev Delta from " << s << ", " << deltaCnt << ", getDeltaCnt: " << getDeltaCnt
-		<< ", thread: " << thread;
-
+	int s = wm.nid2lid(info.source);
+	stat.n_point += deltaMsg.first;
+	applyDelta(deltaMsg.second, s);
 	rph.input(typeDDeltaAll, s);
-
-	if(getDeltaCnt >= thread) { // && opt->mode.find("pasp5") == std::string::npos) {
-		rph.input(typeDDeltaAny, s);
-		// ++unSendDelta;
-	// if (unSendDelta >= freqSendParam){
-		broadcastParameter();
-		sentDReq = false;
-		tmrDeltaV.restart();
-		deltaV.assign(nWorker + 3, 0);
-		ttDpProcessed += getDeltaCnt;
-		reportNum = 0;
-		fastReady = false;
-		factorReady = false;
-
-		++nUpdate;
-		// VLOG_IF(nUpdate<5,1) << "pasp4 shrinkFactor: " << shrinkFactor;
-		string states = std::to_string(getDeltaCnt) + ";" + std::to_string(objEsti)
-			+ ";" + std::to_string(objImproEsti);
-		for(int i = 0; i < nWorker; i++){
-			states += ";" + std::to_string(deltaCount[i]) + "_" + std::to_string(deltaObj[i]) + "_"
-				+ std::to_string(deltaT[i]);
-		}
-
-		deltaCount.assign(nWorker, 0);
-		deltaT.assign(nWorker, 0.0);
-		deltaObj.assign(nWorker, 0.0);
-
-		// archiveProgressAsync(std::to_string(shrinkFactor)+"_"
-		// 		+std::to_string(objImproEsti/getDeltaCnt), false);
-		archiveProgressAsync(states, false);
-		shrinkFactor = 1.0;
-		getDeltaCnt = 0;
-		objImproEsti = 0.0;
-		objEsti = 0.0;
-		// }
-	}
-	//sendReply(info);<< "," << objImproEsti
+	++nUpdate;
 	++stat.n_dlt_recv;
-	// directly send new parameter
-	// sendParameter(s);
-	// ++unSendDelta;
-	// if (unSendDelta >= freqSendParam){
-	// 	broadcastParameter();
-	// 	++nUpdate;
-	// 	unSendDelta = 0;
-	// 	archiveProgressAsync("", true);
-	// }
+	deltaTime += tmr.elapseSd();
 }

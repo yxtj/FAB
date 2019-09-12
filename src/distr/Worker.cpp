@@ -256,7 +256,7 @@ void Worker::fetchParmeter()
 	++stat.n_dlt_recv;
 }
 
-void Worker::sendReport(const vector<double>& report)
+void Worker::sendReport(const std::vector<double>& report)
 {
 	net->send(masterNID, MType::DReport, report);
 }

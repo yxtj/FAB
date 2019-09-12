@@ -64,6 +64,7 @@ private:
 	void broadcastBatchSize(const size_t gbs); // global batch size
 	size_t estimateLocalReportSize();
 	void broadcastReportSize(const size_t lrs); // local report size
+	void broadcastSizeConf(const size_t gbs, const size_t lrs);
 
 // signal logic
 public:
@@ -126,18 +127,18 @@ private:
 	Timer tmrTrain;
 
 	// progressive async
-	std::mutex mp;
 	double reportTime;
 	size_t reportCount;
-	vector<int> processedEach;
-	int processedTotal;
-	atomic<bool> readhBatch;
+	std::mutex mReportProc;
+	std::vector<int> reportProcEach; // how many data point is processed
+	int reportProcTotal;
 	SyncUnit suPap; // reported count reached a batch
 	double deltaTime;
+	//size_t deltaCount; // is nUpdate
 
-	vector<double> wtDatapoint; // worker side time per data point
-	vector<double> wtDelta; // worker side time per delta sending
-	vector<double> wtReport;  // worker side time per report sending
+	std::vector<double> wtDatapoint; // worker side time per data point
+	std::vector<double> wtDelta; // worker side time per delta sending
+	std::vector<double> wtReport;  // worker side time per report sending
 
 	SyncUnit suOnline;
 	SyncUnit suWorker;
