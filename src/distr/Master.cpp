@@ -36,7 +36,7 @@ void Master::init(const ConfData* conf, const size_t lid)
 	this->conf = conf;
 	nWorker = conf->nw;
 	globalBatchSize = conf->batchSize;
-	localreportSize = globalBatchSize / nWorker;
+	localreportSize = conf->reportSize;
 	nPointWorker.assign(nWorker, 0);
 	trainer = TrainerFactory::generate(conf->optimizer, conf->optimizerParam);
 	LOG_IF(trainer == nullptr, FATAL) << "Trainer is not set correctly";

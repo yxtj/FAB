@@ -45,6 +45,7 @@ struct ConfData {
 	std::vector<std::string> optimizerParam;
 	//double lrate; // learning rate
 	size_t batchSize;
+	size_t reportSize;
 
 	unsigned seed;
 

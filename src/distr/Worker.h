@@ -54,6 +54,10 @@ private:
 	void pauseTrain();
 	void resumeTrain();
 
+// local logic
+private:
+	size_t calcLocalBatchSize(const size_t gbs);
+
 // singal
 public:
 	void handleNormalControl(const std::string& data, const RPCInfo& info);
@@ -63,6 +67,9 @@ public:
 	void handlePause(const std::string& data, const RPCInfo& info);
 	void handleContinue(const std::string& data, const RPCInfo& info);
 	void handleDeltaRequest(const std::string& data, const RPCInfo& info);
+	void handleMetaConf(const std::string& data, const RPCInfo& info);
+	void handleMetaConfGlobalBatchSize(const std::string& data, const RPCInfo& info);
+	void handleMetaConfLocalReportSize(const std::string& data, const RPCInfo& info);
 
 	void handleImmediateControl(const std::string& data, const RPCInfo& info);
 	void handleTerminate(const std::string& data, const RPCInfo& info);
@@ -77,6 +84,7 @@ public:
 private:
 	size_t dataPointer;
 	size_t localBatchSize;
+	size_t localReportSize; // pap
 	int ln; // log-every-n times
 
 	int masterNID; // network id of master

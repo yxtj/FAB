@@ -24,6 +24,7 @@ void Worker::init(const ConfData* conf, const size_t lid)
 {
 	this->conf = conf;
 	nWorker = conf->nw;
+	localReportSize = conf->reportSize;
 	localID = lid;
 	trainer = TrainerFactory::generate(conf->optimizer, conf->optimizerParam);
 	LOG_IF(trainer == nullptr, FATAL) << "Trainer is not set correctly";
@@ -54,11 +55,7 @@ void Worker::bindDataset(const DataHolder* pdh)
 	VLOG(1) << "Bind dataset with " << pdh->size() << " data points";
 	trainer->bindDataset(pdh);
 	// separated the mini-batch among all workers
-	localBatchSize = conf->batchSize / nWorker;
-	if(conf->batchSize % nWorker > localID)
-		++localBatchSize;
-	if(localBatchSize <= 0)
-		localBatchSize = 1;
+	localBatchSize = calcLocalBatchSize(conf->batchSize);
 }
 
 void Worker::run()
@@ -271,6 +268,16 @@ void Worker::resumeTrain()
 	allowTrain = true;
 }
 
+size_t Worker::calcLocalBatchSize(const size_t gbs)
+{
+	size_t lbs = gbs / nWorker;
+	if(gbs % nWorker > localID)
+		++lbs;
+	if(lbs <= 0)
+		lbs = 1;
+	return lbs;
+}
+
 void Worker::handleNormalControl(const std::string & data, const RPCInfo & info)
 {
 	int type = deserialize<int>(data);
@@ -290,6 +297,15 @@ void Worker::handleNormalControl(const std::string & data, const RPCInfo & info)
 		break;
 	case MType::CTrainContinue:
 		handleContinue(data.substr(sizeof(int)), info);
+		break;
+	case MType::FGlobalBatchSize:
+		handleMetaConfGlobalBatchSize(data.substr(sizeof(int)), info);
+		break;
+	case MType::FLocalReportSize:
+		handleMetaConfLocalReportSize(data.substr(sizeof(int)), info);
+		break;
+	case MType::FSizeConf:
+		handleMetaConf(data.substr(sizeof(int)), info);
 		break;
 	case MType::DRDelta:
 		handleDeltaRequest(data.substr(sizeof(int)), info);
@@ -347,6 +363,27 @@ void Worker::handleDeltaRequest(const std::string& data, const RPCInfo& info)
 {
 	requestingDelta = true;
 	pauseTrain();
+}
+
+void Worker::handleMetaConf(const std::string& data, const RPCInfo& info)
+{
+	pair<size_t, size_t> p = deserialize<pair<size_t, size_t>>(data);
+	if(p.first != 0)
+		localBatchSize = calcLocalBatchSize(p.first);
+	if(p.second != 0)
+		localReportSize = p.second;
+}
+
+void Worker::handleMetaConfGlobalBatchSize(const std::string& data, const RPCInfo& info)
+{
+	size_t gbs = deserialize<size_t>(data);
+	localBatchSize = calcLocalBatchSize(gbs);
+}
+
+void Worker::handleMetaConfLocalReportSize(const std::string& data, const RPCInfo& info)
+{
+	size_t lrs = deserialize<size_t>(data);
+	localReportSize = lrs;
 }
 
 void Worker::handleImmediateControl(const std::string & data, const RPCInfo & info)

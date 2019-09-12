@@ -31,7 +31,7 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 	string tmp_cast;
 	string tmp_interval;
 	string tmp_ids, tmp_idy;
-	string tmp_bs;
+	string tmp_bs, tmp_rs;
 	string tmp_sr, tmp_sh;
 	string tmp_t_iter, tmp_a_iter, tmp_l_iter;
 	int tmp_v;
@@ -75,7 +75,7 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		("seed", value(&conf.seed)->default_value(123456U), "The seed to initialize parameters")
 		// app - training
 		("batch_size,s", value(&tmp_bs)->required(), "The global batch size. Support suffix: k, m, g")
-		//("learning_rate,l", value(&conf.lrate)->required(), "The learning rate")
+		("report_size", value(&tmp_rs)->default_value(0), "The local report size. Support suffix: k, m, g")
 		("optimizer,o", value(&conf.optimizer)->required()->default_value("gd:0.01"), desc_opt.c_str())
 		// file - input
 		("dataset", value(&conf.dataset)->default_value("csv"), desc_dl.c_str())
@@ -127,6 +127,9 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		conf.idSkip = getIntListByRange(tmp_ids);
 		conf.idY = getIntListByRange(tmp_idy);
 		conf.batchSize = stoiKMG(tmp_bs);
+		conf.reportSize = stoiKMG(tmp_rs);
+		if(conf.reportSize == 0)
+			conf.reportSize = conf.batchSize / conf.nw;
 		conf.tcIter = stoiKMG(tmp_t_iter);
 		conf.arvIter = stoiKMG(tmp_a_iter);
 		conf.logIter = stoiKMG(tmp_l_iter);

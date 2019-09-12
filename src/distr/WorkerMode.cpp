@@ -334,14 +334,13 @@ void Worker::papProcess()
 
 	double t_data = 0.0, t_delta = 0.0, t_report = 0.0;
 	size_t n_delta = 0, n_report = 0;
-	size_t report_size = stoi(conf->algParam);
 
 	while(!exitTrain){
 		Timer tmr;
 		// DVLOG(3) << "current parameter: " << model.getParameter().weights;
 		size_t n_used = 0;
 		t_data = 0.0;
-		size_t left = report_size;
+		size_t left = localReportSize;
 		double dly = speedSlowFactor + speedRandomFun();
 		clearDelta();
 		while(exitTrain == false && !requestingDelta){
