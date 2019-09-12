@@ -15,6 +15,9 @@ Master::Master() : Runner() {
 	ny = 0;
 	nPoint = 0;
 	iter = 0;
+	mtReportSum = 0.0;
+	nReport = 0;
+	mtUpdateSum = 0.0;
 	nUpdate = 0;
 	timeOffset = 0.0;
 	pie = nullptr;
@@ -561,8 +564,9 @@ void Master::handleParameter(const std::string & data, const RPCInfo & info)
 void Master::handleReport(const std::string& data, const RPCInfo& info)
 {
 	Timer tmr;
-	int wid = wm.nid2lid(info.source);
 	vector<double> report = deserialize<vector<double>>(data);
+	stat.t_data_deserial += tmr.elapseSd();
+	int wid = wm.nid2lid(info.source);
 	bool flag = false;
 	// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending
 	{
@@ -581,7 +585,7 @@ void Master::handleReport(const std::string& data, const RPCInfo& info)
 	}
 	if(flag)
 		suPap.notify();
-	reportTime += tmr.elapseSd();
+	mtReportSum += tmr.elapseSd();
 }
 
 void Master::handleDeltaTail(const std::string & data, const RPCInfo & info)

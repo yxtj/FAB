@@ -127,14 +127,14 @@ private:
 	Timer tmrTrain;
 
 	// progressive async
-	double reportTime;
-	size_t reportCount;
+	double mtReportSum; // master side time for processing all reports
+	size_t nReport; // master side # of processed reports
 	std::mutex mReportProc;
 	std::vector<int> reportProcEach; // how many data point is processed
 	int reportProcTotal;
 	SyncUnit suPap; // reported count reached a batch
-	double deltaTime;
-	//size_t deltaCount; // is nUpdate
+	double mtUpdateSum; // master side time for processing all reports
+	//size_t nDelat; // is nUpdate
 
 	std::vector<double> wtDatapoint; // worker side time per data point
 	std::vector<double> wtDelta; // worker side time per delta sending

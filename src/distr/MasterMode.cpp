@@ -236,9 +236,6 @@ void Master::papInit()
 	factorDelta = 1.0;
 	reportProcEach.assign(nWorker, 0);
 	reportProcTotal = 0;
-	reportTime = 0.0;
-	reportCount = 0;
-	deltaTime = 0.0;
 	if(conf->papSearchBatchSize || conf->papSearchReportFreq){
 		wtDatapoint.assign(nWorker, 0.0);
 		wtDelta.assign(nWorker, 0.0);
@@ -398,5 +395,5 @@ void Master::handleDeltaPap(const std::string& data, const RPCInfo& info)
 	rph.input(typeDDeltaAll, s);
 	++nUpdate;
 	++stat.n_dlt_recv;
-	deltaTime += tmr.elapseSd();
+	mtUpdateSum += tmr.elapseSd();
 }
