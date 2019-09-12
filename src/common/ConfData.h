@@ -26,6 +26,8 @@ struct ConfData {
 	std::string mode;
 	int staleGap; // the max gap between current processing iteration and the parameter iteratoin
 	bool aapWait; // force fab wait for its gradient reply before continue
+	bool papSearchBatchSize; // search for the optimal global mini batch size online
+	bool papSearchReportFreq; // search for the optimal report frequency (local micro batch size) online
 	std::vector<std::string> intervalParam; // parameters for the flexible coordinator
 	std::vector<std::string> mcastParam; // parameters for the multicast
 
