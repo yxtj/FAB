@@ -237,11 +237,11 @@ void Master::papInit()
 	factorDelta = 1.0;
 	reportProcEach.assign(nWorker, 0);
 	reportProcTotal = 0;
-	if(conf->papSearchBatchSize || conf->papSearchReportFreq){
-		wtDatapoint.assign(nWorker, 0.0);
-		wtDelta.assign(nWorker, 0.0);
-		wtReport.assign(nWorker, 0.0);
-	}
+	//if(conf->papSearchBatchSize || conf->papSearchReportFreq){
+	wtDatapoint.assign(nWorker, 0.0);
+	wtDelta.assign(nWorker, 0.0);
+	wtReport.assign(nWorker, 0.0);
+	//}
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaPap));
 	regDSPProcess(MType::DReport, localCBBinder(&Master::handleReport));
 }
@@ -266,7 +266,7 @@ void Master::papProcess()
 			double wtc = accumulate(wtDelta.begin(), wtDelta.end(), 0.0) / wtDelta.size();
 			double wtr = accumulate(wtReport.begin(), wtReport.end(), 0.0) / wtReport.size();
 
-			DVLOG(2) << "mtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto" << mtOther
+			DVLOG(2) << "mtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto=" << mtOther
 				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr;
 		}
 		mtOther += tmr.elapseSd();

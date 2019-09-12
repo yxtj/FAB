@@ -621,16 +621,15 @@ void Master::handleReport(const std::string& data, const RPCInfo& info)
 		int cnt = static_cast<int>(report[0]);
 		reportProcEach[wid] = cnt;
 		reportProcTotal += cnt - t;
-		if(reportProcTotal > conf->batchSize)
-			flag = true;
-	}
-	if(conf->papSearchBatchSize || conf->papSearchReportFreq){
+		//if(conf->papSearchBatchSize || conf->papSearchReportFreq){
 		wtDatapoint[wid] = report[1];
 		wtDelta[wid] = report[2];
 		wtReport[wid] = report[3];
+		//}
+		if(reportProcTotal > conf->batchSize)
+			suPap.notify();
 	}
-	if(flag)
-		suPap.notify();
+	++nReport;
 	mtReportSum += tmr.elapseSd();
 }
 
