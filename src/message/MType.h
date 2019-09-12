@@ -42,6 +42,11 @@ struct MType {
 	static constexpr int PRequest = 43;
 	static constexpr int PFinish = 44;
 
+	// Configuration and Meta data (50-59)
+	static constexpr int FGlobalBatchSize = 50;
+	static constexpr int FLocalReportSize = 51;
+
 	// Staticstics (60-69)
 	static constexpr int SGather = 60;
+
 };

@@ -236,40 +236,45 @@ void Master::papInit()
 	factorDelta = 1.0;
 	processedEach.assign(nWorker, 0);
 	processedTotal = 0;
-	reachBroadcast = false;
+	readhBatch = false;
+	reportTime = 0.0;
+	reportCount = 0;
+	if(conf->papSearchBatchSize || conf->papSearchReportFreq){
+		wtDatapoint.assign(nWorker, 0.0);
+		wtDelta.assign(nWorker, 0.0);
+		wtReport.assign(nWorker, 0.0);
+	}
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaPap));
 	regDSPProcess(MType::DReport, localCBBinder(&Master::handleReport));
 }
 
 void Master::papProcess()
 {
-	bool newIter = true;
+	//double t_parameter = 0.0, t_report = 0.0, t_delta = 0.0, t_other = 0.0;
+	double t_parameter = 0.0, t_other = 0.0; // t_report and t_delta are calculated in their handlers
 	double tl = tmrTrain.elapseSd();
-	tmrDeltaV.restart();
-	if(opt->algorighm == "lda")
-		model.resetparam();
 	while(!terminateCheck()){
-		// VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " update: " << nUpdate;
-		VLOG_EVERY_N(20, 1) << "In iteration: " << iter << " update: " << nUpdate
-			<< " dp: " << ttDpProcessed;
-
-		if(opt->mode.find("pasp5") != std::string::npos){
-			waitDeltaFromAll();
-			ttDpProcessed += getDeltaCnt;
-			broadcastParameter();
-			nUpdate++;
-			VLOG_IF(nUpdate < 3, 1) << "pasp5 broadcastParameter: " << iter << " update: " << nUpdate
-				<< " dp: " << ttDpProcessed;
-			archiveProgressAsync(std::to_string(objImproEsti / getDeltaCnt), false);
-			getDeltaCnt = 0;
-		} else {
-			waitDeltaFromAny();
-			suDeltaAny.reset();
+		Timer tmr;
+		VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;// << ", msg waiting: " << driver.queSize() << ", update: " << nUpdate;
+		//DVLOG_EVERY_N(ln / 10, 1) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
+		if(VLOG_IS_ON(2) && iter % ln == 0){
+			double t = tmrTrain.elapseSd();
+			VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl);
+			tl = t;
 		}
+		t_other += tmr.elapseSd();
+		// wait until the report counts reach a global mini batch
+		suPap.wait();
+		gatherDelta();
+		stat.t_dlt_wait += tmr.elapseSd();
+		tmr.restart();
+		broadcastParameter();
+		t_parameter += tmr.elapseSd();
 
-		if(unSendDelta == 0){
-			++iter;
-		}
+		tmr.restart();
+		archiveProgress();
+		++iter;
+		t_other += tmr.elapseSd();
 	}
 }
 

@@ -55,6 +55,8 @@ void Master::init(const ConfData* conf, const size_t lid)
 		aapInit();
 		prs = ReceiverSelectorFactory::generate(conf->mcastParam, nWorker);
 		LOG_IF(prs == nullptr, FATAL) << "Fail to initialize receiver selector with parameter: " << conf->mcastParam;
+	} else if(conf->mode == "pap"){
+		papInit();
 	}
 }
 
@@ -110,6 +112,8 @@ void Master::run()
 		fspProcess();
 	} else if(conf->mode == "aap"){
 		aapProcess();
+	} else if(conf->mode == "pap"){
+		papProcess();
 	}
 	--iter;
 	double t = tmrTrain.elapseSd();
@@ -382,6 +386,16 @@ void Master::archiveProgress(const bool force)
 	}, iter, timeOffset + tmrTrain.elapseSd(), ref(model.getParameter()));
 }
 
+void Master::broadcastBatchSize(const size_t gbs)
+{
+	net->broadcast(CType::Data, make_pair(MType::FGlobalBatchSize, gbs));
+}
+
+void Master::broadcastReportSize(const size_t lrs)
+{
+	net->broadcast(CType::Data, make_pair(MType::FLocalReportSize, lrs));
+}
+
 void Master::broadcastWorkerList()
 {
 	vector<pair<int, int>> temp = wm.list();
@@ -427,7 +441,7 @@ void Master::waitDeltaFromAll(){
 void Master::gatherDelta()
 {
 	suDeltaAll.reset();
-	net->broadcast(MType::DRDelta, "");
+	net->broadcast(CType::NormalControl, MType::DRDelta);
 	suDeltaAll.wait();
 }
 
@@ -450,6 +464,7 @@ void Master::handleNormalControl(const std::string & data, const RPCInfo & info)
 	case MType::CReady:
 		handleReady(data.substr(sizeof(int)), info);
 		break;
+		//MType::DDelta and MType::DReport are handled directly by message type
 	}
 }
 
@@ -539,16 +554,25 @@ void Master::handleParameter(const std::string & data, const RPCInfo & info)
 
 void Master::handleReport(const std::string& data, const RPCInfo& info)
 {
+	Timer tmr;
 	int wid = wm.nid2lid(info.source);
-	int cnt = deserialize<int>(data);
+	vector<double> report = deserialize<vector<double>>(data);
+	// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending
 	{
 		lock_guard<mutex> lg(mp);
 		int t = processedEach[wid];
+		int cnt = static_cast<int>(report[0]);
 		processedEach[wid] = cnt;
 		processedTotal += cnt - t;
 		if(processedTotal > conf->batchSize)
-			reachBroadcast = true;
+			readhBatch = true;
 	}
+	if(conf->papSearchBatchSize || conf->papSearchReportFreq){
+		wtDatapoint[wid] = report[1];
+		wtDelta[wid] = report[2];
+		wtReport[wid] = report[3];
+	}
+	reportTime += tmr.elapseSd();
 }
 
 void Master::handleDeltaTail(const std::string & data, const RPCInfo & info)

@@ -44,6 +44,8 @@ void Worker::init(const ConfData* conf, const size_t lid)
 		fspInit();
 	} else if(conf->mode == "aap"){
 		aapInit();
+	} else if(conf->mode == "pap"){
+		papInit();
 	}
 }
 
@@ -102,6 +104,8 @@ void Worker::run()
 		fspProcess();
 	} else if(conf->mode == "aap"){
 		aapProcess();
+	} else if(conf->mode == "pap"){
+		papProcess();
 	}
 
 	DLOG(INFO) << "finish training";

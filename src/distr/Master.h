@@ -60,6 +60,11 @@ private:
 	bool needArchive();
 	void archiveProgress(const bool force = false);
 
+	size_t estimateGlobalBatchSize();
+	void broadcastBatchSize(const size_t gbs); // global batch size
+	size_t estimateLocalReportSize();
+	void broadcastReportSize(const size_t lrs); // local report size
+
 // signal logic
 public:
 	void broadcastWorkerList();
@@ -116,15 +121,23 @@ private:
 	int ln; // log-every-n times
 
 	//size_t iter; // [defined in Runner] current iteration being executate now (not complete)
-	size_t nUpdate; // used for Async case
-	double timeOffset; // used for accounting time if resumed
+	size_t nUpdate; // # of received delta, usually used for asynchronous cases
+	double timeOffset; // used for accounting time if resumed from previous archive
 	Timer tmrTrain;
 
 	// progressive async
 	std::mutex mp;
+	double reportTime;
+	size_t reportCount;
 	vector<int> processedEach;
 	int processedTotal;
-	bool reachBroadcast;
+	atomic<bool> readhBatch;
+	SyncUnit suPap; // reported count reached a batch
+	double deltaTime;
+
+	vector<double> wtDatapoint; // worker side time per data point
+	vector<double> wtDelta; // worker side time per delta sending
+	vector<double> wtReport;  // worker side time per report sending
 
 	SyncUnit suOnline;
 	SyncUnit suWorker;

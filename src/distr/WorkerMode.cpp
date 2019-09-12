@@ -332,8 +332,8 @@ void Worker::papProcess()
 		}
 	}
 
-	double t_data = 0.0, t_report = 0.0, t_delta = 0.0;
-	size_t n_report = 0, n_delta = 0;
+	double t_data = 0.0, t_delta = 0.0, t_report = 0.0;
+	size_t n_delta = 0, n_report = 0;
 	size_t report_size = stoi(conf->algParam);
 
 	while(!exitTrain){
@@ -361,8 +361,8 @@ void Worker::papProcess()
 			if(left == 0){
 				tmr.restart();
 				vector<double> report = { static_cast<double>(n_used),
-					t_data / n_used, t_report / n_report, t_delta / n_delta };
-				// format: #-processed-data-points, time-per-data-point, time-per-report-sending, time-per-delta-sending
+					t_data / n_used, t_delta / n_delta, t_report / n_report };
+				// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending
 				sendReport(report);
 				++n_report;
 				t_report += tmr.elapseSd();
