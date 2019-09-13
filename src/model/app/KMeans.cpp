@@ -139,7 +139,7 @@ double KMeans::quickDist(it_t xf, it_t xl, it_t yf, const double n)
 	return yy - 2 * round(n) * xy;
 }
 
-pair<size_t, double> KMeans::quickPredict(const std::vector<double>& x, const std::vector<double>& w) const
+std::pair<size_t, double> KMeans::quickPredict(const std::vector<double>& x, const std::vector<double>& w) const
 {
 	size_t min_id = ncenter;
 	double min_v;

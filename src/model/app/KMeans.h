@@ -32,7 +32,7 @@ private:
 	static double quickDist(it_t xf, it_t xl, it_t yf, const double n);
 	// size_t quickPredict(const std::vector<double>& x, const std::vector<double>& w) const;
 	// return cluster id and obj value
-	pair<size_t, double> quickPredict(const std::vector<double>& x, const std::vector<double>& w) const;
+	std::pair<size_t, double> quickPredict(const std::vector<double>& x, const std::vector<double>& w) const;
 private:
 	size_t dim;
 	size_t ncenter;
