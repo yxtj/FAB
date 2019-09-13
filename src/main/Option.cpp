@@ -75,7 +75,7 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		("seed", value(&conf.seed)->default_value(123456U), "The seed to initialize parameters")
 		// app - training
 		("batch_size,s", value(&tmp_bs)->required(), "The global batch size. Support suffix: k, m, g")
-		("report_size", value(&tmp_rs)->default_value(0), "The local report size. Support suffix: k, m, g")
+		("report_size", value(&tmp_rs)->default_value("0"), "The local report size. Support suffix: k, m, g")
 		("optimizer,o", value(&conf.optimizer)->required()->default_value("gd:0.01"), desc_opt.c_str())
 		// file - input
 		("dataset", value(&conf.dataset)->default_value("csv"), desc_dl.c_str())
@@ -237,7 +237,7 @@ bool Option::processSpeedRandom(const std::string& srandom)
 	conf.adjustSpeedRandom = false;
 	if(srandom.empty())
 		return true;
-	vector<string> vec = getStringList(srandom, ", ");
+	vector<string> vec = getStringList(srandom, ":;, ");
 	for(string& str : vec){
 		for(char& ch : str){
 			if(ch >= 'A' && ch <= 'Z')

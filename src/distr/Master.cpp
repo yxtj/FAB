@@ -3,6 +3,7 @@
 #include "message/MType.h"
 #include "logging/logging.h"
 #include "util/Timer.h"
+#include "math/accumulate.h"
 #include <future>
 #include <numeric>
 
@@ -407,9 +408,9 @@ size_t Master::estimateGlobalBatchSize()
 	double mtr = mtReportSum / nReport;
 	double mto = mtOther / iter;
 
-	double wtd = accumulate(wtDatapoint.begin(), wtDatapoint.end(), 0.0) / wtDatapoint.size();
-	double wtc = accumulate(wtDelta.begin(), wtDelta.end(), 0.0) / wtDelta.size();
-	double wtr = accumulate(wtReport.begin(), wtReport.end(), 0.0) / wtReport.size();
+	double wtd = hmean(wtDatapoint);
+	double wtc = mean(wtDelta);
+	double wtr = mean(wtReport);
 
 	double up = nWorker * (nWorker * (mtu + mtb) + mto - wtc);
 	double down = wtd + (wtr - nWorker * mtr) / localreportSize;
@@ -424,15 +425,16 @@ void Master::broadcastBatchSize(const size_t gbs)
 size_t Master::estimateLocalReportSize(const bool quick)
 {
 	double mtr = mtReportSum / nReport;
-	double wtr = accumulate(wtReport.begin(), wtReport.end(), 0.0) / wtReport.size();
-	double wtd = accumulate(wtDatapoint.begin(), wtDatapoint.end(), 0.0) / wtDatapoint.size();
+	double wtr = mean(wtReport);
+	//double wtd = mean(wtDatapoint);
+	double wtd = hmean(wtDatapoint);
 	if(quick){
 		return static_cast<size_t>((nWorker * mtr - wtr) / wtd);
 	} else{
 		double mtu = mtUpdateSum / nUpdate;
 		double mtb = mtParameterSum / stat.n_par_send;
 		double mto = mtOther / iter;
-		double wtc = accumulate(wtDelta.begin(), wtDelta.end(), 0.0) / wtDelta.size();
+		double wtc = mean(wtDelta);
 
 		double up = globalBatchSize * wtr - nWorker * mtr;
 		double down = nWorker * nWorker * (mtu + mtb) - nWorker * wtc - globalBatchSize * wtd;
@@ -621,16 +623,15 @@ void Master::handleReport(const std::string& data, const RPCInfo& info)
 		int cnt = static_cast<int>(report[0]);
 		reportProcEach[wid] = cnt;
 		reportProcTotal += cnt - t;
-		if(reportProcTotal > conf->batchSize)
-			flag = true;
-	}
-	if(conf->papSearchBatchSize || conf->papSearchReportFreq){
+		//if(conf->papSearchBatchSize || conf->papSearchReportFreq){
 		wtDatapoint[wid] = report[1];
 		wtDelta[wid] = report[2];
 		wtReport[wid] = report[3];
+		//}
+		if(reportProcTotal > conf->batchSize)
+			suPap.notify();
 	}
-	if(flag)
-		suPap.notify();
+	++nReport;
 	mtReportSum += tmr.elapseSd();
 }
 

@@ -2,7 +2,7 @@
 #include "network/NetworkThread.h"
 #include "message/MType.h"
 #include "logging/logging.h"
-#include <numeric>
+#include "math/accumulate.h"
 using namespace std;
 
 // ---- bulk synchronous parallel
@@ -237,11 +237,11 @@ void Master::papInit()
 	factorDelta = 1.0;
 	reportProcEach.assign(nWorker, 0);
 	reportProcTotal = 0;
-	if(conf->papSearchBatchSize || conf->papSearchReportFreq){
-		wtDatapoint.assign(nWorker, 0.0);
-		wtDelta.assign(nWorker, 0.0);
-		wtReport.assign(nWorker, 0.0);
-	}
+	//if(conf->papSearchBatchSize || conf->papSearchReportFreq){
+	wtDatapoint.assign(nWorker, 0.0);
+	wtDelta.assign(nWorker, 0.0);
+	wtReport.assign(nWorker, 0.0);
+	//}
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaPap));
 	regDSPProcess(MType::DReport, localCBBinder(&Master::handleReport));
 }
@@ -262,16 +262,16 @@ void Master::papProcess()
 			double mtr = mtReportSum / nReport;
 			double mto = mtOther / iter;
 
-			double wtd = accumulate(wtDatapoint.begin(), wtDatapoint.end(), 0.0) / wtDatapoint.size();
-			double wtc = accumulate(wtDelta.begin(), wtDelta.end(), 0.0) / wtDelta.size();
-			double wtr = accumulate(wtReport.begin(), wtReport.end(), 0.0) / wtReport.size();
+			double wtd = hmean(wtDatapoint);
+			double wtc = mean(wtDelta);
+			double wtr = mean(wtReport);
 
-			DVLOG(2) << "mtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto" << mtOther
+			DVLOG(2) << "mtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto=" << mtOther
 				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr;
 		}
 		mtOther += tmr.elapseSd();
 		// wait until the report counts reach a global mini batch
-		suPap.wait();
+		suPap.wait_n_reset();
 		//// online change globalBatchSize
 		if(conf->papSearchBatchSize) {
 			globalBatchSize = estimateGlobalBatchSize();
