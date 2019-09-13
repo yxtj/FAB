@@ -4,8 +4,6 @@ set(HEADERS
 	EM.h
 	EM_KMeans.h
 	PSGD.h
-	PSGDBlock.h
-	PSGDDecay.h
 	TrainerFactory.h
 )
 set(SOURCES
@@ -14,8 +12,6 @@ set(SOURCES
 	EM.cpp
 	EM_KMeans.cpp
 	PSGD.cpp
-	PSGDBlock.cpp
-	PSGDDecay.cpp
 	TrainerFactory.cpp
 )
 set(IMPL_FILES
@@ -27,6 +23,8 @@ set(IMPL_FILES
 	priority/PriorityHolder.cpp
 )
 set(PSGD_POC_FILES
+	psgd_poc/PSGDBlock.cpp
+	psgd_poc/PSGDDecay.cpp
 	psgd_poc/PSGD_poc.cpp
 	psgd_poc/PSGD_point.cpp
 	psgd_poc/PSGD_dim.cpp

@@ -3,8 +3,8 @@
 #include "EM.h"
 #include "EM_KMeans.h"
 #include "PSGD.h"
-#include "PSGDBlock.h"
-#include "PSGDDecay.h"
+#include "psgd_poc/PSGDBlock.h"
+#include "psgd_poc/PSGDDecay.h"
 #include "psgd_poc/PSGD_point.h"
 #include "psgd_poc/PSGD_dim.h"
 #include <algorithm>

@@ -51,8 +51,7 @@ public:
 	virtual void ready(); // after set initializing parameter
 	virtual ~PSGD();
 
-	virtual DeltaResult batchDelta(
-		const size_t start, const size_t cnt, const bool avg = true);
+	// cond is not used
 	virtual DeltaResult batchDelta(std::atomic<bool>& cond,
 		const size_t start, const size_t cnt, const bool avg = true);
 

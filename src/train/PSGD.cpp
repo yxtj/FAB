@@ -104,7 +104,7 @@ PSGD::~PSGD()
 	prhd = nullptr;
 }
 
-Trainer::DeltaResult PSGD::batchDelta(
+Trainer::DeltaResult PSGD::batchDelta(std::atomic<bool>& cond,
 	const size_t start, const size_t cnt, const bool avg)
 {
 	size_t end = min(start + cnt, pd->size());
@@ -144,12 +144,6 @@ Trainer::DeltaResult PSGD::batchDelta(
 	}
 	stat_t_post += tmr.elapseSd();
 	return { cnt, topSize, move(grad2) };
-}
-
-Trainer::DeltaResult PSGD::batchDelta(
-	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
-{
-	return batchDelta(start, cnt, avg);
 }
 
 std::vector<double> PSGD::phaseUpdatePriority(const size_t r)

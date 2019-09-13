@@ -13,8 +13,6 @@ public:
 	double getRate() const;
 	virtual void prepare();
 
-	virtual DeltaResult batchDelta(
-		const size_t start, const size_t cnt, const bool avg = true);
 	virtual DeltaResult batchDelta(std::atomic<bool>& cond,
 		const size_t start, const size_t cnt, const bool avg = true);
 	virtual DeltaResult batchDelta(std::atomic<bool>& cond,

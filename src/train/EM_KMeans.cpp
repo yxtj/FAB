@@ -37,23 +37,6 @@ void EM_KMeans::prepare()
 }
 
 Trainer::DeltaResult EM_KMeans::batchDelta(
-	const size_t start, const size_t cnt, const bool avg)
-{
-	size_t end = start + cnt;
-	if(end > pd->size())
-		end = pd->size();
-	size_t nx = pm->paramWidth();
-	vector<double> grad(nx, 0.0);
-	size_t i;
-	for(i = start; i < end; ++i){
-		auto g = pm->gradient(pd->get(i), &h[i]);
-		for(size_t j = 0; j < nx; ++j)
-			grad[j] += g[j];
-	}
-	return { i - start, i - start, move(grad) };
-}
-
-Trainer::DeltaResult EM_KMeans::batchDelta(
 	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
 {
 	size_t end = start + cnt;
@@ -85,7 +68,7 @@ Trainer::DeltaResult EM_KMeans::batchDelta(std::atomic<bool>& cond,
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
 		double time = tt.elapseSd();
-		this_thread::sleep_for(chrono::duration<double>(time));
+		this_thread::sleep_for(chrono::duration<double>(time*adjust));
 	}
 	return { i - start, i - start, move(grad) };
 }

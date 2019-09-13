@@ -17,14 +17,16 @@ void Worker::bspInit()
 
 void Worker::bspProcess()
 {
+	function<double()> slowFun = makeSpeedAdjFun();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		size_t left = localBatchSize;
 		size_t n_used = 0;
+		double dly = slowFun();
 		clearDelta();
 		do{
-			Trainer::DeltaResult dr = trainer->batchDelta(dataPointer, left, false);
+			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
 			accumulateDelta(dr.delta);
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
@@ -61,6 +63,7 @@ void Worker::tapInit()
 
 void Worker::tapProcess()
 {
+	function<double()> slowFun = makeSpeedAdjFun();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
@@ -69,9 +72,10 @@ void Worker::tapProcess()
 		if(iter == 1)
 			left += localBatchSize * localID / nWorker;
 		size_t n_used = 0;
+		double dly = slowFun();
 		clearDelta();
 		do{
-			Trainer::DeltaResult dr = trainer->batchDelta(dataPointer, left, false);
+			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
 			accumulateDelta(dr.delta);
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
@@ -108,14 +112,16 @@ void Worker::sspInit()
 
 void Worker::sspProcess()
 {
+	function<double()> slowFun = makeSpeedAdjFun();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		size_t left = localBatchSize;
 		size_t n_used = 0;
+		double dly = slowFun();
 		clearDelta();
 		do{
-			Trainer::DeltaResult dr = trainer->batchDelta(dataPointer, left, false);
+			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
 			accumulateDelta(dr.delta);
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
@@ -154,6 +160,7 @@ void Worker::sapInit()
 
 void Worker::sapProcess()
 {
+	function<double()> slowFun = makeSpeedAdjFun();
 	localBatchSize = trainer->pd->size();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
@@ -163,9 +170,10 @@ void Worker::sapProcess()
 		if(iter == 1)
 			left += localBatchSize * localID / nWorker;
 		size_t n_used = 0;
+		double dly = slowFun();
 		clearDelta();
 		do{
-			Trainer::DeltaResult dr = trainer->batchDelta(dataPointer, left, false);
+			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
 			accumulateDelta(dr.delta);
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
@@ -204,15 +212,17 @@ void Worker::fspInit()
 
 void Worker::fspProcess()
 {
+	function<double()> slowFun = makeSpeedAdjFun();
 	localBatchSize = trainer->pd->size();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		size_t left = trainer->pd->size();
 		size_t n_used = 0;
+		double dly = slowFun();
 		clearDelta();
 		while(exitTrain == false && allowTrain && left != 0) {
-			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false);
+			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
 			accumulateDelta(dr.delta);
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
@@ -253,7 +263,7 @@ void Worker::aapInit()
 
 void Worker::aapProcess()
 {
-	// require different handleParameter -> handleParameterFab
+	function<double()> slowFun = makeSpeedAdjFun();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";// << ". msg waiting: " << driver.queSize();
 		Timer tmr;
@@ -262,12 +272,13 @@ void Worker::aapProcess()
 		if(iter == 1)
 			left += localBatchSize * localID / nWorker;
 		size_t n_used = 0;
+		double dly = slowFun();
 		clearDelta();
 		bool newBatch = true;
 		while(!exitTrain && left != 0){
 			tmr.restart();
 			resumeTrain();
-			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false);
+			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;

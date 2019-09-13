@@ -29,8 +29,6 @@ public:
 	virtual void ready();
 	virtual ~PSGDBlock();
 
-	virtual DeltaResult batchDelta(
-		const size_t start, const size_t cnt, const bool avg = true);
 	virtual DeltaResult batchDelta(std::atomic<bool>& cond,
 		const size_t start, const size_t cnt, const bool avg = true);
 private:

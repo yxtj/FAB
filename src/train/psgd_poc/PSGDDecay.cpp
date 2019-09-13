@@ -70,7 +70,7 @@ PSGDDecay::~PSGDDecay()
 		<< "\ttime-grad-post: " << stat_t_grad_post;
 }
 
-Trainer::DeltaResult PSGDDecay::batchDelta(
+Trainer::DeltaResult PSGDDecay::batchDelta(std::atomic<bool>& cond,
 	const size_t start, const size_t cnt, const bool avg)
 {
 	size_t end = min(start + cnt, pd->size());
@@ -134,12 +134,6 @@ Trainer::DeltaResult PSGDDecay::batchDelta(
 		v *= factor;
 	stat_t_grad_post += tmr.elapseSd();
 	return { cnt, topk.size(), move(grad) };
-}
-
-Trainer::DeltaResult PSGDDecay::batchDelta(
-	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
-{
-	return batchDelta(start, cnt, avg);
 }
 
 float PSGDDecay::calcPriority(const std::vector<double>& g)

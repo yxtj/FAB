@@ -94,7 +94,7 @@ PSGDBlock::~PSGDBlock()
 		<< "\ttime-grad-post: " << stat_t_grad_post;
 }
 
-Trainer::DeltaResult PSGDBlock::batchDelta(
+Trainer::DeltaResult PSGDBlock::batchDelta(std::atomic<bool>& cond,
 	const size_t start, const size_t cnt, const bool avg)
 {
 	size_t end = min(start + cnt, pd->size());
@@ -167,12 +167,6 @@ Trainer::DeltaResult PSGDBlock::batchDelta(
 		v *= factor;
 	stat_t_grad_post += tmr.elapseSd();
 	return { cnt, topk.size(), move(grad) };
-}
-
-Trainer::DeltaResult PSGDBlock::batchDelta(
-	std::atomic<bool>& cond, const size_t start, const size_t cnt, const bool avg)
-{
-	return batchDelta(start, cnt, avg);
 }
 
 size_t PSGDBlock::id2block(size_t i) const

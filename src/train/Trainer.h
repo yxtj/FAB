@@ -15,6 +15,7 @@ public:
 		size_t n_scanned;
 		size_t n_reported;
 		std::vector<double> delta;
+		double loss;
 	};
 public:
 	virtual void init(const std::vector<std::string>& param) = 0;
@@ -33,11 +34,9 @@ public:
 	double loss(const size_t topn = 0) const;
 
 	// calculate the delta values to update the model parameter
+	// if <cond> is reset, finish as soon as possible
 	// <cnt> = 0 means use all the data points.
 	// <avg> is set to true by default. Note that it may not be used for some models
-	virtual DeltaResult batchDelta(
-		const size_t start, const size_t cnt, const bool avg = true) = 0;
-	// try to use all data points in given range, unless the condition is set to false before finish.
 	// <cond> is the continue condition, it can be changed in another thread.
 	// return the number of used data points.
 	virtual DeltaResult batchDelta(std::atomic<bool>& cond,
