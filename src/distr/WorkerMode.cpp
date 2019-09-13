@@ -344,6 +344,7 @@ void Worker::papProcess()
 		double dly = speedSlowFactor + speedRandomFun();
 		clearDelta();
 		while(exitTrain == false && !requestingDelta){
+			tmr.restart(); //
 			resumeTrain();
 			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
 			//tie(cnt, bfDelta) = trainer->batchDelta(allowTrain, dataPointer, remainCnt, dly, -1);

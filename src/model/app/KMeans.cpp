@@ -96,7 +96,8 @@ std::vector<double> KMeans::gradient(const std::vector<std::vector<double>>& x,
 {
 	vector<double> grad(parlen, 0.0);
 	size_t oldp = static_cast<int>((*ph)[0]);
-	size_t newp = quickPredict(x[0], w);
+	pair<size_t, double> newpair = quickPredict(x[0], w);
+	size_t newp = newpair.first;
 	(*ph)[0] = static_cast<double>(newp);
 	if(oldp != newp){
 		oldp *= dim + 1;
@@ -108,6 +109,7 @@ std::vector<double> KMeans::gradient(const std::vector<std::vector<double>>& x,
 		grad[oldp + dim] -= 1;
 		grad[newp + dim] += 1;
 	}
+	grad.push_back(newpair.second); /// append the objective value for curent dp
 	return grad;
 }
 
@@ -137,7 +139,7 @@ double KMeans::quickDist(it_t xf, it_t xl, it_t yf, const double n)
 	return yy - 2 * round(n) * xy;
 }
 
-size_t KMeans::quickPredict(const std::vector<double>& x, const std::vector<double>& w) const
+pair<size_t, double> KMeans::quickPredict(const std::vector<double>& x, const std::vector<double>& w) const
 {
 	size_t min_id = ncenter;
 	double min_v;
@@ -150,6 +152,6 @@ size_t KMeans::quickPredict(const std::vector<double>& x, const std::vector<doub
 			min_v = d;
 		}
 	}
-	return min_id;
+	return {min_id, min_v};
 }
 

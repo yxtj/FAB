@@ -411,9 +411,9 @@ size_t Master::estimateGlobalBatchSize()
 	double wtc = accumulate(wtDelta.begin(), wtDelta.end(), 0.0) / wtDelta.size();
 	double wtr = accumulate(wtReport.begin(), wtReport.end(), 0.0) / wtReport.size();
 
-	double up = nWorker * nWorker * (mtu + mtb) - nWorker * wtc;
+	double up = nWorker * (nWorker * (mtu + mtb) + mto - wtc);
 	double down = wtd + (wtr - nWorker * mtr) / localreportSize;
-	return static_cast<size_t>(up / down);
+	return max(static_cast<size_t>(up / down), conf->batchSize); // conf->batchSize offline opt K
 }
 
 void Master::broadcastBatchSize(const size_t gbs)
