@@ -311,27 +311,7 @@ void Worker::papInit()
 void Worker::papProcess()
 {
 	// initialize speed adjustment generator
-	const double speedSlowFactor = conf->adjustSpeedHetero ? conf->speedHeterogenerity[localID] : 0.0;
-	mt19937 gen(conf->seed + 123 + localID);
-	exponential_distribution<double> distExp;
-	normal_distribution<double> distNorm;
-	uniform_real_distribution<double> distUni;
-	function<double()> speedRandomFun = [](){ return 0.0; };
-	if(conf->adjustSpeedRandom){
-		const vector<string>& param = conf->speedRandomParam;
-		if(param[0] == "exp"){
-			distExp.param(typename exponential_distribution<double>::param_type(1));
-			speedRandomFun = [&](){ return distExp(gen); };
-		} else if(param[0] == "norm"){
-			distNorm.param(normal_distribution<double>::param_type(stod(param[1]), stod(param[2])));
-			speedRandomFun = [&](){ return distNorm(gen); };
-		} else if(param[0] == "uni"){
-			//distUni = uniform_real_distribution<double>(stod(param[1]), stod(param[2]));
-			distUni.param(uniform_real_distribution<double>::param_type(stod(param[1]), stod(param[2])));
-			speedRandomFun = [&](){ return distUni(gen); };
-		}
-	}
-
+	function<double()> slowFun = makeSpeedAdjFun();
 	double t_data = 0.0, t_delta = 0.0, t_report = 0.0;
 	size_t n_delta = 0, n_report = 0;
 
@@ -341,7 +321,7 @@ void Worker::papProcess()
 		size_t n_used = 0;
 		t_data = 0.0;
 		size_t left = localReportSize;
-		double dly = speedSlowFactor + speedRandomFun();
+		double dly = slowFun();
 		clearDelta();
 		while(exitTrain == false && !requestingDelta){
 			tmr.restart(); //

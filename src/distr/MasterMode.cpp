@@ -275,6 +275,7 @@ void Master::papProcess()
 		//// online change globalBatchSize
 		if(conf->papSearchBatchSize) {
 			globalBatchSize = estimateGlobalBatchSize();
+			VLOG(2) << "gbs=" << globalBatchSize << "\tlrs=" << localreportSize;
 		}
 		gatherDelta();
 		stat.t_dlt_wait += tmr.elapseSd();

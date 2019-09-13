@@ -2,6 +2,7 @@
 #include "Runner.h"
 #include "IDMapper.h"
 #include <atomic>
+#include <random>
 #include <mutex>
 
 class Worker : public Runner{
@@ -57,6 +58,7 @@ private:
 // local logic
 private:
 	size_t calcLocalBatchSize(const size_t gbs);
+	std::function<double()> makeSpeedAdjFun();
 
 // singal
 public:
@@ -80,7 +82,6 @@ public:
 	void handleParameterAap(const std::string& data, const RPCInfo& info);
 	void handleParameterPap(const std::string& data, const RPCInfo& info);
 		
-
 private:
 	size_t dataPointer;
 	size_t localBatchSize;
@@ -108,4 +109,11 @@ private:
 	//std::mutex mTrain;
 	std::atomic<bool> allowTrain;
 	std::atomic<bool> exitTrain;
+
+	// speed adjustment
+	double speedSlowFactor;
+	std::mt19937 gen;
+	std::exponential_distribution<double> distExp;
+	std::normal_distribution<double> distNorm;
+	std::uniform_real_distribution<double> distUni;
 };

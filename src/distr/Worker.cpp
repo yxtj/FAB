@@ -278,6 +278,31 @@ size_t Worker::calcLocalBatchSize(const size_t gbs)
 	return lbs;
 }
 
+std::function<double()> Worker::makeSpeedAdjFun()
+{
+	const double fixSlowFactor = conf->adjustSpeedHetero ? conf->speedHeterogenerity[localID] : 0.0;
+	function<double()> speedRandomFun = [=](){ return fixSlowFactor; };
+
+	gen.seed(conf->seed + 123 + localID);
+	if(conf->adjustSpeedRandom){
+		const vector<string>& param = conf->speedRandomParam;
+		if(param[0] == "exp"){
+			distExp.param(typename exponential_distribution<double>::param_type(stod(param[1])));
+			speedRandomFun = [&](){ return fixSlowFactor + distExp(gen); };
+		} else if(param[0] == "norm"){
+			distNorm.param(normal_distribution<double>::param_type(stod(param[1]), stod(param[2])));
+			speedRandomFun = [&](){ return fixSlowFactor + distNorm(gen); };
+		} else if(param[0] == "uni"){
+			//distUni = uniform_real_distribution<double>(stod(param[1]), stod(param[2]));
+			distUni.param(uniform_real_distribution<double>::param_type(stod(param[1]), stod(param[2])));
+			speedRandomFun = [&](){ return fixSlowFactor + distUni(gen); };
+		}
+	}
+	return speedRandomFun;
+}
+
+// handlers
+
 void Worker::handleNormalControl(const std::string & data, const RPCInfo & info)
 {
 	int type = deserialize<int>(data);
