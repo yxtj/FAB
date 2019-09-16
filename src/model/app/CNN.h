@@ -36,4 +36,6 @@ private:
 	std::string procUnitCx(const std::string& param);
 	// i.e. p2 -> max:2
 	std::string procUnitPx(const std::string& param);
+
+	std::vector<std::vector<double>> mid;
 };

@@ -27,6 +27,8 @@ struct VectorNetwork {
 	std::vector<int> weightOffsetLayer; // weight offset of the the first node at layer i
 
 	std::vector<std::vector<NodeBase*>> nodes;
+
+	std::vector<std::vector<std::vector<double>>> mid; // intermediate result for each layer-feature-dimension
 private:
 	// function of the gradient of loss function. calculate gradient for each p entry
 	// First Arg: predicted value. Second Arg: expected value
@@ -50,6 +52,9 @@ public:
 	int lengthParameter() const;
 
 	std::vector<double> predict(const std::vector<double>& x, const std::vector<double>& w);
+	std::vector<double> forward(const std::vector<double>& x, const std::vector<double>& w);
+	std::vector<double> backward(
+		const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y);
 	std::vector<double> gradient(
 		const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y);
 

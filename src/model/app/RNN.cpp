@@ -81,13 +81,22 @@ double RNN::loss(const std::vector<double>& pred, const std::vector<double>& lab
 std::vector<double> RNN::forward(
 	const std::vector<std::vector<double>>& x, const std::vector<double>& w)
 {
-	return std::vector<double>();
+	vector<double> res;
+	for(auto& line : x)
+		res = net.forward(line, w);
+	return res;
 }
 
 std::vector<double> RNN::backward(const std::vector<std::vector<double>>& x,
 	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph)
 {
-	return std::vector<double>();
+	vector<double> res(net.lenFeatureLayer[0], 0.0);
+	for(auto& line : x){
+		auto temp = net.backward(line, w, y);
+		for(size_t i = 0; i < temp.size(); ++i)
+			res[i] += temp[i];
+	}
+	return res;
 }
 
 std::vector<double> RNN::gradLoss(const std::vector<double>& pred, const std::vector<double>& label)

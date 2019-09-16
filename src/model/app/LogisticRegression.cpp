@@ -78,8 +78,8 @@ std::vector<double> LogisticRegression::forward(
 	for(int i = 0; i < xlength; ++i) {
 		t += x[0][i] * w[i];
 	}
-	mid = t;
-	return { sigmoid(t) };
+	mid = sigmoid(t);
+	return { mid };
 }
 
 std::vector<double> LogisticRegression::backward(const std::vector<std::vector<double>>& x,

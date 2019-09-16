@@ -181,6 +181,101 @@ std::vector<double> VectorNetwork::predict(
 	return res;
 }
 
+std::vector<double> VectorNetwork::forward(
+	const std::vector<double>& x, const std::vector<double>& w)
+{
+	// reset
+	for(int i = 0; i < nLayer; ++i){
+		if(typeLayer[i] == NodeType::RecrSig || typeLayer[i] == NodeType::RecrTanh){
+			for(auto& p : nodes[i])
+				p->reset();
+		}
+	}
+	mid.clear();
+	mid.reserve(nLayer); // intermediate result of all layers
+	mid.push_back({ x });
+	for(int i = 1; i < nLayer - 1; ++i){ // apart from the input and output (FC) layers
+		const vector<vector<double>>& input = mid[i - 1];
+		vector<vector<double>> output;
+		// apply one node on each previous features repeatedly
+		//assert(nFeatureLayer[i - 1] * nNodeLayer[i] == nFeatureLayer[i]);
+		for(int j = 0; j < nNodeLayer[i]; ++j){
+			for(int k = 0; k < numFeatureLayer[i - 1]; ++k){
+				output.push_back(nodes[i][j]->predict(input[k], w));
+			}
+		}
+		mid.push_back(move(output));
+	}
+	vector<FCNode*> finalNodes;
+	{
+		const vector<vector<double>>& input = mid[nLayer - 2];
+		vector<double> output;
+		for(int j = 0; j < nNodeLayer.back(); ++j){
+			FCNode* p = dynamic_cast<FCNode*>(nodes.back()[j]);
+			finalNodes.push_back(p);
+			output.push_back(p->predict(input, w));
+		}
+		mid.push_back({ move(output) });
+	}
+	return mid.back()[0];
+}
+
+std::vector<double> VectorNetwork::backward(
+	const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y)
+{
+	vector<FCNode*> finalNodes;
+	for(int j = 0; j < nNodeLayer.back(); ++j){
+		FCNode* p = dynamic_cast<FCNode*>(nodes.back()[j]);
+		finalNodes.push_back(p);
+	}
+
+	vector<double> grad(w.size());
+	vector<vector<double>> partial; // partial gradient
+	size_t n = mid.back().size();
+	//assert(mid.back().size() ==1 && y.size() == mid.back()[0].size());
+	// BP (last layer)
+	{
+		const vector<double>& output = mid.back().front();
+		vector<double> pg = fgl(output, y);
+		for(size_t i = 0; i < y.size(); ++i){ // last FC layer
+			FCNode* p = finalNodes[i];
+			vector<vector<double>> temp = p->gradient(grad, mid[nLayer - 2], w, output[i], pg[i]);
+			if(i == 0){
+				partial = move(temp);
+			} else{
+				// partial += temp;
+				for(size_t a = 0; a < temp.size(); ++a)
+					for(size_t b = 0; b < temp[a].size(); ++b)
+						partial[a][b] += temp[a][b];
+			}
+		}
+	}
+	// BP (0 to n-1 layer)
+	for(int i = nLayer - 2; i > 0; --i){ // layer
+		int oidx = 0;
+		vector<vector<double>> newPartialGradient(numFeatureLayer[i]);
+		for(int j = 0; j < nNodeLayer[i]; ++j){ // node
+			for(int k = 0; k < numFeatureLayer[i - 1]; ++k){ // feature (input)
+				const vector<double>& input = mid[i - 1][k];
+				//oidx == j * numFeatureLayer[i - 1] + k;
+				const vector<double>& output = mid[i][oidx];
+				const vector<double>& pg = partial[oidx];
+				++oidx;
+				NodeBase* p = nodes[i][j];
+				vector<double> npg = p->gradient(grad, input, w, output, pg);
+				if(j == 0){
+					newPartialGradient[k] = move(npg);
+				} else{
+					for(size_t a = 0; a < npg.size(); ++a)
+						newPartialGradient[k][a] += npg[a];
+				}
+			}
+		}
+		partial = move(newPartialGradient);
+	}
+	return grad;
+}
+
 std::vector<double> VectorNetwork::gradient(
 	const std::vector<double>& x, const std::vector<double>& w, const std::vector<double>& y)
 {
