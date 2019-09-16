@@ -81,7 +81,8 @@ public:
 		trainer.bindDataset(&dh);
 	}
 	vector<double> getDalta(const size_t start, const size_t cnt){
-		bf_grad = trainer.batchDelta(start, cnt, true).second;
+		atomic_bool flag;
+		bf_grad = trainer.batchDelta(flag, start, cnt, true).delta;
 		return bf_grad;
 	}
 	void applyDelta(const double factor){

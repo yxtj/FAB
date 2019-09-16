@@ -6,8 +6,9 @@
 using namespace std;
 
 void showLine(const DataPoint& d){
-	for(const auto& v : d.x)
-		cout << v << ", ";
+	for(const auto& line : d.x)
+		for(const auto& v : line)
+			cout << v << ", ";
 	for(const auto& v : d.y)
 		cout << v << ", ";
 	cout << endl;

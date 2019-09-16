@@ -70,6 +70,7 @@ int main(int argc, char* argv[]){
 		dh.load(opt.fnData, ",", {}, opt.idY, opt.withHeader, true);
 		m.init("rnn", opt.shape, 123456u);
 	} else{
+		dh.setLength(2, 1);
 		// pattern: the summation of entries for 3 sequential input are: 0.3, 0.6, 0.9
 		dh.add({ 0.0, 0.3 }, { 0 });
 		dh.add({ 0.3, 0.3 }, { 0 });
@@ -106,19 +107,18 @@ int main(int argc, char* argv[]){
 
 	LOG(INFO) << "start";
 	show(trainer.pm->getParameter().weights, {}, trainer.loss());
+	atomic_bool flag;
 	size_t p = 0;
 	for(int iter = 0; iter < opt.niter; ++iter){
 		LOG(INFO) << "Iteration: " << iter;
-		size_t cnt;
-		vector<double> dlt;
-		tie(cnt, dlt) = trainer.batchDelta(p, opt.batchSize, true);
-		trainer.applyDelta(dlt);
+		auto dr = trainer.batchDelta(flag, p, opt.batchSize, true);
+		trainer.applyDelta(dr.delta);
 		double loss = trainer.loss();
 		p += opt.batchSize;
 		if(p >= dh.size())
 			p = 0;
 		if(opt.showIter != 0 && iter%opt.showIter == 0)
-			show(trainer.pm->getParameter().weights, dlt, loss);
+			show(trainer.pm->getParameter().weights, dr.delta, loss);
 		else
 			LOG(INFO) << loss;
 	}

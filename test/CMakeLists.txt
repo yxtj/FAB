@@ -8,13 +8,13 @@ add_executable(data-load data-load.cpp)
 target_link_libraries(data-load data)
 
 add_executable(train-simple train-simple.cpp)
-target_link_libraries(train-simple data model train)
+target_link_libraries(train-simple data model train logging)
 
 add_executable(mw-simple mw-simple.cpp)
-target_link_libraries(mw-simple data model train)
+target_link_libraries(mw-simple data model train logging)
 
 add_executable(mw-thread mw-thread.cpp)
-target_link_libraries(mw-thread data model train ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(mw-thread data model train logging ${CMAKE_THREAD_LIBS_INIT})
 
 add_executable(communication communication.cpp)
 target_include_directories(communication PRIVATE ${MPI_CXX_INCLUDE_PATH})

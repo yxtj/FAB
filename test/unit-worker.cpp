@@ -9,7 +9,7 @@
 #include <mpi.h>
 //#include <cassert>
 #include "logging/logging.h"
-#include "common/Option.h"
+#include "common/ConfData.h"
 #include "network/NetworkThread.h"
 #include "message/MType.h"
 #include "data/DataHolder.h"
@@ -134,9 +134,9 @@ void master_thread(){
 	assert(info.tag == MType::CClosed, "last message is not CClosed: "+to_string(info.tag));
 }
 
-void worker_thread(Option& opt, DataHolder& dh){
+void worker_thread(ConfData& conf, DataHolder& dh){
 	Worker w;
-	w.init(&opt, 0);
+	w.init(&conf, 0);
 	w.bindDataset(&dh);
 
 	cout << "Starting worker" << endl;
@@ -144,17 +144,20 @@ void worker_thread(Option& opt, DataHolder& dh){
 }
 
 void test_worker(DataHolder& dh, const int nid){
-	Option opt;
-	opt.batchSize = 500;
-	opt.nw = 1;
-	opt.mode = "sync";
+	ConfData conf;
+	conf.batchSize = 500;
+	conf.nw = 1;
+	conf.optimizer = "gd";
+	conf.optimizerParam = { "1" };
+	conf.mode = "sync";
+	conf.adjustSpeedHetero = conf.adjustSpeedRandom = false;
 
 	if(nid == 0){
 		setLogThreadName("M");
 		master_thread();
 	} else{
 		setLogThreadName("W0");
-		worker_thread(opt, dh);
+		worker_thread(conf, dh);
 	}
 	
 }

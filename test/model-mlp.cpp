@@ -23,11 +23,13 @@ struct Option{
 
 	bool parse(int argc, char* argv[]){
 		int optIdx = 9;
-		if(argc <= optIdx)
+		if(argc < optIdx)
 			return false;
 		int idx = 1;
 		try{
 			fnData = argv[idx++];
+			if(fnData == "-" || fnData == " ")
+				fnData.clear();
 			idY = getIntList(argv[idx++]);
 			withHeader = beTrueOption(argv[idx++]);
 			doNormalize = beTrueOption(argv[idx++]);
@@ -66,6 +68,7 @@ int main(int argc, char* argv[]){
 	if(!opt.fnData.empty()){
 		dh.load(opt.fnData, ",", {}, opt.idY, opt.withHeader, true);
 	} else{
+		dh.setLength(2, 1);
 		dh.add({ .2, .9 }, { 0.92 });
 		dh.add({ .1, .5 }, { 0.86 });
 		dh.add({ .3, .6 }, { 0.89 });
@@ -97,21 +100,31 @@ int main(int argc, char* argv[]){
 	trainer.bindDataset(&dh);
 	trainer.bindModel(&m);
 
+	auto g = m.gradient(dh.get(0));
+	auto a = m.forward(dh.get(0));
+	auto b = m.backward(dh.get(0));
+	loss = m.loss(a, dh.get(0).y);
+	double diff = 0.0;
+	for(size_t i = 0; i < g.size(); ++i){
+		auto v = g[i] - b[i];
+		diff += v * v;
+	}
+	cout << diff << "\t" << loss << endl;
+
 	LOG(INFO) << "start";
 	show(trainer.pm->getParameter().weights, {}, trainer.loss());
+	atomic_bool flag;
 	size_t p = 0;
 	for(int iter = 0; iter < opt.niter; ++iter){
 		LOG(INFO) << "Iteration: " << iter;
-		size_t cnt;
-		vector<double> dlt;
-		tie(cnt, dlt) = trainer.batchDelta(p, opt.batchSize, true);
-		trainer.applyDelta(dlt);
+		auto dr = trainer.batchDelta(flag, p, opt.batchSize, true);
+		trainer.applyDelta(dr.delta);
 		double loss = trainer.loss();
 		p += opt.batchSize;
 		if(p >= dh.size())
 			p = 0;
 		if(opt.showIter != 0 && iter%opt.showIter == 0)
-			show(trainer.pm->getParameter().weights, dlt, loss);
+			show(trainer.pm->getParameter().weights, dr.delta, loss);
 		else
 			LOG(INFO) << loss;
 	}

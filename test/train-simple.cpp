@@ -45,9 +45,10 @@ int main(int argc, char* argv[]){
 	trainer.bindDataset(&dh);
 	trainer.setRate(0.1);
 
+	atomic_bool flag;
 	for(int i = 0; i < 5; i++){
-		auto v = trainer.batchDelta(i * 500, 500);
-		trainer.applyDelta(v.second);
+		auto dr = trainer.batchDelta(flag, i * 500, 500);
+		trainer.applyDelta(dr.delta);
 		cout << i << " iter: " << trainer.loss() << endl;
 		cout << "parameters:\n";
 		showParameter(m.getParameter());
@@ -55,8 +56,8 @@ int main(int argc, char* argv[]){
 
 	cout << "full trainning:" << endl;
 	for(int i = 0; i < 300; ++i){
-		auto v = trainer.batchDelta(0, dh.size());
-		trainer.applyDelta(v.second);
+		auto dr = trainer.batchDelta(flag, 0, dh.size());
+		trainer.applyDelta(dr.delta);
 		if(i % 10 == 0){
 			cout << i << " iter: " << trainer.loss() << endl;
 			cout << "parameters:\n";

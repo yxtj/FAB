@@ -87,6 +87,7 @@ int main(int argc, char* argv[]){
 	DataHolder dh(1, 0);
 	auto fun = [](const string& s){return str2list(s, 1, 1.0 / 5); };
 	auto foo = [&](){ return rndlist(gen, 4, 4, 0.0, 5.0); };
+	dh.setLength(16, 1);
 	// pattern: 505;050;505
 	dh.add(fun("5050;0500;5050;0000"), { 1 });
 	dh.add(fun("0505;0050;0505;0000"), { 1 });
@@ -137,19 +138,18 @@ int main(int argc, char* argv[]){
 
 	LOG(INFO) << "start";
 	show(trainer.pm->getParameter().weights, {}, trainer.loss());
+	atomic_bool flag;
 	size_t p = 0;
 	for(int iter = 0; iter < opt.niter; ++iter){
 		LOG(INFO) << "Iteration: " << iter;
-		size_t cnt;
-		vector<double> dlt;
-		tie(cnt, dlt) = trainer.batchDelta(p, opt.batchSize, true);
-		trainer.applyDelta(dlt);
+		auto dr = trainer.batchDelta(flag, p, opt.batchSize, true);
+		trainer.applyDelta(dr.delta);
 		double loss = trainer.loss();
 		p += opt.batchSize;
 		if(p >= dh.size())
 			p = 0;
-		if(opt.showIter != 0 && iter%opt.showIter == 0)
-			show(trainer.pm->getParameter().weights, dlt, loss);
+		if(opt.showIter != 0 && iter % opt.showIter == 0)
+			show(trainer.pm->getParameter().weights, dr.delta, loss);
 		else
 			LOG(INFO) << loss;
 	}
