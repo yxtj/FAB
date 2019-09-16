@@ -16,6 +16,7 @@ void MLP::init(const std::string & param)
 	// set n
 	nLayer = static_cast<int>(nNodeLayer.size());
 	proxy.init(nNodeLayer);
+	mid.resize(nLayer);
 }
 
 bool MLP::checkData(const size_t nx, const size_t ny)
@@ -64,6 +65,64 @@ double MLP::loss(const std::vector<double>& pred, const std::vector<double>& lab
 	}
 	//return 0.5 * res;
 	return res;
+}
+
+std::vector<double> MLP::forward(
+	const std::vector<std::vector<double>>& x, const std::vector<double>& w)
+{
+	proxy.bind(&w);
+	mid[0] = x[0];
+	for(int l = 0; l < nLayer - 1; ++l){
+		mid[l + 1] = activateLayer(mid[l], w, l);
+	}
+	return mid.back();
+}
+
+std::vector<double> MLP::backward(const std::vector<std::vector<double>>& x,
+	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph)
+{
+	vector<double> grad(w.size());
+	vector<double> delta; // used for all but the first iteration (l==nLayer-2)
+	for(int l = nLayer - 2; l >= 0; --l){
+		// prepare
+		const int n = nNodeLayer[l];
+		const int m = nNodeLayer[l + 1];
+		const vector<double>& pred = mid[l+1];
+		// error
+		vector<double> error(m);
+		if(l == nLayer - 2){
+			//error = pred - y;
+			for(int i = 0; i < m; ++i)
+				error[i] = pred[i] - y[i];
+		} else{
+			//error = np.dot(delta, self.w[i + 1].T)
+			MLPProxyLayer wl = proxy[l + 1];
+			int h = nNodeLayer[l + 2];
+			for(int i = 0; i < m; ++i){
+				MLPProxyNode wn = wl[i];
+				for(int j = 0; j < h; ++j)
+					error[i] += delta[j] * wn[j]; // <delta> is left by last iteration
+			}
+		}
+		// delta
+		//delta = error * self.sigmoidPrime(pred)
+		delta.resize(m);
+		for(int i = 0; i < m; ++i){
+			delta[i] = error[i] * sigmoid_derivative(pred[i]);
+		}
+		// grad
+		//grad = np.dot(self.output[i].T, delta)
+		MLPProxyLayer wl = proxy[l];
+		for(int i = 0; i < n + 1; ++i){
+			MLPProxyNode wn = wl[i];
+			double v = (i != n) ? mid[l][i] : 1.0;
+			for(int j = 0; j < m; ++j){
+				int offset = wn.position(j);
+				grad[offset] = v * delta[j];
+			}
+		}
+	}
+	return grad;
 }
 
 std::vector<double> MLP::gradient(const std::vector<std::vector<double>>& x,

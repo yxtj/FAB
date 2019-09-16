@@ -15,8 +15,11 @@ public:
 
 	std::vector<double> predict(const std::vector<std::vector<double>>& x, const std::vector<double>& w) const;
 	int classify(const double p) const;
-
 	double loss(const std::vector<double>& pred, const std::vector<double>& label) const;
+
+	std::vector<double> forward(const std::vector<std::vector<double>>& x, const std::vector<double>& w);
+	std::vector<double> backward(const std::vector<std::vector<double>>& x,
+		const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph = nullptr);
 	std::vector<double> gradient(const std::vector<std::vector<double>>& x,
 		const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph = nullptr) const;
 private:

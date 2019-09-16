@@ -39,6 +39,9 @@ public:
 	int classify(const double p) const;
 	double loss(const DataPoint& dp) const;
 	double loss(const std::vector<double>& pred, const std::vector<double>& label) const;
+
+	std::vector<double> forward(const DataPoint& dp);
+	std::vector<double> backward(const DataPoint& dp, std::vector<double>* ph = nullptr);
 	std::vector<double> gradient(const DataPoint& dp, std::vector<double>* ph = nullptr) const;
 
 private:

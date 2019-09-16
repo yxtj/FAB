@@ -106,6 +106,16 @@ double Model::loss(const std::vector<double>& pred, const std::vector<double>& l
 	return kern->loss(pred, label);
 }
 
+std::vector<double> Model::forward(const DataPoint& dp)
+{
+	return kern->forward(dp.x, param.weights);
+}
+
+std::vector<double> Model::backward(const DataPoint& dp, std::vector<double>* ph)
+{
+	return kern->backward(dp.x, param.weights, dp.y, ph);
+}
+
 std::vector<double> Model::gradient(const DataPoint & dp, std::vector<double>* ph) const
 {
 	return kern->gradient(dp.x, param.weights, dp.y, ph);

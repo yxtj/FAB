@@ -19,8 +19,12 @@ public:
 
 	virtual std::vector<double> predict(const std::vector<std::vector<double>>& x, const std::vector<double>& w) const = 0;
 	virtual int classify(const double p) const = 0;
-	
 	virtual double loss(const std::vector<double>& pred, const std::vector<double>& label) const = 0;
+
+	// backward propagation
+	virtual std::vector<double> forward(const std::vector<std::vector<double>>& x, const std::vector<double>& w) = 0;
+	virtual std::vector<double> backward(const std::vector<std::vector<double>>& x,
+		const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph = nullptr) = 0;
 	virtual std::vector<double> gradient(const std::vector<std::vector<double>>& x,
 		const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph = nullptr) const = 0;
 

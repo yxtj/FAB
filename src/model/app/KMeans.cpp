@@ -91,6 +91,18 @@ double KMeans::loss(
 	return pred[1];
 }
 
+std::vector<double> KMeans::forward(
+	const std::vector<std::vector<double>>& x, const std::vector<double>& w)
+{
+	return std::vector<double>();
+}
+
+std::vector<double> KMeans::backward(const std::vector<std::vector<double>>& x,
+	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph)
+{
+	return std::vector<double>();
+}
+
 std::vector<double> KMeans::gradient(const std::vector<std::vector<double>>& x,
 	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const
 {

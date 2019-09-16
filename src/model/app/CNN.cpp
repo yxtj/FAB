@@ -75,6 +75,18 @@ double CNN::loss(const std::vector<double>& pred, const std::vector<double>& lab
 	return res;
 }
 
+std::vector<double> CNN::forward(
+	const std::vector<std::vector<double>>& x, const std::vector<double>& w)
+{
+	return std::vector<double>();
+}
+
+std::vector<double> CNN::backward(const std::vector<std::vector<double>>& x,
+	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph)
+{
+	return std::vector<double>();
+}
+
 std::vector<double> CNN::gradLoss(const std::vector<double>& pred, const std::vector<double>& label)
 {
 	vector<double> res(pred.size());

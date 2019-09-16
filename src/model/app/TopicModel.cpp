@@ -38,6 +38,18 @@ double TopicModel::loss(const std::vector<double>& pred, const std::vector<doubl
 	return 0.0;
 }
 
+std::vector<double> TopicModel::forward(
+	const std::vector<std::vector<double>>& x, const std::vector<double>& w)
+{
+	return std::vector<double>();
+}
+
+std::vector<double> TopicModel::backward(const std::vector<std::vector<double>>& x,
+	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph)
+{
+	return std::vector<double>();
+}
+
 std::vector<double> TopicModel::gradient(const std::vector<std::vector<double>>& x,
 	const std::vector<double>& w, const std::vector<double>& y, std::vector<double>* ph) const
 {
