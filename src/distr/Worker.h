@@ -1,6 +1,7 @@
 #pragma once
 #include "Runner.h"
 #include "IDMapper.h"
+#include "math/RandomGenerator.h"
 #include <atomic>
 #include <random>
 #include <mutex>
@@ -58,7 +59,7 @@ private:
 // local logic
 private:
 	size_t calcLocalBatchSize(const size_t gbs);
-	std::function<double()> makeSpeedAdjFun();
+	void initSpeedAdjustment();
 
 // singal
 public:
@@ -111,9 +112,5 @@ private:
 	std::atomic<bool> exitTrain;
 
 	// speed adjustment
-	double speedSlowFactor;
-	std::mt19937 gen;
-	std::exponential_distribution<double> distExp;
-	std::normal_distribution<double> distNorm;
-	std::uniform_real_distribution<double> distUni;
+	RandomGenerator speedFactor;
 };

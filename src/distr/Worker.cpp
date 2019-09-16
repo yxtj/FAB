@@ -32,6 +32,7 @@ void Worker::init(const ConfData* conf, const size_t lid)
 	logName = "W"+to_string(localID);
 	setLogThreadName(logName);
 	model.init(conf->algorighm, conf->algParam);
+	initSpeedAdjustment();
 
 	if(conf->mode == "bsp"){
 		bspInit();
@@ -278,27 +279,13 @@ size_t Worker::calcLocalBatchSize(const size_t gbs)
 	return lbs;
 }
 
-std::function<double()> Worker::makeSpeedAdjFun()
+void Worker::initSpeedAdjustment()
 {
 	const double fixSlowFactor = conf->adjustSpeedHetero ? conf->speedHeterogenerity[localID] : 0.0;
-	function<double()> speedRandomFun = [=](){ return fixSlowFactor; };
+	unsigned seed = conf->seed + 123 + localID;
 
-	if(conf->adjustSpeedRandom){
-		gen.seed(conf->seed + 123 + localID);
-		const vector<string>& param = conf->speedRandomParam;
-		if(param[0] == "exp"){
-			distExp.param(exponential_distribution<double>::param_type(stod(param[1])));
-			speedRandomFun = [&](){ return fixSlowFactor + distExp(gen); };
-		} else if(param[0] == "norm"){
-			distNorm.param(normal_distribution<double>::param_type(stod(param[1]), stod(param[2])));
-			speedRandomFun = [&](){ return fixSlowFactor + distNorm(gen); };
-		} else if(param[0] == "uni"){
-			//distUni = uniform_real_distribution<double>(stod(param[1]), stod(param[2]));
-			distUni.param(uniform_real_distribution<double>::param_type(stod(param[1]), stod(param[2])));
-			speedRandomFun = [&](){ return fixSlowFactor + distUni(gen); };
-		}
-	}
-	return speedRandomFun;
+	const vector<string>& param = conf->adjustSpeedRandom ? conf->speedRandomParam : vector<string>();
+	speedFactor.init(param, fixSlowFactor, seed);
 }
 
 // handlers

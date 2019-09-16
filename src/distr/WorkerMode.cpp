@@ -17,13 +17,12 @@ void Worker::bspInit()
 
 void Worker::bspProcess()
 {
-	function<double()> slowFun = makeSpeedAdjFun();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		size_t left = localBatchSize;
 		size_t n_used = 0;
-		double dly = slowFun();
+		double dly = speedFactor.generate();
 		clearDelta();
 		do{
 			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
@@ -63,7 +62,6 @@ void Worker::tapInit()
 
 void Worker::tapProcess()
 {
-	function<double()> slowFun = makeSpeedAdjFun();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
@@ -72,7 +70,7 @@ void Worker::tapProcess()
 		if(iter == 1)
 			left += localBatchSize * localID / nWorker;
 		size_t n_used = 0;
-		double dly = slowFun();
+		double dly = speedFactor.generate();
 		clearDelta();
 		do{
 			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
@@ -112,13 +110,12 @@ void Worker::sspInit()
 
 void Worker::sspProcess()
 {
-	function<double()> slowFun = makeSpeedAdjFun();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		size_t left = localBatchSize;
 		size_t n_used = 0;
-		double dly = slowFun();
+		double dly = speedFactor.generate();
 		clearDelta();
 		do{
 			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
@@ -160,7 +157,6 @@ void Worker::sapInit()
 
 void Worker::sapProcess()
 {
-	function<double()> slowFun = makeSpeedAdjFun();
 	localBatchSize = trainer->pd->size();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
@@ -170,7 +166,7 @@ void Worker::sapProcess()
 		if(iter == 1)
 			left += localBatchSize * localID / nWorker;
 		size_t n_used = 0;
-		double dly = slowFun();
+		double dly = speedFactor.generate();
 		clearDelta();
 		do{
 			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
@@ -212,14 +208,13 @@ void Worker::fspInit()
 
 void Worker::fspProcess()
 {
-	function<double()> slowFun = makeSpeedAdjFun();
 	localBatchSize = trainer->pd->size();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
 		Timer tmr;
 		size_t left = trainer->pd->size();
 		size_t n_used = 0;
-		double dly = slowFun();
+		double dly = speedFactor.generate();
 		clearDelta();
 		while(exitTrain == false && allowTrain && left != 0) {
 			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
@@ -263,7 +258,6 @@ void Worker::aapInit()
 
 void Worker::aapProcess()
 {
-	function<double()> slowFun = makeSpeedAdjFun();
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";// << ". msg waiting: " << driver.queSize();
 		Timer tmr;
@@ -272,7 +266,7 @@ void Worker::aapProcess()
 		if(iter == 1)
 			left += localBatchSize * localID / nWorker;
 		size_t n_used = 0;
-		double dly = slowFun();
+		double dly = speedFactor.generate();
 		clearDelta();
 		bool newBatch = true;
 		while(!exitTrain && left != 0){
@@ -321,8 +315,6 @@ void Worker::papInit()
 
 void Worker::papProcess()
 {
-	// initialize speed adjustment generator
-	function<double()> slowFun = makeSpeedAdjFun();
 	double t_data = 0.0, t_delta = 0.0, t_report = 0.0;
 	size_t n_delta = 0, n_report = 0;
 
@@ -332,7 +324,7 @@ void Worker::papProcess()
 		size_t n_used = 0;
 		t_data = 0.0;
 		size_t left = localReportSize;
-		double dly = slowFun();
+		double dly = speedFactor.generate();
 		clearDelta();
 		while(exitTrain == false && !requestingDelta){
 			tmr.restart(); //
