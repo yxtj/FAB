@@ -23,6 +23,7 @@ void Worker::bspProcess()
 		size_t left = localBatchSize;
 		size_t n_used = 0;
 		double dly = speedFactor.generate();
+		//VLOG_EVERY_N(ln, 2) << "dly=" << dly;
 		clearDelta();
 		do{
 			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);

@@ -285,6 +285,7 @@ void Worker::initSpeedAdjustment()
 	unsigned seed = conf->seed + 123 + localID;
 
 	const vector<string>& param = conf->adjustSpeedRandom ? conf->speedRandomParam : vector<string>();
+	DLOG(DEBUG) << param << "," << fixSlowFactor << "," << seed;
 	speedFactor.init(param, fixSlowFactor, seed);
 }
 

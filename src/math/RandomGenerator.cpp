@@ -10,6 +10,7 @@ struct RandomGenerator::Impl{
 	std::normal_distribution<double> distNorm;
 	std::uniform_real_distribution<double> distUni;
 
+	double offset;
 	std::function<double()> fun;
 	void init(const std::vector<std::string>& param,
 		const double offset, const unsigned seed);
@@ -18,18 +19,19 @@ struct RandomGenerator::Impl{
 void RandomGenerator::Impl::init(const std::vector<std::string>& param,
 	const double offset, const unsigned seed)
 {
+	this->offset = offset;
 	gen.seed(seed);
 	if(param.empty() || param[0].empty() || param[0] == "none"){
-		fun = [&](){ return offset; };
+		fun = [&](){ return this->offset; };
 	} else if(param[0] == "exp"){
 		distExp = exponential_distribution<double>(stod(param[1]));
-		fun = [&](){ return offset + distExp(gen); };
+		fun = [&](){ return this->offset + distExp(gen); };
 	} else if(param[0] == "norm"){
 		distNorm = normal_distribution<double>(stod(param[1]), stod(param[2]));
-		fun = [&](){ return offset + distNorm(gen); };
+		fun = [&](){ return this->offset + distNorm(gen); };
 	} else if(param[0] == "uni"){
 		distUni = uniform_real_distribution<double>(stod(param[1]), stod(param[2]));
-		fun = [&](){ return offset + distUni(gen); };
+		fun = [&](){ return this->offset + distUni(gen); };
 	}
 }
 
