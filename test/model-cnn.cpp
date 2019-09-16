@@ -84,7 +84,7 @@ int main(int argc, char* argv[]){
 		dh.add({ 0.2, 0.3, 0.6, 0.9, 0.9, 0.2, 0.6, 0.1 }, { 0.1 });
 		dh.add({ 0.3, 0.7, 0.3, 0.6, 0.4, 0.9, 0.5, 0.6 }, { 0.2 });
 
-		m.init("cnn", "8-1c3-sig-max:2-1f", 12346u);
+		m.init("cnn", "8-1c3-sigmoid-max:2-1f", 123456u);
 	}
 	if(!m.checkData(dh.xlength(), dh.ylength()))
 		LOG(FATAL) << "data size does not match model";
@@ -101,6 +101,17 @@ int main(int argc, char* argv[]){
 	trainer.setRate(opt.lrate);
 	trainer.bindDataset(&dh);
 	trainer.bindModel(&m);
+
+	auto g = m.gradient(dh.get(0));
+	auto a = m.forward(dh.get(0));
+	auto b = m.backward(dh.get(0));
+	loss = m.loss(a, dh.get(0).y);
+	double diff = 0.0;
+	for(size_t i = 0; i < g.size(); ++i){
+		auto v = g[i] - b[i];
+		diff += v * v;
+	}
+	LOG(INFO) << diff << "\t" << loss << endl;
 
 	LOG(INFO) << "start";
 	show(trainer.pm->getParameter().weights, {}, trainer.loss());

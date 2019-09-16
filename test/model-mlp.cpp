@@ -109,7 +109,7 @@ int main(int argc, char* argv[]){
 		auto v = g[i] - b[i];
 		diff += v * v;
 	}
-	cout << diff << "\t" << loss << endl;
+	LOG(INFO) << diff << "\t" << loss << endl;
 
 	LOG(INFO) << "start";
 	show(trainer.pm->getParameter().weights, {}, trainer.loss());
