@@ -30,7 +30,7 @@ void Worker::bspProcess()
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
-		} while(left > 0);
+		} while(!exitTrain && left > 0);
 		if(trainer->needAveragedDelta())
 			averageDelta(n_used);
 		stat.t_dlt_calc += tmr.elapseSd();
@@ -78,7 +78,7 @@ void Worker::tapProcess()
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
-		} while(left > 0);
+		} while(!exitTrain && left > 0);
 		if(trainer->needAveragedDelta())
 			averageDelta(n_used);
 		stat.t_dlt_calc += tmr.elapseSd();
@@ -123,7 +123,7 @@ void Worker::sspProcess()
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
-		} while(left > 0);
+		} while(!exitTrain && left > 0);
 		if(trainer->needAveragedDelta())
 			averageDelta(n_used);
 		stat.t_dlt_calc += tmr.elapseSd();
@@ -174,7 +174,7 @@ void Worker::sapProcess()
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
-		} while(left > 0);
+		} while(!exitTrain && left > 0);
 		if(trainer->needAveragedDelta())
 			averageDelta(n_used);
 		stat.t_dlt_calc += tmr.elapseSd();
@@ -216,7 +216,7 @@ void Worker::fspProcess()
 		size_t n_used = 0;
 		double dly = speedFactor.generate();
 		clearDelta();
-		while(exitTrain == false && allowTrain && left != 0) {
+		while(allowTrain && !exitTrain && left != 0) {
 			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
 			accumulateDelta(dr.delta);
 			updatePointer(dr.n_scanned, dr.n_reported);
