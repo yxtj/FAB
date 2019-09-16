@@ -62,9 +62,12 @@ Trainer::DeltaResult GD::batchDelta(std::atomic<bool>& cond,
 		end = pd->size();
 	size_t nx = pm->paramWidth();
 	vector<double> grad(nx, 0.0);
+	double loss = 0.0;
 	size_t i;
 	for(i = start; i < end && cond.load(); ++i){
-		auto g = pm->gradient(pd->get(i));
+		auto p = pm->forward(pd->get(i));
+		loss += pm->loss(p, pd->get(i).y);
+		auto g = pm->backward(pd->get(i));
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
 	}
@@ -91,10 +94,13 @@ Trainer::DeltaResult GD::batchDelta(std::atomic<bool>& cond,
 		end = pd->size();
 	size_t nx = pm->paramWidth();
 	vector<double> grad(nx, 0.0);
+	double loss = 0.0;
 	size_t i;
 	for(i = start; i < end && cond.load(); ++i){
 		Timer tt;
-		auto g = pm->gradient(pd->get(i));
+		auto p = pm->forward(pd->get(i));
+		loss += pm->loss(p, pd->get(i).y);
+		auto g = pm->backward(pd->get(i));
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
 		double time = tt.elapseSd();
@@ -111,5 +117,5 @@ Trainer::DeltaResult GD::batchDelta(std::atomic<bool>& cond,
 			v *= factor;
 	}
 	stat_t_grad_post += tmr.elapseSd();
-	return { i - start, i - start, move(grad) };
+	return { i - start, i - start, move(grad), loss };
 }
