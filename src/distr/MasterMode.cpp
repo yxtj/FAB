@@ -266,7 +266,7 @@ void Master::papProcess()
 			double wtc = mean(wtDelta);
 			double wtr = mean(wtReport);
 
-			DVLOG(2) << "mtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto=" << mtOther
+			VLOG(2) << "mtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto=" << mtOther
 				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr;
 		}
 		mtOther += tmr.elapseSd();
