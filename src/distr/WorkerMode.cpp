@@ -279,7 +279,7 @@ void Worker::aapProcess()
 			n_used += dr.n_reported;
 			//DVLOG(3) <<"tmp: "<< tmp;
 			VLOG_EVERY_N(ln, 2) << "  calculate delta with " << dr.n_scanned << " data points, left: " << left;
-			if(dr.n_scanned != 0){
+			if(dr.n_reported != 0){
 				accumulateDelta(dr.delta);
 			}
 			stat.t_dlt_calc += tmr.elapseSd();
@@ -325,6 +325,7 @@ void Worker::papProcess()
 		size_t n_used = 0;
 		t_data = 0.0;
 		size_t left = localReportSize;
+		double loss = 0.0;
 		double dly = speedFactor.generate();
 		clearDelta();
 		while(exitTrain == false && !requestingDelta){
@@ -335,8 +336,9 @@ void Worker::papProcess()
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
+			loss += dr.loss;
 			VLOG_EVERY_N(ln, 2) << "  calculate delta with " << dr.n_scanned << " data points";
-			if(dr.n_scanned != 0){
+			if(dr.n_reported!= 0){
 				accumulateDelta(dr.delta);
 			}
 			auto t= tmr.elapseSd();
@@ -345,7 +347,7 @@ void Worker::papProcess()
 			if(left == 0){
 				tmr.restart();
 				vector<double> report = { static_cast<double>(n_used),
-					t_data / n_used, t_delta / n_delta, t_report / n_report };
+					t_data / n_used, t_delta / n_delta, t_report / n_report, loss };
 				// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending
 				VLOG_EVERY_N(ln, 2) << "  send report: " << report;
 				sendReport(report);

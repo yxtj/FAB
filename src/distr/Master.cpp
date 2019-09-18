@@ -24,6 +24,7 @@ Master::Master() : Runner() {
 	mtParameterSum = 0.0;
 	mtOther = 0.0;
 	timeOffset = 0.0;
+	lossBatch = 0.0;
 	pie = nullptr;
 	prs = nullptr;
 	lastArchIter = 0;
@@ -628,6 +629,7 @@ void Master::handleReport(const std::string& data, const RPCInfo& info)
 		wtDelta[wid] = report[2];
 		wtReport[wid] = report[3];
 		//}
+		lossBatch = (lossBatch * (nWorker - 1) + report[4]) / nWorker; // estimated loss
 		if(reportProcTotal > conf->batchSize)
 			suPap.notify();
 	}

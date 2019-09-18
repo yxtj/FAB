@@ -143,6 +143,8 @@ private:
 	std::vector<double> wtDelta; // worker side time per delta sending
 	std::vector<double> wtReport;  // worker side time per report sending
 
+	double lossBatch; // the online loss for one batch
+
 	SyncUnit suOnline;
 	SyncUnit suWorker;
 	SyncUnit suAllClosed;

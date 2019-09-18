@@ -267,7 +267,7 @@ void Master::papProcess()
 			double wtr = mean(wtReport);
 
 			VLOG(2) << "mtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto=" << mtOther
-				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr;
+				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr << "\tloss=" << lossBatch;
 		}
 		mtOther += tmr.elapseSd();
 		// wait until the report counts reach a global mini batch
