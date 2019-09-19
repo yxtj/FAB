@@ -15,7 +15,22 @@ public:
 	void bindDataset(const DataHolder* pdh);
 
 private:
-	callback_t localCBBinder(void (Worker::*fp)(const std::string&, const RPCInfo&));
+	using init_ft = void(Worker::*)();
+	using process_ft = void(Worker::*)();
+	using handler_ft = void(Worker::*)(const std::string&, const RPCInfo&);
+	using lbs_ft = size_t(Worker::*)(const size_t gbs);
+	init_ft initFun;
+	process_ft processFun;
+	handler_ft paramFun;
+	lbs_ft lbsFun;
+	
+	callback_t localCBBinder(handler_ft fp);
+	void bindMode();
+	void probeModeInit();
+	void probeModeProcess();
+
+	// parallel modes
+private:
 	void bspInit();
 	void bspProcess();
 	void tapInit();
@@ -32,6 +47,8 @@ private:
 	void papProcess();
 	//void generalProcess();
 
+// local logic
+private:
 	void updatePointer(const size_t scan, const size_t report);
 	void sendOnline();
 	void waitWorkerList();
@@ -51,14 +68,18 @@ private:
 	void waitParameter();
 	void fetchParmeter();
 
+	// calculate loss with data in range [start, start+cnt] using current model parameter
+	double calcLoss(const size_t start, const size_t cnt);
+	void sendLoss(const double loss);
+
 	void sendReport(const std::vector<double>& cnt); // pap progress
 
 	void pauseTrain();
 	void resumeTrain();
 
-// local logic
-private:
-	size_t calcLocalBatchSize(const size_t gbs);
+	size_t calcLocalBatchSizeDivide(const size_t gbs);
+	size_t calcLocalBatchSizeWhole(const size_t gbs);
+
 	void initSpeedAdjustment();
 
 // singal
@@ -70,6 +91,8 @@ public:
 	void handlePause(const std::string& data, const RPCInfo& info);
 	void handleContinue(const std::string& data, const RPCInfo& info);
 	void handleDeltaRequest(const std::string& data, const RPCInfo& info);
+	void handleLossRequest(const std::string& data, const RPCInfo& info);
+
 	void handleMetaConf(const std::string& data, const RPCInfo& info);
 	void handleMetaConfGlobalBatchSize(const std::string& data, const RPCInfo& info);
 	void handleMetaConfLocalReportSize(const std::string& data, const RPCInfo& info);
@@ -77,8 +100,10 @@ public:
 	void handleImmediateControl(const std::string& data, const RPCInfo& info);
 	void handleTerminate(const std::string& data, const RPCInfo& info);
 
-	void handleParameter(const std::string& data, const RPCInfo& info);
-	void handleParameterSsp(const std::string& data, const RPCInfo& info);
+	void handleParameterProbe(const std::string& data, const RPCInfo& info);
+
+	void handleParameter(const std::string& data, const RPCInfo& info); // bsp and tap
+	void handleParameterSsp(const std::string& data, const RPCInfo& info); // ssp and sap
 	void handleParameterFsp(const std::string& data, const RPCInfo& info);
 	void handleParameterAap(const std::string& data, const RPCInfo& info);
 	void handleParameterPap(const std::string& data, const RPCInfo& info);

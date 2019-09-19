@@ -4,6 +4,7 @@
 #include "driver/tools/ReplyHandler.h"
 #include "driver/tools/SyncUnit.h"
 #include "model/Model.h"
+#include "data/DataHolder.h"
 #include "train/TrainerFactory.h"
 #include "common/Statistics.h"
 #include "common/ConfData.h"
@@ -21,6 +22,7 @@ public:
 	int iter;
 	std::string logName;
 	Model model;
+	const DataHolder* pdh = nullptr;
 	Trainer* trainer = nullptr;
 	
 public:

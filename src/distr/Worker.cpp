@@ -26,37 +26,28 @@ void Worker::init(const ConfData* conf, const size_t lid)
 	nWorker = conf->nw;
 	localReportSize = conf->reportSize;
 	localID = lid;
-	trainer = TrainerFactory::generate(conf->optimizer, conf->optimizerParam);
-	LOG_IF(trainer == nullptr, FATAL) << "Trainer is not set correctly";
 	ln = conf->logIter;
 	logName = "W"+to_string(localID);
 	setLogThreadName(logName);
+
+	bindMode();
+	trainer = TrainerFactory::generate(conf->optimizer, conf->optimizerParam);
+	LOG_IF(trainer == nullptr, FATAL) << "Trainer is not set correctly";
 	model.init(conf->algorighm, conf->algParam);
 	initSpeedAdjustment();
 
-	if(conf->mode == "bsp"){
-		bspInit();
-	} else if(conf->mode == "tap"){
-		tapInit();
-	} else if(conf->mode == "ssp"){
-		sspInit();
-	} else if(conf->mode == "sap"){
-		sapInit();
-	} else if(conf->mode == "fsp"){
-		fspInit();
-	} else if(conf->mode == "aap"){
-		aapInit();
-	} else if(conf->mode == "pap"){
-		papInit();
+	if(!conf->probe){
+		(this->*initFun)();
+	} else{
+		probeModeInit();
 	}
 }
 
 void Worker::bindDataset(const DataHolder* pdh)
 {
 	VLOG(1) << "Bind dataset with " << pdh->size() << " data points";
+	this->pdh = pdh;
 	trainer->bindDataset(pdh);
-	// separated the mini-batch among all workers
-	localBatchSize = calcLocalBatchSize(conf->batchSize);
 }
 
 void Worker::run()
@@ -82,28 +73,14 @@ void Worker::run()
 	sendReady();
 	waitStart();
 
+	localBatchSize = (this->*lbsFun)(conf->batchSize);
 	DLOG(INFO) << "start training with mode: " << conf->mode << ", local batch size: " << localBatchSize;
 	iter = 1;
 	iterParam = 1;
-	//try{
-	//	generalProcess();
-	//} catch(exception& e){
-	//	LOG(FATAL) << e.what();
-	//}
-	if(conf->mode == "bsp"){
-		bspProcess();
-	} else if(conf->mode == "tap"){
-		tapProcess();
-	} else if(conf->mode == "ssp"){
-		sspProcess();
-	} else if(conf->mode == "sap"){
-		sapProcess();
-	} else if(conf->mode == "fsp"){
-		fspProcess();
-	} else if(conf->mode == "aap"){
-		aapProcess();
-	} else if(conf->mode == "pap"){
-		papProcess();
+	if(!conf->probe){
+		(this->*processFun)();
+	} else{
+		probeModeProcess();
 	}
 
 	DLOG(INFO) << "finish training";
@@ -115,10 +92,75 @@ void Worker::run()
 	stopMsgLoop();
 }
 
-Worker::callback_t Worker::localCBBinder(
-	void (Worker::*fp)(const std::string&, const RPCInfo&))
+Worker::callback_t Worker::localCBBinder(handler_ft fp)
+	//void (Worker::*fp)(const std::string&, const RPCInfo&))
 {
 	return bind(fp, this, placeholders::_1, placeholders::_2);
+}
+
+void Worker::bindMode()
+{
+	if(conf->mode == "bsp"){
+		initFun = &Worker::bspInit;
+		processFun = &Worker::bspProcess;
+		paramFun = &Worker::handleParameter;
+		lbsFun = &Worker::calcLocalBatchSizeDivide;
+	} else if(conf->mode == "tap"){
+		initFun = &Worker::tapInit;
+		processFun = &Worker::tapProcess;
+		paramFun = &Worker::handleParameter;
+		lbsFun = &Worker::calcLocalBatchSizeWhole;
+	} else if(conf->mode == "ssp"){
+		initFun = &Worker::sspInit;
+		processFun = &Worker::sspProcess;
+		paramFun = &Worker::handleParameterSsp;
+		lbsFun = &Worker::calcLocalBatchSizeDivide;
+	} else if(conf->mode == "sap"){
+		initFun = &Worker::sapInit;
+		processFun = &Worker::sapProcess;
+		paramFun = &Worker::handleParameterSsp;
+		lbsFun = &Worker::calcLocalBatchSizeWhole;
+	} else if(conf->mode == "fsp"){
+		initFun = &Worker::fspInit;
+		processFun = &Worker::fspProcess;
+		paramFun = &Worker::handleParameterFsp;
+		lbsFun = &Worker::calcLocalBatchSizeDivide;
+	} else if(conf->mode == "aap"){
+		initFun = &Worker::aapInit;
+		processFun = &Worker::aapProcess;
+		paramFun = &Worker::handleParameterAap;
+		lbsFun = &Worker::calcLocalBatchSizeWhole;
+	} else if(conf->mode == "pap"){
+		initFun = &Worker::papInit;
+		processFun = &Worker::papProcess;
+		paramFun = &Worker::handleParameterPap;
+		lbsFun = &Worker::calcLocalBatchSizeDivide;
+	} else{
+		LOG(FATAL) << "Unsupported mode: " << conf->mode;
+	}
+}
+
+void Worker::registerHandlers()
+{
+	regDSPProcess(CType::NormalControl, localCBBinder(&Worker::handleNormalControl));
+	//regDSPProcess(MType::CReply, localCBBinder(&Worker::handleReply));
+	//regDSPProcess(MType::CWorkers, localCBBinder(&Worker::handleWorkerList));
+	//regDSPProcess(MType::CTrainPause, localCBBinder(&Worker::handlePause));
+	//regDSPProcess(MType::CTrainContinue, localCBBinder(&Worker::handleContinue));
+
+	regDSPProcess(CType::ImmediateControl, localCBBinder(&Worker::handleImmediateControl));
+	//regDSPImmediate(MType::CTerminate, localCBBinder(&Worker::handleTerminate));
+
+	//regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameter));
+	//regDSPProcess(MType::DDelta, localCBBinder(&Worker::handleDelta));
+	if(!conf->probe){
+		regDSPProcess(MType::DDelta, localCBBinder(paramFun));
+	} else{
+		regDSPProcess(MType::DDelta, localCBBinder(&Worker::handleParameterProbe));
+	}
+
+	//addRPHAnySU(MType::DParameter, suParam);
+	addRPHAnySU(MType::CDataset, suDatasetInfo);
 }
 
 void Worker::updatePointer(const size_t scan, const size_t report)
@@ -163,24 +205,6 @@ void Worker::sendClosed()
 {
 	net->send(masterNID, CType::ImmediateControl,
 		make_pair(MType::CClosed, localID));
-}
-
-void Worker::registerHandlers()
-{
-	regDSPProcess(CType::NormalControl, localCBBinder(&Worker::handleNormalControl));
-	//regDSPProcess(MType::CReply, localCBBinder(&Worker::handleReply));
-	//regDSPProcess(MType::CWorkers, localCBBinder(&Worker::handleWorkerList));
-	//regDSPProcess(MType::CTrainPause, localCBBinder(&Worker::handlePause));
-	//regDSPProcess(MType::CTrainContinue, localCBBinder(&Worker::handleContinue));
-
-	regDSPProcess(CType::ImmediateControl, localCBBinder(&Worker::handleImmediateControl));
-	//regDSPImmediate(MType::CTerminate, localCBBinder(&Worker::handleTerminate));
-
-	//regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameter));
-	//regDSPProcess(MType::DDelta, localCBBinder(&Worker::handleDelta));
-
-	//addRPHAnySU(MType::DParameter, suParam);
-	addRPHAnySU(MType::CDataset, suDatasetInfo);
 }
 
 void Worker::clearDelta()
@@ -254,6 +278,24 @@ void Worker::fetchParmeter()
 	++stat.n_dlt_recv;
 }
 
+double Worker::calcLoss(const size_t start, const size_t cnt)
+{
+	double loss = 0.0;
+	size_t end = start + cnt;
+	if(end > pdh->size())
+		end = pdh->size();
+	for(size_t i = 0; i < end; ++i){
+		double l = model.loss(pdh->get(i));
+		loss += l;
+	}
+	return loss;
+}
+
+void Worker::sendLoss(const double loss)
+{
+	net->send(masterNID, MType::DLoss, loss);
+}
+
 void Worker::sendReport(const std::vector<double>& report)
 {
 	net->send(masterNID, MType::DReport, report);
@@ -269,7 +311,7 @@ void Worker::resumeTrain()
 	allowTrain = true;
 }
 
-size_t Worker::calcLocalBatchSize(const size_t gbs)
+size_t Worker::calcLocalBatchSizeDivide(const size_t gbs)
 {
 	size_t lbs = gbs / nWorker;
 	if(gbs % nWorker > localID)
@@ -277,6 +319,11 @@ size_t Worker::calcLocalBatchSize(const size_t gbs)
 	if(lbs <= 0)
 		lbs = 1;
 	return lbs;
+}
+
+size_t Worker::calcLocalBatchSizeWhole(const size_t gbs)
+{
+	return gbs;
 }
 
 void Worker::initSpeedAdjustment()
@@ -322,6 +369,9 @@ void Worker::handleNormalControl(const std::string & data, const RPCInfo & info)
 		break;
 	case MType::DRDelta:
 		handleDeltaRequest(data.substr(sizeof(int)), info);
+		break;
+	case MType::DRLoss:
+		handleLossRequest(data.substr(sizeof(int)), info);
 		break;
 		// MType::DParameter is handled directly by message type
 	}
@@ -378,11 +428,17 @@ void Worker::handleDeltaRequest(const std::string& data, const RPCInfo& info)
 	pauseTrain();
 }
 
+void Worker::handleLossRequest(const std::string& data, const RPCInfo& info)
+{
+	double loss = calcLoss(0, pdh->size());
+	sendLoss(loss);
+}
+
 void Worker::handleMetaConf(const std::string& data, const RPCInfo& info)
 {
 	pair<size_t, size_t> p = deserialize<pair<size_t, size_t>>(data);
 	if(p.first != 0)
-		localBatchSize = calcLocalBatchSize(p.first);
+		localBatchSize = (this->*lbsFun)(p.first);
 	if(p.second != 0)
 		localReportSize = p.second;
 }
@@ -390,7 +446,7 @@ void Worker::handleMetaConf(const std::string& data, const RPCInfo& info)
 void Worker::handleMetaConfGlobalBatchSize(const std::string& data, const RPCInfo& info)
 {
 	size_t gbs = deserialize<size_t>(data);
-	localBatchSize = calcLocalBatchSize(gbs);
+	localBatchSize = (this->*lbsFun)(gbs);
 }
 
 void Worker::handleMetaConfLocalReportSize(const std::string& data, const RPCInfo& info)
