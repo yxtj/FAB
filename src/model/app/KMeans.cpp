@@ -24,7 +24,8 @@ bool KMeans::checkData(const size_t nx, const size_t ny)
 {
 	// check input layer size
 	if(nx != dim)
-		throw invalid_argument("The dataset does not match the input layer of the network");
+		throw invalid_argument("The dataset does not match the input " 
+				+ to_string(nx) + " - " + to_string(dim));
 	// check output layer size
 	if(ny != 0)
 		throw invalid_argument("The dataset does not match the output layer of the network");
@@ -108,8 +109,8 @@ std::vector<double> KMeans::gradient(const std::vector<std::vector<double>>& x,
 {
 	vector<double> grad(parlen, 0.0);
 	size_t oldp = static_cast<int>((*ph)[0]);
-	pair<size_t, double> newpair = quickPredict(x[0], w);
-	size_t newp = newpair.first;
+	vector<double> pred = predict(x, w); 
+	size_t newp = pred[0]; // quickPredict(x[0], w);
 	(*ph)[0] = static_cast<double>(newp);
 	if(oldp != newp){
 		oldp *= dim + 1;
@@ -121,7 +122,7 @@ std::vector<double> KMeans::gradient(const std::vector<std::vector<double>>& x,
 		grad[oldp + dim] -= 1;
 		grad[newp + dim] += 1;
 	}
-	grad.push_back(newpair.second); /// append the objective value for curent dp
+	grad.push_back(pred[1]); /// append the objective value for curent dp
 	return grad;
 }
 
@@ -151,7 +152,7 @@ double KMeans::quickDist(it_t xf, it_t xl, it_t yf, const double n)
 	return yy - 2 * round(n) * xy;
 }
 
-std::pair<size_t, double> KMeans::quickPredict(const std::vector<double>& x, const std::vector<double>& w) const
+size_t KMeans::quickPredict(const std::vector<double>& x, const std::vector<double>& w) const
 {
 	size_t min_id = ncenter;
 	double min_v;
@@ -164,6 +165,6 @@ std::pair<size_t, double> KMeans::quickPredict(const std::vector<double>& x, con
 			min_v = d;
 		}
 	}
-	return {min_id, min_v};
+	return min_id;
 }
 
