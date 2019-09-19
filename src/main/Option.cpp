@@ -60,6 +60,12 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 			"The method to decide update interval for FSP. "
 			"Supports: interval:x(x is in seconds), portion:x(x in 0~1), "
 			"improve:x,t (x: avg. imporovement, t: max waiting time), balance:w (num. of windows)")
+		// parallel - probe
+		("probe", bool_switch(&conf.probe)->default_value(false), "Probe the best hyper-parameter like global batch size")
+		("probe_ratio", value(&conf.probeRatio)->default_value(0.05), "The ratio of data used for each probe")
+		("probe_loss_online", bool_switch(&conf.probeOnlineLoss)->default_value(false), 
+			"Use the accumulated online loss or calculate loss with last model parameter")
+		("probe_loss_full", bool_switch(&conf.probeLossFull)->default_value(false), "Calcualte the loss with full batch or the probed part")
 		// setting - machine speed
 		("speed_random", value(&tmp_sr)->default_value(""),
 			"The random worker speed difference (how much slower than normal).\n"
@@ -195,8 +201,8 @@ bool Option::processMode(){
 	} else if(t[0]=="aap"){
 		conf.aapWait = t.size() >= 2 && beTrueOption(t[1]);
 	} else if(t[0] == "pap"){
-		conf.papSearchBatchSize = t.size() > 1 ? beTrueOption(t[1]) : false;
-		conf.papSearchReportFreq = t.size() > 2 ? beTrueOption(t[2]) : false;
+		conf.papDynamicBatchSize = t.size() > 1 ? beTrueOption(t[1]) : false;
+		conf.papDynamicReportFreq = t.size() > 2 ? beTrueOption(t[2]) : false;
 	}
 	return true;
 }

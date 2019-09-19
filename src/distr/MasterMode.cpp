@@ -5,6 +5,43 @@
 #include "math/accumulate.h"
 using namespace std;
 
+// ---- general probe mode
+
+void Master::probeModeInit()
+{
+	(this->*initFun)();
+	probeReached = false;
+	probeNeededPoint = static_cast<size_t>(conf->probeRatio * nPoint);
+}
+
+void Master::probeModeProcess()
+{
+	size_t gbs = conf->batchSize;
+	while(!probeReached){
+		probeNeededIter = probeNeededPoint / gbs;
+		probeNeededUpdate = probeNeededPoint / gbs * nWorker;
+		probeReached = false;
+		broadcastBatchSize(gbs);
+		Timer tmr;
+		(this->*processFun)();
+		double time = tmr.elapseSd();
+		gatherLoss();
+		double rate = lossGlobal / time;
+
+		gbs /= 2;
+	}
+}
+
+void Master::handleDeltaProbe(const std::string& data, const RPCInfo& info)
+{
+	(this->*deltaFun)(data, info);
+	++nUpdate;
+	if(nUpdate >= probeNeededUpdate){
+		probeReached = true;
+		
+	}
+}
+
 // ---- bulk synchronous parallel
 
 void Master::bspInit()
@@ -12,7 +49,7 @@ void Master::bspInit()
 	factorDelta = 1.0 / nWorker;
 	if(!trainer->needAveragedDelta())
 		factorDelta = 1.0;
-	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDelta));
+	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaBsp));
 }
 
 void Master::bspProcess()
@@ -267,13 +304,13 @@ void Master::papProcess()
 			double wtr = mean(wtReport);
 
 			VLOG(2) << "mtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto=" << mtOther
-				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr << "\tloss=" << lossBatch;
+				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr << "\tloss=" << lossGlobal;
 		}
 		mtOther += tmr.elapseSd();
 		// wait until the report counts reach a global mini batch
 		suPap.wait_n_reset();
 		//// online change globalBatchSize
-		if(conf->papSearchBatchSize) {
+		if(conf->papDynamicBatchSize) {
 			globalBatchSize = estimateGlobalBatchSize();
 			VLOG(2) << "gbs=" << globalBatchSize << "\tlrs=" << localreportSize;
 		}
@@ -290,7 +327,7 @@ void Master::papProcess()
 
 // ---- handlers ----
 
-void Master::handleDelta(const std::string & data, const RPCInfo & info)
+void Master::handleDeltaBsp(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
 	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);

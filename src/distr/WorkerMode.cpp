@@ -8,6 +8,23 @@
 
 using namespace std;
 
+// ---- general probe mode
+
+void Worker::probeModeInit()
+{
+	(this->*initFun)();
+}
+
+void Worker::probeModeProcess()
+{
+	(this->*processFun)();
+}
+
+void Worker::handleParameterProbe(const std::string& data, const RPCInfo& info)
+{
+	(this->*paramFun)(data, info);
+}
+
 // ---- bulk synchronous parallel
 
 void Worker::bspInit()
@@ -376,7 +393,6 @@ void Worker::papProcess()
 		++iter;
 	}
 }
-
 
 // ---- handlers ----
 

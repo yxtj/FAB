@@ -20,7 +20,20 @@ public:
 	void bindDataset(const DataHolder* pdh);
 
 private:
-	callback_t localCBBinder(void (Master::*fp)(const std::string&, const RPCInfo&));
+	using init_ft = void(Master::*)();
+	using process_ft = void(Master::*)();
+	using handler_ft = void(Master::*)(const std::string&, const RPCInfo&);
+	init_ft initFun;
+	process_ft processFun;
+	handler_ft deltaFun;
+
+	callback_t localCBBinder(handler_ft fp);
+	void bindMode();
+	void probeModeInit();
+	void probeModeProcess();
+
+// parallel modes
+private:
 	void bspInit();
 	void bspProcess();
 	void tapInit();
@@ -77,6 +90,7 @@ public:
 	void waitDeltaFromAny(); // dont reset suDeltaAny
 	void waitDeltaFromAll(); // reset suDeltaAll
 	void gatherDelta();
+	void gatherLoss();
 
 // handler
 public:
@@ -91,8 +105,11 @@ public:
 
 	void handleParameter(const std::string& data, const RPCInfo& info);
 	void handleReport(const std::string& data, const RPCInfo& info);
+	void handleLoss(const std::string& data, const RPCInfo& info);
 
-	void handleDelta(const std::string& data, const RPCInfo& info);
+	void handleDeltaProbe(const std::string& data, const RPCInfo& info);
+
+	void handleDeltaBsp(const std::string& data, const RPCInfo& info);
 	void handleDeltaTap(const std::string& data, const RPCInfo& info);
 	void handleDeltaSsp(const std::string& data, const RPCInfo& info);
 	void handleDeltaSap(const std::string& data, const RPCInfo& info);
@@ -100,6 +117,7 @@ public:
 	void handleDeltaAap(const std::string& data, const RPCInfo& info);
 	void handleDeltaPap(const std::string& data, const RPCInfo& info);
 	void handleDeltaTail(const std::string& data, const RPCInfo& info);
+	void handleDeltaIgnore(const std::string& data, const RPCInfo& info);
 
 private:
 	std::vector<double>  bfDelta;
@@ -129,6 +147,8 @@ private:
 	double mtParameterSum; // master side time for sending all parameters
 	double mtOther; // time other than processing/sending parameter, delta and report. include: archive, log
 
+	double lossGlobal; // the loss for one global batch
+
 	// progressive async
 	double mtReportSum; // master side time for processing all reports
 	size_t nReport; // master side # of processed reports
@@ -143,13 +163,13 @@ private:
 	std::vector<double> wtDelta; // worker side time per delta sending
 	std::vector<double> wtReport;  // worker side time per report sending
 
-	double lossBatch; // the online loss for one batch
-
 	SyncUnit suOnline;
 	SyncUnit suWorker;
 	SyncUnit suAllClosed;
 	SyncUnit suDatasetInfo;
 	SyncUnit suReady;
+	SyncUnit suHyper; // hyper parameters (global batch size, local report size) 
+	SyncUnit suLoss;
 	int typeDDeltaAny, typeDDeltaAll;
 	SyncUnit suDeltaAny, suDeltaAll;
 	SyncUnit suParam; // reply of parameter broadcast
@@ -161,4 +181,8 @@ private:
 	size_t lastArchIter;
 	Timer tmrArch;
 	bool archDoing;
+
+	// probe
+	size_t probeNeededUpdate, probeNeededPoint, probeNeededIter;
+	bool probeReached;
 };

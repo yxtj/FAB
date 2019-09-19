@@ -30,10 +30,12 @@ struct MType {
 	// Data and data Request (30-39)
 	static constexpr int DParameter = 30; // data for parametr
 	static constexpr int DRParameter = 31; // data request for parameter
-	static constexpr int DDelta = 34;
-	static constexpr int DRDelta = 35;
-	static constexpr int DReport= 36;
-	static constexpr int DRReport= 37;
+	static constexpr int DDelta = 32;
+	static constexpr int DRDelta = 33;
+	static constexpr int DReport= 34;
+	static constexpr int DRReport= 35;
+	static constexpr int DLoss= 36;
+	static constexpr int DRLoss= 37;
 
 	// Process and Progress for Termination (40-49)
 	static constexpr int PApply = 40;

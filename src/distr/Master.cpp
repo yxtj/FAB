@@ -24,7 +24,7 @@ Master::Master() : Runner() {
 	mtParameterSum = 0.0;
 	mtOther = 0.0;
 	timeOffset = 0.0;
-	lossBatch = 0.0;
+	lossGlobal = 0.0;
 	pie = nullptr;
 	prs = nullptr;
 	lastArchIter = 0;
@@ -40,33 +40,21 @@ void Master::init(const ConfData* conf, const size_t lid)
 	globalBatchSize = conf->batchSize;
 	localreportSize = conf->reportSize;
 	nPointWorker.assign(nWorker, 0);
-	trainer = TrainerFactory::generate(conf->optimizer, conf->optimizerParam);
-	LOG_IF(trainer == nullptr, FATAL) << "Trainer is not set correctly";
-	trainer->bindModel(&model);
 	localID = lid;
 	ln = conf->logIter;
 	logName = "M";
 	setLogThreadName(logName);
+
+	bindMode();
+	trainer = TrainerFactory::generate(conf->optimizer, conf->optimizerParam);
+	LOG_IF(trainer == nullptr, FATAL) << "Trainer is not set correctly";
+	trainer->bindModel(&model);
 	initializeParameter();
 
-	if(conf->mode == "bsp"){
-		bspInit();
-	} else if(conf->mode == "tap"){
-		tapInit();
-	} else if(conf->mode == "ssp"){
-		sspInit();
-	} else if(conf->mode == "sap"){
-		sapInit();
-	} else if(conf->mode == "fsp"){
-		fspInit();
-		pie =IntervalEstimatorFactory::generate(conf->intervalParam, nWorker, nPoint);
-		LOG_IF(pie == nullptr, FATAL) << "Fail to initialize interval estimator with parameter: " << conf->intervalParam;
-	} else if(conf->mode == "aap"){
-		aapInit();
-		prs = ReceiverSelectorFactory::generate(conf->mcastParam, nWorker);
-		LOG_IF(prs == nullptr, FATAL) << "Fail to initialize receiver selector with parameter: " << conf->mcastParam;
-	} else if(conf->mode == "pap"){
-		papInit();
+	if(!conf->probe){
+		(this->*initFun)();
+	} else{
+		probeModeInit();
 	}
 }
 
@@ -110,20 +98,10 @@ void Master::run()
 	LOG(INFO)<<"Start traning with mode: "<<conf->mode;
 	//tmrTrain.restart();
 	iter = 1;
-	if(conf->mode == "bsp"){
-		bspProcess();
-	} else if(conf->mode == "tap"){
-		tapProcess();
-	} else if(conf->mode == "ssp"){
-		sspProcess();
-	} else if(conf->mode == "sap"){
-		sapProcess();
-	} else if(conf->mode == "fsp"){
-		fspProcess();
-	} else if(conf->mode == "aap"){
-		aapProcess();
-	} else if(conf->mode == "pap"){
-		papProcess();
+	if(!conf->probe){
+		(this->*processFun)();
+	} else{
+		probeModeProcess();
 	}
 	--iter;
 	double t = tmrTrain.elapseSd();
@@ -143,12 +121,50 @@ void Master::run()
 	stopMsgLoop();
 }
 
-Master::callback_t Master::localCBBinder(
-	void (Master::*fp)(const std::string&, const RPCInfo&))
+Master::callback_t Master::localCBBinder(handler_ft fp)
+	//void (Master::*fp)(const std::string&, const RPCInfo&))
 {
 	return bind(fp, this, placeholders::_1, placeholders::_2);
 }
 
+void Master::bindMode()
+{
+	if(conf->mode == "bsp"){
+		initFun = &Master::bspInit;
+		processFun = &Master::bspProcess;
+		deltaFun = &Master::handleDeltaBsp;
+	} else if(conf->mode == "tap"){
+		initFun = &Master::tapInit;
+		processFun = &Master::tapProcess;
+		deltaFun = &Master::handleDeltaTap;
+	} else if(conf->mode == "ssp"){
+		initFun = &Master::sspInit;
+		processFun = &Master::sspProcess;
+		deltaFun = &Master::handleDeltaSsp;
+	} else if(conf->mode == "sap"){
+		initFun = &Master::sapInit;
+		processFun = &Master::sapProcess;
+		deltaFun = &Master::handleDeltaSap;
+	} else if(conf->mode == "fsp"){
+		initFun = &Master::fspInit;
+		processFun = &Master::fspProcess;
+		deltaFun = &Master::handleDeltaFsp;
+		pie = IntervalEstimatorFactory::generate(conf->intervalParam, nWorker, nPoint);
+		LOG_IF(pie == nullptr, FATAL) << "Fail to initialize interval estimator with parameter: " << conf->intervalParam;
+	} else if(conf->mode == "aap"){
+		initFun = &Master::aapInit;
+		processFun = &Master::aapProcess;
+		deltaFun = &Master::handleDeltaAap;
+		prs = ReceiverSelectorFactory::generate(conf->mcastParam, nWorker);
+		LOG_IF(prs == nullptr, FATAL) << "Fail to initialize receiver selector with parameter: " << conf->mcastParam;
+	} else if(conf->mode == "pap"){
+		initFun = &Master::papInit;
+		processFun = &Master::papProcess;
+		deltaFun = &Master::handleDeltaPap;
+	} else{
+		LOG(FATAL) << "Unsupported mode: " << conf->mode;
+	}
+}
 
 void Master::registerHandlers()
 {
@@ -161,20 +177,28 @@ void Master::registerHandlers()
 	//regDSPImmediate(MType::CClosed, localCBBinder(&Master::handleClosed));
 
 	regDSPProcess(MType::DParameter, localCBBinder(&Master::handleParameter));
-	// regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDelta)); // for bsp and fsp
-	// regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaTap)); // for tap
+	if(!conf->probe){
+		regDSPProcess(MType::DDelta, localCBBinder(deltaFun));
+	} else{
+		regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaProbe));
+	}
 
 	addRPHEachSU(MType::COnline, suOnline);
 	addRPHEachSU(MType::CWorkers, suWorker);
 	addRPHEachSU(MType::CDataset, suDatasetInfo);
 	addRPHEachSU(MType::CReady, suReady);
-	addRPHEachSU(MType::DParameter, suParam);
 	addRPHEachSU(MType::CTrainPause, suTPause);
 	addRPHEachSU(MType::CTrainContinue, suTContinue);
 	//addRPHEachSU(MType::CTerminate, suAllClosed); // in reply
 	addRPHEachSU(MType::CClosed, suAllClosed); // in immediate handler
 	addRPHAnySU(typeDDeltaAny, suDeltaAny);
 	addRPHEachSU(typeDDeltaAll, suDeltaAll);
+
+	addRPHEachSU(MType::DParameter, suParam);
+	addRPHEachSU(MType::DLoss, suLoss);
+	addRPHEachSU(MType::FGlobalBatchSize, suHyper);
+	addRPHEachSU(MType::FLocalReportSize, suHyper);
+	addRPHEachSU(MType::FSizeConf, suHyper);
 }
 
 void Master::bindDataset(const DataHolder* pdh)
@@ -503,6 +527,14 @@ void Master::gatherDelta()
 	suDeltaAll.wait();
 }
 
+void Master::gatherLoss()
+{
+	suLoss.reset();
+	lossGlobal = 0.0;
+	net->broadcast(CType::NormalControl, MType::DRLoss);
+	suLoss.wait();
+}
+
 // handler - normal control
 
 void Master::handleNormalControl(const std::string & data, const RPCInfo & info)
@@ -521,6 +553,9 @@ void Master::handleNormalControl(const std::string & data, const RPCInfo & info)
 		break;
 	case MType::CReady:
 		handleReady(data.substr(sizeof(int)), info);
+		break;
+	case MType::DLoss:
+		handleLoss(data.substr(sizeof(int)), info);
 		break;
 		//MType::DDelta and MType::DReport are handled directly by message type
 	}
@@ -629,12 +664,20 @@ void Master::handleReport(const std::string& data, const RPCInfo& info)
 		wtDelta[wid] = report[2];
 		wtReport[wid] = report[3];
 		//}
-		lossBatch = (lossBatch * (nWorker - 1) + report[4]) / nWorker; // estimated loss
+		lossGlobal= (lossGlobal* (nWorker - 1) + report[4]) / nWorker; // estimated loss
 		if(reportProcTotal > conf->batchSize)
 			suPap.notify();
 	}
 	++nReport;
 	mtReportSum += tmr.elapseSd();
+}
+
+void Master::handleLoss(const std::string& data, const RPCInfo& info)
+{
+	double loss = deserialize<double>(data);
+	int s = wm.nid2lid(info.source);
+	lossGlobal += loss;
+	rph.input(MType::DLoss, s);
 }
 
 void Master::handleDeltaTail(const std::string & data, const RPCInfo & info)
@@ -645,4 +688,9 @@ void Master::handleDeltaTail(const std::string & data, const RPCInfo & info)
 	int s = wm.nid2lid(info.source);
 	applyDelta(deltaMsg.second, s);
 	++stat.n_dlt_recv;
+}
+
+void Master::handleDeltaIgnore(const std::string& data, const RPCInfo& info)
+{
+	// doing nothing
 }
