@@ -111,9 +111,9 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		("binary,b", bool_switch(&conf.binary)->default_value(false), "Whether to output using binary IO.")
 		("resume", bool_switch(&conf.resume)->default_value(false), "Whether to resume from the last output item.")
 		// termination
-		("term_point", value(&tmp_t_point)->default_value(0), "Termination condition: maximum used data point.")
-		("term_delta", value(&tmp_t_delta)->default_value(0), "Termination condition: maximum delta report.")
-		("term_iter", value(&tmp_t_iter)->default_value(0), "Termination condition: maximum iteration.")
+		("term_point", value(&tmp_t_point)->default_value("0"), "Termination condition: maximum used data point.")
+		("term_delta", value(&tmp_t_delta)->default_value("0"), "Termination condition: maximum delta report.")
+		("term_iter", value(&tmp_t_iter)->default_value("0"), "Termination condition: maximum iteration.")
 		("term_time", value(&conf.tcTime)->required(), "Termination condition: maximum training time.")
 		// archive
 		("arch_iter", value(&tmp_a_iter)->default_value("1000"), "Progress archiving condition: maximum iteration.")
