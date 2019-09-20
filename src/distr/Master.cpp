@@ -15,12 +15,12 @@ Master::Master() : Runner() {
 	factorDelta = 1.0;
 	nx = 0;
 	ny = 0;
-	nPoint = 0;
+	nPointTotal = 0;
 	iter = 0;
 	mtReportSum = 0.0;
 	nReport = 0;
-	mtUpdateSum = 0.0;
-	nUpdate = 0;
+	mtDeltaSum = 0.0;
+	nDelta = 0;
 	mtParameterSum = 0.0;
 	mtOther = 0.0;
 	timeOffset = 0.0;
@@ -50,6 +50,7 @@ void Master::init(const ConfData* conf, const size_t lid)
 	LOG_IF(trainer == nullptr, FATAL) << "Trainer is not set correctly";
 	trainer->bindModel(&model);
 	initializeParameter();
+	setTerminateCondition(conf->tcTime, conf->tcPoint, conf->tcDelta, conf->tcIter);
 
 	if(!conf->probe){
 		(this->*initFun)();
@@ -75,7 +76,7 @@ void Master::run()
 	} catch(exception& e){
 		LOG(FATAL) << "Error in checking dataset: " << e.what();
 	}
-	LOG(INFO) << "Got x-length: " << nx << ", y-length: " << ny << ", data points: " << nPoint;
+	LOG(INFO) << "Got x-length: " << nx << ", y-length: " << ny << ", data points: " << nPointTotal;
 	LOG(INFO) << "Model parameter length: " << model.paramWidth();
 	clearAccumulatedDelta();
 	if(!conf->fnOutput.empty()){
@@ -114,8 +115,12 @@ void Master::run()
 	delete pie;
 	delete prs;
 	DLOG(INFO) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
+	// statistics
+	stat.n_dlt_recv = nDelta;
+	stat.n_point = nPoint;
 	finishStat();
 	showStat();
+	// close up
 	rph.deactivateType(MType::DDelta);
 	suAllClosed.wait();
 	stopMsgLoop();
@@ -149,7 +154,7 @@ void Master::bindMode()
 		initFun = &Master::fspInit;
 		processFun = &Master::fspProcess;
 		deltaFun = &Master::handleDeltaFsp;
-		pie = IntervalEstimatorFactory::generate(conf->intervalParam, nWorker, nPoint);
+		pie = IntervalEstimatorFactory::generate(conf->intervalParam, nWorker, nPointTotal);
 		LOG_IF(pie == nullptr, FATAL) << "Fail to initialize interval estimator with parameter: " << conf->intervalParam;
 	} else if(conf->mode == "aap"){
 		initFun = &Master::aapInit;
@@ -313,10 +318,24 @@ void Master::accumulateDeltaNext(const int d, const std::vector<double>& delta, 
 	stat.t_dlt_calc += tmr.elapseSd();
 }
 
+void Master::setTerminateCondition(const double time,
+	const size_t nPoint, const size_t nDelta, const size_t nIter)
+{
+	if(time <= 0.0 && nPoint == 0 && nDelta == 0 && nIter == 0){
+		LOG(FATAL) << "No valid Terminate condition";
+	}
+	termTime = time > 0.0 ? time : numeric_limits<double>::max();
+	termPoint = nPoint != 0 ? nPoint : numeric_limits<size_t>::max();
+	termDelta = nDelta != 0 ? nDelta : numeric_limits<size_t>::max();
+	termIter = nIter != 0 ? nIter : numeric_limits<size_t>::max();
+}
+
 bool Master::terminateCheck()
 {
-	return (iter > conf->tcIter)
-		|| (tmrTrain.elapseSd() > conf->tcTime);
+	return (nPoint > termPoint)
+		|| (nDelta > termDelta)
+		|| (iter > termIter)
+		|| (tmrTrain.elapseSd() > termTime);
 }
 
 void Master::checkDataset()
@@ -428,7 +447,7 @@ void Master::archiveProgress(const bool force)
 
 size_t Master::estimateGlobalBatchSize()
 {
-	double mtu = mtUpdateSum / nUpdate;
+	double mtu = mtDeltaSum / nDelta;
 	double mtb = mtParameterSum / stat.n_par_send;
 	double mtr = mtReportSum / nReport;
 	double mto = mtOther / iter;
@@ -456,7 +475,7 @@ size_t Master::estimateLocalReportSize(const bool quick)
 	if(quick){
 		return static_cast<size_t>((nWorker * mtr - wtr) / wtd);
 	} else{
-		double mtu = mtUpdateSum / nUpdate;
+		double mtu = mtDeltaSum / nDelta;
 		double mtb = mtParameterSum / stat.n_par_send;
 		double mto = mtOther / iter;
 		double wtc = mean(wtDelta);
@@ -600,7 +619,7 @@ void Master::handleDataset(const std::string& data, const RPCInfo& info){
 	LOG_IF(flag, FATAL) << "dataset on " << source << " does not match with others."
 		<< " X-match: " << (nx == tnx) << ", Y-match: " << (ny == tny);
 	nPointWorker[source] = tnp;
-	nPoint += tnp;
+	nPointTotal += tnp;
 	rph.input(MType::CDataset, source);
 	sendReply(info, MType::CDataset);
 }

@@ -60,6 +60,8 @@ struct ConfData {
 	int logIter;
 
 	// termination condition
+	size_t tcPoint; // maximum total used data point
+	size_t tcDelta; // maximum total received delta/update report
 	size_t tcIter; // maximum iteration
 	double tcTime; // maximum training time
 	double tcDiff; // minimum improvement cross iterations

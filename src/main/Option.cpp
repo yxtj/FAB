@@ -33,7 +33,8 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 	string tmp_ids, tmp_idy;
 	string tmp_bs, tmp_rs;
 	string tmp_sr, tmp_sh;
-	string tmp_t_iter, tmp_a_iter, tmp_l_iter;
+	string tmp_t_point, tmp_t_delta, tmp_t_iter;
+	string tmp_a_iter, tmp_l_iter;
 	int tmp_v;
 	if(pimpl == nullptr)
 		pimpl = new Impl(getScreenSize().first);
@@ -49,46 +50,47 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 	using boost::program_options::value;
 	using boost::program_options::bool_switch;
 	pimpl->desc.add_options()
-		("help,h", "Print help messages")
+		("help,h", "Print help messages.")
 		// parallel
-		("mode,m", value(&conf.mode)->default_value("bsp"), "The parallel mode: bsp, tap, ssp:<n>, sap:<n>, fsp, aap, pap:<n>")
+		("mode,m", value(&conf.mode)->default_value("bsp"), "The parallel mode: bsp, tap, ssp:<n>, sap:<n>, fsp, aap, pap:<n>.")
 		// parallel - broadcast
 		("cast_mode,c", value(&tmp_cast)->default_value("broadcast"),
-			"The method to send out new parameters. Supports: broadcast/all, ring:k, random:k,seed, hash:k")
+			"The method to send out new parameters. Supports: broadcast/all, ring:k, random:k,seed, hash:k.")
 		// parallel - fsp
 		("flex_interval", value(&tmp_interval)->default_value("portion:0.05"),
 			"The method to decide update interval for FSP. "
 			"Supports: interval:x(x is in seconds), portion:x(x in 0~1), "
-			"improve:x,t (x: avg. imporovement, t: max waiting time), balance:w (num. of windows)")
+			"improve:x,t (x: avg. imporovement, t: max waiting time), balance:w (num. of windows).")
 		// parallel - probe
-		("probe", bool_switch(&conf.probe)->default_value(false), "Probe the best hyper-parameter like global batch size")
-		("probe_ratio", value(&conf.probeRatio)->default_value(0.05), "The ratio of data used for each probe")
+		("probe", bool_switch(&conf.probe)->default_value(false), "Probe the best hyper-parameter like global batch size.")
+		("probe_ratio", value(&conf.probeRatio)->default_value(0.05), "The ratio of data used for each probe.")
 		("probe_loss_online", bool_switch(&conf.probeOnlineLoss)->default_value(false), 
-			"Use the accumulated online loss or calculate loss with last model parameter")
-		("probe_loss_full", bool_switch(&conf.probeLossFull)->default_value(false), "Calcualte the loss with full batch or the probed part")
+			"Use the accumulated online loss or calculate loss with last model parameter.")
+		("probe_loss_full", bool_switch(&conf.probeLossFull)->default_value(false),
+			"Calcualte the loss with full batch or the probed part.")
 		// setting - machine speed
 		("speed_random", value(&tmp_sr)->default_value(""),
 			"The random worker speed difference (how much slower than normal).\n"
 			"Format: <type>:<min>:<max>:<distribution parameters...>. "
-			"<type> supports: <empty>, none, exp, norm")
+			"<type> supports: <empty>, none, exp, norm.")
 		("speed_hetero", value(&tmp_sh)->default_value(""), "The fixed worker speed difference (how much slower than normal).\n"
 			"Format: <n1>-<m1>:<p1>,<n2>-<m2>:<p2>,<n3>:<p3>,... "
-			"<n1>-<m1>:<p1> means worker n1,n1+1,...,m1 are p1 slower than normal. The abscent workers are assumed 0 (working normally)")
+			"<n1>-<m1>:<p1> means worker n1,n1+1,...,m1 are p1 slower than normal. The abscent workers are assumed 0 (working normally).")
 		// app - algorithm
 		("algorithm,a", value(&conf.algorighm)->required(), desc_alg.c_str())
 		("parameter,p", value(&conf.algParam)->required(),
-			"The parameter of the algorithm, usually the shape of the algorithm")
-		("seed", value(&conf.seed)->default_value(123456U), "The seed to initialize parameters")
+			"The parameter of the algorithm, usually the shape of the algorithm.")
+		("seed", value(&conf.seed)->default_value(123456U), "The seed to initialize parameters.")
 		// app - training
-		("batch_size,s", value(&tmp_bs)->required(), "The global batch size. Support suffix: k, m, g")
-		("report_size", value(&tmp_rs)->default_value("1"), "The local report size. Support suffix: k, m, g")
+		("batch_size,s", value(&tmp_bs)->required(), "The global batch size. Support suffix: k, m, g.")
+		("report_size", value(&tmp_rs)->default_value("1"), "The local report size. Support suffix: k, m, g.")
 		("optimizer,o", value(&conf.optimizer)->required()->default_value("gd:0.01"), desc_opt.c_str())
 		// file - input
 		("dataset", value(&conf.dataset)->default_value("csv"), desc_dl.c_str())
 		("trainpart", bool_switch(&conf.trainPart)->default_value(true),
 			"Whether to use the trainning part of the dateset.")
 		("data_file,d", value(&conf.fnData)->required(), "The file name of the input data.")
-		("topk,k", value(&conf.topk)->default_value(0), "Only use the first <k> data points. (0 means all)")
+		("topk,k", value(&conf.topk)->default_value(0), "Only use the first <k> data points (0 means all).")
 		("normalize,n", bool_switch(&conf.normalize)->default_value(false),
 			"Whether to do normailzation on the input file.")
 		("shuffle", bool_switch(&conf.shuffle)->default_value(false), "Randomly shuffle the dataset.")
@@ -109,7 +111,9 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		("binary,b", bool_switch(&conf.binary)->default_value(false), "Whether to output using binary IO.")
 		("resume", bool_switch(&conf.resume)->default_value(false), "Whether to resume from the last output item.")
 		// termination
-		("term_iter", value(&tmp_t_iter)->required(), "Termination condition: maximum iteration.")
+		("term_point", value(&tmp_t_point)->default_value(0), "Termination condition: maximum used data point.")
+		("term_delta", value(&tmp_t_delta)->default_value(0), "Termination condition: maximum delta report.")
+		("term_iter", value(&tmp_t_iter)->default_value(0), "Termination condition: maximum iteration.")
 		("term_time", value(&conf.tcTime)->required(), "Termination condition: maximum training time.")
 		// archive
 		("arch_iter", value(&tmp_a_iter)->default_value("1000"), "Progress archiving condition: maximum iteration.")
@@ -136,6 +140,8 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		conf.reportSize = stoiKMG(tmp_rs);
 		if(conf.reportSize == 0)
 			conf.reportSize = conf.batchSize / conf.nw;
+		conf.tcPoint = stoiKMG(tmp_t_point);
+		conf.tcDelta = stoiKMG(tmp_t_delta);
 		conf.tcIter = stoiKMG(tmp_t_iter);
 		conf.arvIter = stoiKMG(tmp_a_iter);
 		conf.logIter = stoiKMG(tmp_l_iter);

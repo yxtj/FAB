@@ -60,6 +60,8 @@ private:
 	void accumulateDeltaNext(const int d, const std::vector<double>& delta, const size_t cnt); // include slot d
 	//void receiveDelta(std::vector<double>& delta, const int source);
 	
+	void setTerminateCondition(const double time = 0.0,
+		const size_t nPoint = 0, const size_t nDelta = 0, const size_t nIter = 0); // 0 means unlimited
 	bool terminateCheck();
 	void checkDataset();
 
@@ -131,7 +133,7 @@ private:
 	double factorDelta;
 	size_t nx, ny; // length of x and y
 	std::vector<size_t> nPointWorker; // number of data-points on each worker
-	size_t nPoint;
+	size_t nPointTotal;
 
 	IntervalEstimator* pie; // for flexible parallel modes
 	ReceiverSelector* prs;
@@ -139,15 +141,19 @@ private:
 
 	int ln; // log-every-n times
 
+	double termTime;
+	size_t termIter, termDelta, termPoint;
+
 	//size_t iter; // [defined in Runner] current iteration being executate now (not complete)
-	double mtUpdateSum; // master side time for processing all delta
-	size_t nUpdate; // # of received delta, usually used for asynchronous cases
-	double timeOffset; // used for accounting time if resumed from previous archive
-	Timer tmrTrain;
+	size_t nPoint; // # of used data point by now
+	double mtDeltaSum; // master side time for processing all delta
+	size_t nDelta; // # of received delta, usually used for asynchronous cases
 	double mtParameterSum; // master side time for sending all parameters
 	double mtOther; // time other than processing/sending parameter, delta and report. include: archive, log
-
 	double lossGlobal; // the loss for one global batch
+
+	double timeOffset; // used for accounting time if resumed from previous archive
+	Timer tmrTrain;
 
 	// progressive async
 	double mtReportSum; // master side time for processing all reports
@@ -183,6 +189,6 @@ private:
 	bool archDoing;
 
 	// probe
-	size_t probeNeededUpdate, probeNeededPoint, probeNeededIter;
+	size_t probeNeededDelta, probeNeededPoint, probeNeededIter;
 	bool probeReached;
 };

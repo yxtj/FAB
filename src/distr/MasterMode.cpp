@@ -11,7 +11,7 @@ void Master::probeModeInit()
 {
 	(this->*initFun)();
 	probeReached = false;
-	probeNeededPoint = static_cast<size_t>(conf->probeRatio * nPoint);
+	probeNeededPoint = static_cast<size_t>(conf->probeRatio * nPointTotal);
 }
 
 void Master::probeModeProcess()
@@ -19,9 +19,10 @@ void Master::probeModeProcess()
 	size_t gbs = conf->batchSize;
 	while(!probeReached){
 		probeNeededIter = probeNeededPoint / gbs;
-		probeNeededUpdate = probeNeededPoint / gbs * nWorker;
+		probeNeededDelta = probeNeededPoint / gbs * nWorker;
 		probeReached = false;
 		broadcastBatchSize(gbs);
+		setTerminateCondition(0, probeNeededPoint, probeNeededDelta, probeNeededIter);
 		Timer tmr;
 		(this->*processFun)();
 		double time = tmr.elapseSd();
@@ -35,8 +36,8 @@ void Master::probeModeProcess()
 void Master::handleDeltaProbe(const std::string& data, const RPCInfo& info)
 {
 	(this->*deltaFun)(data, info);
-	++nUpdate;
-	if(nUpdate >= probeNeededUpdate){
+	++nDelta;
+	if(nDelta >= probeNeededDelta){
 		probeReached = true;
 		
 	}
@@ -96,10 +97,10 @@ void Master::tapProcess()
 				tl = t;
 			}
 		}
-		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " update: " << nUpdate;
+		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " #-delta: " << nDelta;
 		waitDeltaFromAny();
 		stat.t_dlt_wait += tmr.elapseSd();
-		int p = static_cast<int>(nUpdate / nWorker + 1);
+		int p = static_cast<int>(nDelta / nWorker + 1);
 		if(iter != p){
 			archiveProgress();
 			iter = p;
@@ -176,10 +177,10 @@ void Master::sapProcess()
 				tl = t;
 			}
 		}
-		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " update: " << nUpdate;
+		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " #-delta: " << nDelta;
 		waitDeltaFromAny();
 		stat.t_dlt_wait += tmr.elapseSd();
-		int p = static_cast<int>(nUpdate / nWorker + 1);
+		int p = static_cast<int>(nDelta / nWorker + 1);
 		if(iter != p){
 			archiveProgress();
 			iter = p;
@@ -245,7 +246,7 @@ void Master::aapProcess()
 	while(!terminateCheck()){
 		Timer tmr;
 		if(newIter){
-			VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;// << ", msg waiting: " << driver.queSize() << ", update: " << nUpdate;
+			VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;// << ", msg waiting: " << driver.queSize() << ", #-delta: " << nDelta;
 			//DVLOG_EVERY_N(ln / 10, 1) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
 			newIter = false;
 			if(VLOG_IS_ON(2) && iter % ln == 0){
@@ -254,11 +255,11 @@ void Master::aapProcess()
 				tl = t;
 			}
 		}
-		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " update: " << nUpdate;
+		VLOG_EVERY_N(ln, 2) << "In iteration: " << iter << " #-delta: " << nDelta;
 		waitDeltaFromAny();
 		stat.t_dlt_wait += tmr.elapseSd();
 		multicastParameter(lastDeltaSource.load());
-		int p = static_cast<int>(nUpdate / nWorker + 1);
+		int p = static_cast<int>(nDelta / nWorker + 1);
 		if(iter != p){
 			archiveProgress();
 			iter = p;
@@ -288,13 +289,13 @@ void Master::papProcess()
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
 		Timer tmr;
-		VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;// << ", msg waiting: " << driver.queSize() << ", update: " << nUpdate;
+		VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;// << ", msg waiting: " << driver.queSize() << ", #-delta: " << nDelta;
 		//DVLOG_EVERY_N(ln / 10, 1) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
 		if(VLOG_IS_ON(2) && iter % ln == 0){
 			double t = tmrTrain.elapseSd();
 			VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl);
 			tl = t;
-			double mtu = mtUpdateSum / nUpdate;
+			double mtu = mtDeltaSum / nDelta;
 			double mtb = mtParameterSum / stat.n_par_send;
 			double mtr = mtReportSum / nReport;
 			double mto = mtOther / iter;
@@ -333,12 +334,12 @@ void Master::handleDeltaBsp(const std::string & data, const RPCInfo & info)
 	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	stat.n_point += deltaMsg.first;
 	applyDelta(deltaMsg.second, s);
+	nPoint += deltaMsg.first;
+	++nDelta;
 	rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
 	//sendReply(info, MType::DDelta);
-	++stat.n_dlt_recv;
 }
 
 void Master::handleDeltaTap(const std::string & data, const RPCInfo & info)
@@ -347,13 +348,12 @@ void Master::handleDeltaTap(const std::string & data, const RPCInfo & info)
 	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	stat.n_point += deltaMsg.first;
 	applyDelta(deltaMsg.second, s);
-	++nUpdate;
+	nPoint += deltaMsg.first;
+	++nDelta;
 	//rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
 	//sendReply(info);
-	++stat.n_dlt_recv;
 	// directly send new parameter
 	sendParameter(s);
 }
@@ -373,13 +373,13 @@ void Master::handleDeltaSsp(const std::string & data, const RPCInfo & info)
 			accumulateDeltaNext(deltaIter[s] - iter, deltaMsg.second, deltaMsg.first);
 		}
 	}
-	++nUpdate;
+	nPoint += deltaMsg.first;
+	++nDelta;
 	//applyDelta(deltaMsg.second, s); // called at the main process
 	//rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
 	//rph.input(typeDDeltaN, s);
 	//sendReply(info);
-	++stat.n_dlt_recv;
 }
 
 void Master::handleDeltaSap(const std::string & data, const RPCInfo & info)
@@ -388,13 +388,12 @@ void Master::handleDeltaSap(const std::string & data, const RPCInfo & info)
 	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	stat.n_point += deltaMsg.first;
 	applyDelta(deltaMsg.second, s);
-	++nUpdate;
+	nPoint += deltaMsg.first;
+	++nDelta;
 	//rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
 	//sendReply(info);
-	++stat.n_dlt_recv;
 	// directly send new parameter
 	sendParameter(s);
 }
@@ -403,14 +402,14 @@ void Master::handleDeltaFsp(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
 	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
-	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
 	accumulateDelta(deltaMsg.second, deltaMsg.first);
 	//applyDelta(deltaMsg.second, s); // called at the main process
+	nPoint += deltaMsg.first;
+	++nDelta;
 	rph.input(typeDDeltaAll, s);
 	//rph.input(typeDDeltaAny, s);
 	//sendReply(info);
-	++stat.n_dlt_recv;
 }
 
 void Master::handleDeltaAap(const std::string & data, const RPCInfo & info)
@@ -419,18 +418,17 @@ void Master::handleDeltaAap(const std::string & data, const RPCInfo & info)
 	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	stat.n_point += deltaMsg.first;
 	applyDelta(deltaMsg.second, s);
-	++nUpdate;
+	nPoint += deltaMsg.first;
+	++nDelta;
 	//static vector<int> cnt(nWorker, 0);
 	//++cnt[s];
-	//VLOG_EVERY_N(ln/10, 1) << "Update: " << nUpdate << " rsp: " << cnt << " r-pkg: " << net->stat_recv_pkg;
+	//VLOG_EVERY_N(ln/10, 1) << "#-delta: " << nDelta << " rsp: " << cnt << " r-pkg: " << net->stat_recv_pkg;
 	//rph.input(typeDDeltaAll, s);
 	lastDeltaSource = s;
 	rph.input(typeDDeltaAny, s);
 	if(conf->aapWait)
 		sendReply(info, MType::DDelta);
-	++stat.n_dlt_recv;
 	// broadcast new parameter in main thread
 }
 
@@ -440,10 +438,9 @@ void Master::handleDeltaPap(const std::string& data, const RPCInfo& info)
 	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	stat.n_point += deltaMsg.first;
 	applyDelta(deltaMsg.second, s);
+	nPoint += deltaMsg.first;
+	++nDelta;
 	rph.input(typeDDeltaAll, s);
-	++nUpdate;
-	++stat.n_dlt_recv;
-	mtUpdateSum += tmr.elapseSd();
+	mtDeltaSum += tmr.elapseSd();
 }
