@@ -31,7 +31,7 @@ void EM_KMeans::prepare()
 		size_t s = pd->size();
 		for(size_t i = 0; i < s; ++i){
 			pm->getKernel()->initVariables(
-				pd->get(i).x, pm->getParameter().weights, pd->get(i).y, nullptr);
+				pd->get(i).x, pm->getParameter().weights, pd->get(i).y, &h[i]); // replace nullprt to &h[i]
 		}
 	}
 }
