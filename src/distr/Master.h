@@ -77,8 +77,8 @@ private:
 
 	size_t estimateGlobalBatchSize();
 	size_t estimateLocalReportSize(const bool quick = false);
-	// global batch size, local report size. send 0 means keeping the old one
-	void broadcastSizeConf(const size_t gbs, const size_t lrs);
+
+	void updateOnlineLoss(const double loss, const int source);
 
 // signal logic
 public:
@@ -88,6 +88,8 @@ public:
 	void broadcastSignalPause();
 	void broadcastSignalContinue();
 	void broadcastSignalTerminate();
+	// global batch size, local report size. send 0 means keeping the old one
+	void broadcastSizeConf(const size_t gbs, const size_t lrs);
 	void waitDeltaFromAny(); // dont reset suDeltaAny
 	void waitDeltaFromAll(); // reset suDeltaAll
 	void gatherDelta();
@@ -149,7 +151,7 @@ private:
 	size_t nDelta; // # of received delta, usually used for asynchronous cases
 	double mtParameterSum; // master side time for sending all parameters
 	double mtOther; // time other than processing/sending parameter, delta and report. include: archive, log
-	double lossGlobal; // the loss for one global batch
+	double lossOnline; // the loss for one global batch
 
 	double timeOffset; // used for accounting time if resumed from previous archive
 	Timer tmrTrain;

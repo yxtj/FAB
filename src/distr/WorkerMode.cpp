@@ -20,11 +20,11 @@ void Worker::probeModeProcess()
 	size_t probeNeededPoint = static_cast<size_t>(conf->probeRatio * pdh->size());
 	double loss = calcLoss(0, probeNeededPoint);
 	sendLoss(loss);
-//	while(1){
+	while(1){
 		LOG(INFO) << "waiting for new batch size";
 		suConf.wait_n_reset();
 		(this->*processFun)();
-//	}
+	}
 }
 
 void Worker::handleParameterProbe(const std::string& data, const RPCInfo& info)
@@ -46,6 +46,7 @@ void Worker::bspProcess()
 		Timer tmr;
 		size_t left = localBatchSize;
 		size_t n_used = 0;
+		double loss = 0.0;
 		double dly = speedFactor.generate();
 		//VLOG_EVERY_N(ln, 2) << "dly=" << dly;
 		clearDelta();
@@ -55,13 +56,14 @@ void Worker::bspProcess()
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
+			loss += dr.loss;
 		} while(!exitTrain && left > 0);
 		if(trainer->needAveragedDelta())
 			averageDelta(n_used);
 		stat.t_dlt_calc += tmr.elapseSd();
 		DVLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
-		sendDelta(bfDelta, n_used);
+		sendDelta(bfDelta, n_used, loss);
 		if(exitTrain == true){
 			break;
 		}
@@ -95,6 +97,7 @@ void Worker::tapProcess()
 		if(iter == 1)
 			left += localBatchSize * localID / nWorker;
 		size_t n_used = 0;
+		double loss = 0.0;
 		double dly = speedFactor.generate();
 		clearDelta();
 		do{
@@ -103,13 +106,14 @@ void Worker::tapProcess()
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
+			loss += dr.loss;
 		} while(!exitTrain && left > 0);
 		if(trainer->needAveragedDelta())
 			averageDelta(n_used);
 		stat.t_dlt_calc += tmr.elapseSd();
 		DVLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
-		sendDelta(bfDelta, n_used);
+		sendDelta(bfDelta, n_used, loss);
 		if(exitTrain == true){
 			break;
 		}
@@ -140,6 +144,7 @@ void Worker::sspProcess()
 		Timer tmr;
 		size_t left = localBatchSize;
 		size_t n_used = 0;
+		double loss = 0.0;
 		double dly = speedFactor.generate();
 		clearDelta();
 		do{
@@ -148,13 +153,14 @@ void Worker::sspProcess()
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
+			loss += dr.loss;
 		} while(!exitTrain && left > 0);
 		if(trainer->needAveragedDelta())
 			averageDelta(n_used);
 		stat.t_dlt_calc += tmr.elapseSd();
 		DVLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
-		sendDelta(bfDelta, n_used);
+		sendDelta(bfDelta, n_used, loss);
 		if(exitTrain == true){
 			break;
 		}
@@ -191,6 +197,7 @@ void Worker::sapProcess()
 		if(iter == 1)
 			left += localBatchSize * localID / nWorker;
 		size_t n_used = 0;
+		double loss = 0.0;
 		double dly = speedFactor.generate();
 		clearDelta();
 		do{
@@ -199,13 +206,14 @@ void Worker::sapProcess()
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
+			loss += dr.loss;
 		} while(!exitTrain && left > 0);
 		if(trainer->needAveragedDelta())
 			averageDelta(n_used);
 		stat.t_dlt_calc += tmr.elapseSd();
 		DVLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
-		sendDelta(bfDelta, n_used);
+		sendDelta(bfDelta, n_used, loss);
 		if(exitTrain == true){
 			break;
 		}
@@ -239,6 +247,7 @@ void Worker::fspProcess()
 		Timer tmr;
 		size_t left = trainer->pd->size();
 		size_t n_used = 0;
+		double loss = 0.0;
 		double dly = speedFactor.generate();
 		clearDelta();
 		while(allowTrain && !exitTrain && left != 0) {
@@ -247,6 +256,7 @@ void Worker::fspProcess()
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
+			loss += dr.loss;
 		}
 		// wait until allowTrain is set to false
 		while(allowTrain == true)
@@ -257,7 +267,7 @@ void Worker::fspProcess()
 		DVLOG_EVERY_N(ln, 2) << "  calculate delta with " << n_used << " data points";
 		DVLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
-		sendDelta(bfDelta, n_used);
+		sendDelta(bfDelta, n_used, loss);
 		if(exitTrain == true){
 			break;
 		}
@@ -291,6 +301,7 @@ void Worker::aapProcess()
 		if(iter == 1)
 			left += localBatchSize * localID / nWorker;
 		size_t n_used = 0;
+		double loss = 0.0;
 		double dly = speedFactor.generate();
 		clearDelta();
 		bool newBatch = true;
@@ -301,6 +312,7 @@ void Worker::aapProcess()
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
+			loss += dr.loss;
 			//DVLOG(3) <<"tmp: "<< tmp;
 			DVLOG_EVERY_N(ln, 2) << "  calculate delta with " << dr.n_scanned << " data points, left: " << left;
 			if(dr.n_reported != 0){
@@ -322,7 +334,7 @@ void Worker::aapProcess()
 			averageDelta(n_used);
 		stat.t_dlt_calc += tmr.elapseSd();
 		DVLOG_EVERY_N(ln, 2) << "  send delta";
-		sendDelta(bfDelta, n_used);
+		sendDelta(bfDelta, n_used, loss);
 		//if(conf->aapWait)
 		//	waitParameter();
 		//stat.t_par_wait += tmr.elapseSd();
@@ -392,7 +404,7 @@ void Worker::papProcess()
 			stat.t_dlt_calc += tmr.elapseSd();
 			DVLOG_EVERY_N(ln, 2) << "  send delta";
 			tmr.restart();
-			sendDelta(bfDelta, n_used);
+			sendDelta(bfDelta, n_used, loss);
 			requestingDelta = false;
 			++n_delta;
 			t_delta += tmr.elapseSd();
