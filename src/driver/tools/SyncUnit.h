@@ -41,10 +41,11 @@ struct SyncUnit{
 	void notify();
 
 	void reset();
+	bool ready() const { return flag; }
 private:
 	std::mutex m;
 	std::condition_variable cv;
-	bool ready=false;
+	bool flag=false;
 };
 
 #endif /* DRIVER_TOOLS_SYNCUNIT_H_ */

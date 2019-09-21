@@ -4,6 +4,7 @@
 #include "logging/logging.h"
 #include "util/Timer.h"
 #include "math/accumulate.h"
+#include <tuple>
 #include <future>
 #include <numeric>
 
@@ -24,7 +25,7 @@ Master::Master() : Runner() {
 	mtParameterSum = 0.0;
 	mtOther = 0.0;
 	timeOffset = 0.0;
-	lossGlobal = 0.0;
+	lossOnline, lossGlobal = 0.0;
 	pie = nullptr;
 	prs = nullptr;
 	lastArchIter = 0;
@@ -487,11 +488,6 @@ size_t Master::optFkGlobalBatchSize(){
 	return curk;
 }
 
-void Master::broadcastBatchSize(const size_t gbs)
-{
-	net->broadcast(CType::NormalControl, make_pair(MType::FGlobalBatchSize, gbs));
-}
-
 size_t Master::estimateLocalReportSize(const bool quick)
 {
 	double mtr = mtReportSum / nReport;
@@ -512,9 +508,9 @@ size_t Master::estimateLocalReportSize(const bool quick)
 	}
 }
 
-void Master::broadcastReportSize(const size_t lrs)
+void Master::updateOnlineLoss(const double loss, const int source)
 {
-	net->broadcast(CType::NormalControl, make_pair(MType::FLocalReportSize, lrs));
+	lossOnline = (lossOnline * (nWorker - 1) + loss) / nWorker;
 }
 
 void Master::broadcastSizeConf(const size_t gbs, const size_t lrs)
@@ -572,12 +568,13 @@ void Master::gatherDelta()
 	suDeltaAll.wait();
 }
 
-void Master::gatherLoss()
+double Master::gatherLoss()
 {
 	suLoss.reset();
-	lossGlobal = 0.0;
+	lossOnline = 0.0;
 	net->broadcast(CType::NormalControl, MType::DRLoss);
 	suLoss.wait();
+	return lossOnline;
 }
 
 // handler - normal control
@@ -697,7 +694,7 @@ void Master::handleReport(const std::string& data, const RPCInfo& info)
 	stat.t_data_deserial += tmr.elapseSd();
 	int wid = wm.nid2lid(info.source);
 	bool flag = false;
-	// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending
+	// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending, loss
 	{
 		lock_guard<mutex> lg(mReportProc);
 		// int t = reportProcEach[wid];
@@ -712,11 +709,15 @@ void Master::handleReport(const std::string& data, const RPCInfo& info)
 		wtReport[wid] = report[3];
 		//}
 		// lossGlobal= (lossGlobal* (nWorker - 1) + report[4]) / nWorker; // estimated loss
+		updateOnlineLoss(report[4], wid); // estimated loss
+
 		lossGlobal += report[4]; /// accumulate loss
 		wtu = wtu == 0 ? report[5] : (report[5] + wtu)/2; /// worker update time
 		if(reportProcTotal >= globalBatchSize) /// > conf->batchSize)
 			suPap.notify();
 	}
+	if(reportProcTotal > conf->batchSize)
+		suPap.notify();
 	++nReport;
 	mtReportSum += tmr.elapseSd();
 }
@@ -725,18 +726,19 @@ void Master::handleLoss(const std::string& data, const RPCInfo& info)
 {
 	double loss = deserialize<double>(data);
 	int s = wm.nid2lid(info.source);
-	lossGlobal += loss;
+	lossOnline += loss;
 	rph.input(MType::DLoss, s);
 }
 
 void Master::handleDeltaTail(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
-	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
+	auto deltaMsg = deserialize<tuple<size_t, vector<double>, double>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	applyDelta(deltaMsg.second, s);
-	++stat.n_dlt_recv;
+	applyDelta(get<1>(deltaMsg), s);
+	updateOnlineLoss(get<2>(deltaMsg), s);
+	++nDelta;
 }
 
 void Master::handleDeltaIgnore(const std::string& data, const RPCInfo& info)

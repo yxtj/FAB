@@ -226,11 +226,11 @@ void Worker::accumulateDelta(const std::vector<double>& delta)
 		bfDelta[i] += delta[i];
 }
 
-void Worker::sendDelta(std::vector<double>& delta, const size_t cnt)
+void Worker::sendDelta(std::vector<double>& delta, const size_t cnt, const double loss)
 {
 	DVLOG(3) << "send delta: " << delta;
 	//DVLOG_EVERY_N(ln, 1) << "n-send: " << iter << " un-cmt msg: " << net->pending_pkgs() << " cmt msg: " << net->stat_send_pkg;
-	net->send(masterNID, MType::DDelta, make_pair(move(cnt), move(delta)));
+	net->send(masterNID, MType::DDelta, make_tuple(move(cnt), move(delta), move(loss)));
 	++stat.n_dlt_send;
 }
 
@@ -363,12 +363,6 @@ void Worker::handleNormalControl(const std::string & data, const RPCInfo & info)
 	case MType::CTrainContinue:
 		handleContinue(data.substr(sizeof(int)), info);
 		break;
-	case MType::FGlobalBatchSize:
-		handleMetaConfGlobalBatchSize(data.substr(sizeof(int)), info);
-		break;
-	case MType::FLocalReportSize:
-		handleMetaConfLocalReportSize(data.substr(sizeof(int)), info);
-		break;
 	case MType::FSizeConf:
 		handleMetaConf(data.substr(sizeof(int)), info);
 		break;
@@ -446,18 +440,7 @@ void Worker::handleMetaConf(const std::string& data, const RPCInfo& info)
 		localBatchSize = (this->*lbsFun)(p.first);
 	if(p.second != 0)
 		localReportSize = p.second;
-}
-
-void Worker::handleMetaConfGlobalBatchSize(const std::string& data, const RPCInfo& info)
-{
-	size_t gbs = deserialize<size_t>(data);
-	localBatchSize = (this->*lbsFun)(gbs);
-}
-
-void Worker::handleMetaConfLocalReportSize(const std::string& data, const RPCInfo& info)
-{
-	size_t lrs = deserialize<size_t>(data);
-	localReportSize = lrs;
+	suConf.notify();
 }
 
 void Worker::handleImmediateControl(const std::string & data, const RPCInfo & info)

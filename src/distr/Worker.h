@@ -60,7 +60,7 @@ private:
 	void clearDelta();
 	void averageDelta(const size_t size);
 	void accumulateDelta(const std::vector<double>& delta);
-	void sendDelta(std::vector<double>& delta, const size_t cnt);
+	void sendDelta(std::vector<double>& delta, const size_t cnt, const double loss);
 
 	void initializeParameter();
 	void bufferParameter(Parameter& p);
@@ -94,8 +94,6 @@ public:
 	void handleLossRequest(const std::string& data, const RPCInfo& info);
 
 	void handleMetaConf(const std::string& data, const RPCInfo& info);
-	void handleMetaConfGlobalBatchSize(const std::string& data, const RPCInfo& info);
-	void handleMetaConfLocalReportSize(const std::string& data, const RPCInfo& info);
 
 	void handleImmediateControl(const std::string& data, const RPCInfo& info);
 	void handleTerminate(const std::string& data, const RPCInfo& info);
@@ -119,6 +117,7 @@ private:
 	SyncUnit suOnline;
 	SyncUnit suDatasetInfo;
 	SyncUnit suStart;
+	SyncUnit suConf;
 	
 	bool hasNewParam;
 	std::mutex mParam;

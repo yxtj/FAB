@@ -12,22 +12,28 @@ void Master::probeModeInit()
 	(this->*initFun)();
 	probeReached = false;
 	probeNeededPoint = static_cast<size_t>(conf->probeRatio * nPointTotal);
+	lossOnline = 0.0;
+	suLoss.reset();
 }
 
 void Master::probeModeProcess()
 {
-	size_t gbs = conf->batchSize;
-	while(!probeReached){
+	Parameter p0 = model.getParameter();
+	suLoss.wait_n_reset();
+	double l0 = lossOnline;
+	// TODO
+	vector<size_t> gbsList = { conf->batchSize, conf->batchSize / 2, conf->batchSize / 4 };
+	for(size_t gbs : gbsList){
 		probeNeededIter = probeNeededPoint / gbs;
 		probeNeededDelta = probeNeededPoint / gbs * nWorker;
 		probeReached = false;
-		broadcastBatchSize(gbs);
+		broadcastSizeConf(gbs, 0);
 		setTerminateCondition(0, probeNeededPoint, probeNeededDelta, probeNeededIter);
 		Timer tmr;
 		(this->*processFun)();
 		double time = tmr.elapseSd();
 		gatherLoss();
-		double rate = lossGlobal / time;
+		double rate = lossOnline / time;
 
 		gbs /= 2;
 	}
@@ -305,7 +311,7 @@ void Master::papProcess()
 			double wtr = mean(wtReport);
 
 			VLOG(2) << "mtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto=" << mtOther
-				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr << "\tloss=" << lossGlobal;
+				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr << "\tloss=" << lossOnline;
 		}
 		mtOther += tmr.elapseSd();
 		// wait until the report counts reach a global mini batch
@@ -451,12 +457,14 @@ void Master::papProbe()
 void Master::handleDeltaBsp(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
-	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
+	auto deltaMsg = deserialize<tuple<size_t, vector<double>, double>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	applyDelta(deltaMsg.second, s);
-	nPoint += deltaMsg.first;
+	nPoint += get<0>(deltaMsg);
+	applyDelta(get<1>(deltaMsg), s);
+	updateOnlineLoss(get<2>(deltaMsg), s);
 	++nDelta;
+
 	rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
 	//sendReply(info, MType::DDelta);
@@ -465,12 +473,14 @@ void Master::handleDeltaBsp(const std::string & data, const RPCInfo & info)
 void Master::handleDeltaTap(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
-	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
+	auto deltaMsg = deserialize<tuple<size_t, vector<double>, double>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	applyDelta(deltaMsg.second, s);
-	nPoint += deltaMsg.first;
+	nPoint += get<0>(deltaMsg);
+	applyDelta(get<1>(deltaMsg), s);
+	updateOnlineLoss(get<2>(deltaMsg), s);
 	++nDelta;
+
 	//rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
 	//sendReply(info);
@@ -481,19 +491,22 @@ void Master::handleDeltaTap(const std::string & data, const RPCInfo & info)
 void Master::handleDeltaSsp(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
-	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
+	auto deltaMsg = deserialize<tuple<size_t, vector<double>, double>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
+	size_t n = get<0>(deltaMsg);
 	{
 		++deltaIter[s];
 		lock_guard<mutex> lg(mbfd);
+		// applied in the main process
 		if(iter == deltaIter[s]){
-			accumulateDelta(deltaMsg.second, deltaMsg.first);
+			accumulateDelta(get<1>(deltaMsg), n);
 		} else{
-			accumulateDeltaNext(deltaIter[s] - iter, deltaMsg.second, deltaMsg.first);
+			accumulateDeltaNext(deltaIter[s] - iter, get<1>(deltaMsg), n);
 		}
 	}
-	nPoint += deltaMsg.first;
+	updateOnlineLoss(get<2>(deltaMsg), s);
+	nPoint += n;
 	++nDelta;
 	//applyDelta(deltaMsg.second, s); // called at the main process
 	//rph.input(typeDDeltaAll, s);
@@ -505,12 +518,14 @@ void Master::handleDeltaSsp(const std::string & data, const RPCInfo & info)
 void Master::handleDeltaSap(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
-	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
+	auto deltaMsg = deserialize<tuple<size_t, vector<double>, double>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	applyDelta(deltaMsg.second, s);
-	nPoint += deltaMsg.first;
+	nPoint += get<0>(deltaMsg);
+	applyDelta(get<1>(deltaMsg), s);
+	updateOnlineLoss(get<2>(deltaMsg), s);
 	++nDelta;
+
 	//rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
 	//sendReply(info);
@@ -521,12 +536,15 @@ void Master::handleDeltaSap(const std::string & data, const RPCInfo & info)
 void Master::handleDeltaFsp(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
-	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
+	auto deltaMsg = deserialize<tuple<size_t, vector<double>, double>>(data);
 	int s = wm.nid2lid(info.source);
-	accumulateDelta(deltaMsg.second, deltaMsg.first);
-	//applyDelta(deltaMsg.second, s); // called at the main process
-	nPoint += deltaMsg.first;
+	size_t n = get<0>(deltaMsg);
+	nPoint += n;
+	//applyDelta(get<1>(deltaMsg), s);
+	accumulateDelta(get<1>(deltaMsg), n); // applied in the main process
+	updateOnlineLoss(get<2>(deltaMsg), s);
 	++nDelta;
+
 	rph.input(typeDDeltaAll, s);
 	//rph.input(typeDDeltaAny, s);
 	//sendReply(info);
@@ -535,11 +553,12 @@ void Master::handleDeltaFsp(const std::string & data, const RPCInfo & info)
 void Master::handleDeltaAap(const std::string & data, const RPCInfo & info)
 {
 	Timer tmr;
-	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
+	auto deltaMsg = deserialize<tuple<size_t, vector<double>, double>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	applyDelta(deltaMsg.second, s);
-	nPoint += deltaMsg.first;
+	nPoint += get<0>(deltaMsg);
+	applyDelta(get<1>(deltaMsg), s);
+	updateOnlineLoss(get<2>(deltaMsg), s);
 	++nDelta;
 	//static vector<int> cnt(nWorker, 0);
 	//++cnt[s];
@@ -555,11 +574,12 @@ void Master::handleDeltaAap(const std::string & data, const RPCInfo & info)
 void Master::handleDeltaPap(const std::string& data, const RPCInfo& info)
 {
 	Timer tmr;
-	auto deltaMsg = deserialize<pair<size_t, vector<double>>>(data);
+	auto deltaMsg = deserialize<tuple<size_t, vector<double>, double>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	applyDelta(deltaMsg.second, s);
-	nPoint += deltaMsg.first;
+	nPoint += get<0>(deltaMsg);
+	applyDelta(get<1>(deltaMsg), s);
+	updateOnlineLoss(get<2>(deltaMsg), s);
 	++nDelta;
 	rph.input(typeDDeltaAll, s);
 	mtDeltaSum += tmr.elapseSd();
