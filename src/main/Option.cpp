@@ -194,7 +194,7 @@ bool Option::processMode(){
 			ch += 'a' - 'A';
 	}
 	vector<string> t = getStringList(conf.mode, ":-, ");
-	vector<string> supported = { "bsp", "tap", "ssp", "sap", "fsp", "aap", "pap" };
+	vector<string> supported = { "bsp", "tap", "ssp", "sap", "fsp", "aap", "pap", "pap2" };
 	auto it = find(supported.begin(), supported.end(), t[0]);
 	if(it == supported.end())
 		return false;
@@ -206,7 +206,7 @@ bool Option::processMode(){
 			conf.staleGap = 1;
 	} else if(t[0]=="aap"){
 		conf.aapWait = t.size() >= 2 && beTrueOption(t[1]);
-	} else if(t[0] == "pap"){
+	} else if(t[0] == "pap" || t[0] == "pap2"){
 		conf.papDynamicBatchSize = t.size() > 1 ? beTrueOption(t[1]) : false;
 		conf.papDynamicReportFreq = t.size() > 2 ? beTrueOption(t[2]) : false;
 	}

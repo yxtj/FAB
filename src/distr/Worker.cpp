@@ -14,6 +14,8 @@ Worker::Worker() : Runner() {
 	iterParam = 0;
 	localBatchSize = 1;
 	//bfDeltaDpCount = 0;
+	n_updParam = 0;
+	t_updParam = 0;
 
 	hasNewParam = false;
 	allowTrain = true;
@@ -130,7 +132,7 @@ void Worker::bindMode()
 		processFun = &Worker::aapProcess;
 		paramFun = &Worker::handleParameterAap;
 		lbsFun = &Worker::calcLocalBatchSizeWhole;
-	} else if(conf->mode == "pap"){
+	} else if(conf->mode == "pap" || conf->mode == "pap2"){
 		initFun = &Worker::papInit;
 		processFun = &Worker::papProcess;
 		paramFun = &Worker::handleParameterPap;
@@ -252,6 +254,7 @@ void Worker::bufferParameter(Parameter & p)
 
 void Worker::applyBufferParameter()
 {
+	Timer tmr;
 	//DLOG(INFO)<<"has new parameter: "<<hasNewParam;
 	if(!hasNewParam)
 		return;
@@ -264,6 +267,8 @@ void Worker::applyBufferParameter()
 	//mModel.unlock();
 	hasNewParam = false;
 	//mParam.unlock();
+	n_updParam++;
+	t_updParam += tmr.elapseSd();
 }
 
 void Worker::waitParameter()

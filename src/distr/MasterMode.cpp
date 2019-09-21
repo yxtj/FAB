@@ -326,6 +326,126 @@ void Master::papProcess()
 	}
 }
 
+void Master::pap2Process()
+{
+	papProbe();
+	VLOG(1) << "Finish prob with glb= " << globalBatchSize;
+	
+	double tl = tmrTrain.elapseSd();
+	while(!terminateCheck()){
+		Timer tmr;
+		VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;
+		if(VLOG_IS_ON(2) && iter % ln == 0){
+			double t = tmrTrain.elapseSd();
+			VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl);
+			tl = t;
+			double mtu = mtDeltaSum / nDelta;
+			double mtb = mtParameterSum / stat.n_par_send;
+			double mtr = mtReportSum / nReport;
+			double mto = mtOther / iter;
+
+			double wtd = hmean(wtDatapoint);
+			double wtc = mean(wtDelta);
+			double wtr = mean(wtReport);
+
+			VLOG(2) << "mtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto=" << mto
+				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr << "\tloss=" << lossGlobal;
+		}
+		mtOther += tmr.elapseSd();
+		// wait until the report counts reach a global mini batch
+		suPap.wait_n_reset();
+		//// online change globalBatchSize
+		if(conf->papDynamicBatchSize) {
+			globalBatchSize = max(globalBatchSize, estimateGlobalBatchSize());
+			VLOG(2) << "gbs=" << globalBatchSize << "\tlrs=" << localreportSize;
+		}
+		gatherDelta();
+		stat.t_dlt_wait += tmr.elapseSd();
+		broadcastParameter();
+
+		tmr.restart();
+		archiveProgress();
+		++iter;
+		mtOther += tmr.elapseSd();
+	}
+}
+
+/// pap with online probe
+void Master::papProbe()
+{
+	double tl = tmrTrain.elapseSd();
+	minfk = -1;
+	probeReached = false;
+
+	while(!terminateCheck() && !probeReached){
+		Timer tmr;
+		// VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;
+		//DVLOG_EVERY_N(ln / 10, 1) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
+		if(VLOG_IS_ON(2) && iter % ln == 0){
+			double t = tmrTrain.elapseSd();
+			VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl);
+			tl = t;
+			double mtu = mtDeltaSum / nDelta;
+			double mtb = mtParameterSum / stat.n_par_send;
+			double mtr = mtReportSum / nReport;
+			double mto = mtOther / iter;
+
+			double wtd = hmean(wtDatapoint);
+			double wtc = mean(wtDelta);
+			double wtr = mean(wtReport);
+
+			VLOG(2) << "mtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto=" << mto
+				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr << "\tloss=" << lossGlobal;
+		}
+		mtOther += tmr.elapseSd();
+		// wait until the report counts reach a global mini batch
+		suPap.wait_n_reset();
+
+		gatherDelta();
+		stat.t_dlt_wait += tmr.elapseSd();
+
+		/// reset gbs
+		if (conf->papDynamicBatchSize && nPoint > nPointTotal * conf->probeRatio) { 
+			double gk = lossGlobal/nPoint;
+			gkProb[globalBatchSize] = gk;
+			double wtd = hmean(wtDatapoint);
+			double fk = gk / (wtd/nWorker + wtu/globalBatchSize);
+			double mink = estimateGlobalBatchSize();
+
+			VLOG(2) << "PROB k=" << globalBatchSize << "\tnp=" << nPoint << "\tgk=" << gk 
+				<< "\tfk=" << fk << "\twtd=" << wtd << "\twtu=" << wtu
+				<< "\tminfk=" << minfk << "\tmink=" << mink << "\tloss=" << lossGlobal;
+		
+			if (minfk < 0 || minfk > fk) {
+				minfk = fk;
+				if (globalBatchSize / 2 < mink) {
+					// probeReached = true;
+					break;
+				}
+				globalBatchSize /= 2;
+				model.setParameter(initP);
+				localreportSize = globalBatchSize/nWorker/2;
+				broadcastReportSize(localreportSize);
+			}
+			else {
+				globalBatchSize *= 2;
+				// probeReached = true;
+				break;
+			}
+			iter = 0;
+			nPoint = 0;
+			lossGlobal = 0;
+		}
+
+		broadcastParameter();
+
+		tmr.restart();
+		// archiveProgress();
+		++iter;
+		mtOther += tmr.elapseSd();
+	}
+}
+
 // ---- handlers ----
 
 void Master::handleDeltaBsp(const std::string & data, const RPCInfo & info)

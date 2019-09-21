@@ -31,6 +31,7 @@ Master::Master() : Runner() {
 	tmrArch.restart();
 	doArchive = false;
 	archDoing = false;
+	wtu = 0;
 }
 
 void Master::init(const ConfData* conf, const size_t lid)
@@ -165,6 +166,10 @@ void Master::bindMode()
 	} else if(conf->mode == "pap"){
 		initFun = &Master::papInit;
 		processFun = &Master::papProcess;
+		deltaFun = &Master::handleDeltaPap;
+	} else if(conf->mode == "pap2"){
+		initFun = &Master::papInit;
+		processFun = &Master::pap2Process;
 		deltaFun = &Master::handleDeltaPap;
 	} else{
 		LOG(FATAL) << "Unsupported mode: " << conf->mode;
@@ -375,6 +380,7 @@ void Master::coordinateParameter()
 			suParam.wait_n_reset();
 		}
 	}
+	initP.set(model.getParameter().weights); /// cache the initial parameter
 	broadcastParameter();
 }
 
@@ -458,7 +464,27 @@ size_t Master::estimateGlobalBatchSize()
 
 	double up = nWorker * (nWorker * (mtu + mtb) + mto - wtc);
 	double down = wtd + (wtr - nWorker * mtr) / localreportSize;
-	return max(static_cast<size_t>(up / down), conf->batchSize); // conf->batchSize offline opt K
+
+	VLOG(2) << "e gbs: up= " << up << "\tdn= " << down << "\tmtu=" << mtu << "\tmtb=" 
+		<< mtb << "\tmtr=" << mtr << "\tmto=" << mto << "\twtd=" << wtd << "\twtc=" 
+		<< wtc << "\twtr=" << wtr;
+
+	return static_cast<size_t>(up / down);
+	// return max(static_cast<size_t>(up / down), conf->batchSize); // conf->batchSize offline opt K
+}
+
+size_t Master::optFkGlobalBatchSize(){
+	double curmin = -1;
+	size_t curk = -1;
+	std::map<size_t, double>::iterator itr;
+	for (itr = gkProb.begin(); itr != gkProb.end(); itr++){
+		double fk = itr->second / ( hmean(wtDatapoint) / nWorker + wtu / globalBatchSize);
+		if (curmin == -1 || curmin > fk){
+			curmin = fk;
+			curk = itr->first;
+		}
+	}
+	return curk;
 }
 
 void Master::broadcastBatchSize(const size_t gbs)
@@ -674,17 +700,21 @@ void Master::handleReport(const std::string& data, const RPCInfo& info)
 	// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending
 	{
 		lock_guard<mutex> lg(mReportProc);
-		int t = reportProcEach[wid];
-		int cnt = static_cast<int>(report[0]);
-		reportProcEach[wid] = cnt;
-		reportProcTotal += cnt - t;
+		// int t = reportProcEach[wid];
+		// int cnt = static_cast<int>(report[0]);
+		// reportProcEach[wid] = cnt;
+		// reportProcTotal += cnt - t;
+		reportProcEach[wid] = static_cast<int>(report[0]);
+		reportProcTotal += reportProcEach[wid];
 		//if(conf->papSearchBatchSize || conf->papSearchReportFreq){
 		wtDatapoint[wid] = report[1];
 		wtDelta[wid] = report[2];
 		wtReport[wid] = report[3];
 		//}
-		lossGlobal= (lossGlobal* (nWorker - 1) + report[4]) / nWorker; // estimated loss
-		if(reportProcTotal > conf->batchSize)
+		// lossGlobal= (lossGlobal* (nWorker - 1) + report[4]) / nWorker; // estimated loss
+		lossGlobal += report[4]; /// accumulate loss
+		wtu = wtu == 0 ? report[5] : (report[5] + wtu)/2; /// worker update time
+		if(reportProcTotal >= globalBatchSize) /// > conf->batchSize)
 			suPap.notify();
 	}
 	++nReport;

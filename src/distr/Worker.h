@@ -132,6 +132,9 @@ private:
 
 	int iterParam;
 
+	size_t n_updParam; // pap: moniter paramter update time
+	double t_updParam;
+
 	//std::mutex mTrain;
 	std::atomic<bool> allowTrain;
 	std::atomic<bool> exitTrain;

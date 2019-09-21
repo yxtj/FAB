@@ -10,6 +10,7 @@
 #include <fstream>
 #include <mutex>
 #include <atomic>
+#include <map>
 
 class Master : public Runner{
 public:
@@ -48,6 +49,8 @@ private:
 	void aapProcess();
 	void papInit();
 	void papProcess();
+	void pap2Process();
+	void papProbe();
 
 // local logic
 private:
@@ -76,6 +79,7 @@ private:
 	void archiveProgress(const bool force = false);
 
 	size_t estimateGlobalBatchSize();
+	size_t optFkGlobalBatchSize();
 	void broadcastBatchSize(const size_t gbs); // global batch size
 	size_t estimateLocalReportSize(const bool quick = false);
 	void broadcastReportSize(const size_t lrs); // local report size
@@ -164,6 +168,11 @@ private:
 	SyncUnit suPap; // reported count reached a batch
 	size_t localreportSize;
 	size_t globalBatchSize;
+
+	Parameter initP; // cache init parameter for probe
+	std::map<size_t, double> gkProb; // cache probed gk
+	double minfk; // current minimum fk
+	double wtu;
 
 	std::vector<double> wtDatapoint; // worker side time per data point
 	std::vector<double> wtDelta; // worker side time per delta sending
