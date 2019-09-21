@@ -17,6 +17,7 @@ Master::Master() : Runner() {
 	nx = 0;
 	ny = 0;
 	nPointTotal = 0;
+	nPoint = 0;
 	iter = 0;
 	mtReportSum = 0.0;
 	nReport = 0;
@@ -697,12 +698,14 @@ void Master::handleReport(const std::string& data, const RPCInfo& info)
 	// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending, loss
 	{
 		lock_guard<mutex> lg(mReportProc);
+		
 		// int t = reportProcEach[wid];
 		// int cnt = static_cast<int>(report[0]);
 		// reportProcEach[wid] = cnt;
 		// reportProcTotal += cnt - t;
-		reportProcEach[wid] = static_cast<int>(report[0]);
+		reportProcEach[wid] = static_cast<int>(report[0]); /// only send the cnt between reports
 		reportProcTotal += reportProcEach[wid];
+
 		//if(conf->papSearchBatchSize || conf->papSearchReportFreq){
 		wtDatapoint[wid] = report[1];
 		wtDelta[wid] = report[2];

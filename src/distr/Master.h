@@ -80,7 +80,6 @@ private:
 
 	size_t estimateGlobalBatchSize();
 	size_t optFkGlobalBatchSize(); // compute opt k from f(k)
-	void broadcastBatchSize(const size_t gbs); // global batch size
 	size_t estimateLocalReportSize(const bool quick = false);
 
 	void updateOnlineLoss(const double loss, const int source);

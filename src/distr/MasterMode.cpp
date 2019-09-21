@@ -362,8 +362,11 @@ void Master::pap2Process()
 		suPap.wait_n_reset();
 		//// online change globalBatchSize
 		if(conf->papDynamicBatchSize) {
-			globalBatchSize = max(globalBatchSize, estimateGlobalBatchSize());
-			VLOG(2) << "gbs=" << globalBatchSize << "\tlrs=" << localreportSize;
+			globalBatchSize = max(optFkGlobalBatchSize(), estimateGlobalBatchSize());
+			localreportSize = globalBatchSize/nWorker/2;
+			broadcastSizeConf(globalBatchSize, localreportSize);
+			VLOG(2) << "gbs=" << globalBatchSize << "\tlrs=" << localreportSize
+				<< "\testimatedlrs=" << estimateLocalReportSize();
 		}
 		gatherDelta();
 		stat.t_dlt_wait += tmr.elapseSd();
@@ -431,7 +434,7 @@ void Master::papProbe()
 				globalBatchSize /= 2;
 				model.setParameter(initP);
 				localreportSize = globalBatchSize/nWorker/2;
-				broadcastReportSize(localreportSize);
+				broadcastSizeConf(globalBatchSize, localreportSize);
 			}
 			else {
 				globalBatchSize *= 2;

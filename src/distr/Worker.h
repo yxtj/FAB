@@ -45,6 +45,7 @@ private:
 	void aapProcess();
 	void papInit();
 	void papProcess();
+	void pap2Process();
 	//void generalProcess();
 
 // local logic

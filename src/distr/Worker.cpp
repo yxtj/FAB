@@ -132,9 +132,14 @@ void Worker::bindMode()
 		processFun = &Worker::aapProcess;
 		paramFun = &Worker::handleParameterAap;
 		lbsFun = &Worker::calcLocalBatchSizeWhole;
-	} else if(conf->mode == "pap" || conf->mode == "pap2"){
+	} else if(conf->mode == "pap"){
 		initFun = &Worker::papInit;
 		processFun = &Worker::papProcess;
+		paramFun = &Worker::handleParameterPap;
+		lbsFun = &Worker::calcLocalBatchSizeDivide;
+	} else if(conf->mode == "pap2"){
+		initFun = &Worker::papInit;
+		processFun = &Worker::pap2Process;
 		paramFun = &Worker::handleParameterPap;
 		lbsFun = &Worker::calcLocalBatchSizeDivide;
 	} else{
