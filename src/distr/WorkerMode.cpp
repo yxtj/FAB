@@ -17,7 +17,14 @@ void Worker::probeModeInit()
 
 void Worker::probeModeProcess()
 {
-	(this->*processFun)();
+	size_t probeNeededPoint = static_cast<size_t>(conf->probeRatio * pdh->size());
+	double loss = calcLoss(0, probeNeededPoint);
+	sendLoss(loss);
+//	while(1){
+		LOG(INFO) << "waiting for new batch size";
+		suConf.wait_n_reset();
+		(this->*processFun)();
+//	}
 }
 
 void Worker::handleParameterProbe(const std::string& data, const RPCInfo& info)
@@ -35,7 +42,7 @@ void Worker::bspInit()
 void Worker::bspProcess()
 {
 	while(!exitTrain){
-		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
+		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;
 		Timer tmr;
 		size_t left = localBatchSize;
 		size_t n_used = 0;
@@ -52,13 +59,13 @@ void Worker::bspProcess()
 		if(trainer->needAveragedDelta())
 			averageDelta(n_used);
 		stat.t_dlt_calc += tmr.elapseSd();
-		VLOG_EVERY_N(ln, 2) << "  send delta";
+		DVLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
-		sendDelta(bfDelta, localBatchSize);
+		sendDelta(bfDelta, n_used);
 		if(exitTrain == true){
 			break;
 		}
-		VLOG_EVERY_N(ln, 2) << "  wait for new parameter";
+		DVLOG_EVERY_N(ln, 2) << "  wait for new parameter";
 		waitParameter();
 		if(exitTrain == true){
 			break;
@@ -81,7 +88,7 @@ void Worker::tapInit()
 void Worker::tapProcess()
 {
 	while(!exitTrain){
-		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
+		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;
 		Timer tmr;
 		size_t left = localBatchSize;
 		// make the reporting time more even
@@ -100,13 +107,13 @@ void Worker::tapProcess()
 		if(trainer->needAveragedDelta())
 			averageDelta(n_used);
 		stat.t_dlt_calc += tmr.elapseSd();
-		VLOG_EVERY_N(ln, 2) << "  send delta";
+		DVLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
-		sendDelta(bfDelta, localBatchSize);
+		sendDelta(bfDelta, n_used);
 		if(exitTrain == true){
 			break;
 		}
-		VLOG_EVERY_N(ln, 2) << "  wait for new parameter";
+		DVLOG_EVERY_N(ln, 2) << "  wait for new parameter";
 		waitParameter();
 		if(exitTrain == true){
 			break;
@@ -129,7 +136,7 @@ void Worker::sspInit()
 void Worker::sspProcess()
 {
 	while(!exitTrain){
-		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
+		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;
 		Timer tmr;
 		size_t left = localBatchSize;
 		size_t n_used = 0;
@@ -145,13 +152,13 @@ void Worker::sspProcess()
 		if(trainer->needAveragedDelta())
 			averageDelta(n_used);
 		stat.t_dlt_calc += tmr.elapseSd();
-		VLOG_EVERY_N(ln, 2) << "  send delta";
+		DVLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
-		sendDelta(bfDelta, localBatchSize);
+		sendDelta(bfDelta, n_used);
 		if(exitTrain == true){
 			break;
 		}
-		VLOG_EVERY_N(ln, 2) << "  wait for new parameter";
+		DVLOG_EVERY_N(ln, 2) << "  wait for new parameter";
 		while(!exitTrain && iter - iterParam > conf->staleGap){
 			waitParameter();
 		}
@@ -177,7 +184,7 @@ void Worker::sapProcess()
 {
 	localBatchSize = trainer->pd->size();
 	while(!exitTrain){
-		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
+		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;
 		Timer tmr;
 		size_t left = localBatchSize;
 		// make the reporting time more even
@@ -196,13 +203,13 @@ void Worker::sapProcess()
 		if(trainer->needAveragedDelta())
 			averageDelta(n_used);
 		stat.t_dlt_calc += tmr.elapseSd();
-		VLOG_EVERY_N(ln, 2) << "  send delta";
+		DVLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
-		sendDelta(bfDelta, localBatchSize);
+		sendDelta(bfDelta, n_used);
 		if(exitTrain == true){
 			break;
 		}
-		VLOG_EVERY_N(ln, 2) << "  wait for new parameter";
+		DVLOG_EVERY_N(ln, 2) << "  wait for new parameter";
 		while(!exitTrain && iter - iterParam > conf->staleGap){
 			waitParameter();
 		}
@@ -228,7 +235,7 @@ void Worker::fspProcess()
 {
 	localBatchSize = trainer->pd->size();
 	while(!exitTrain){
-		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";
+		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;
 		Timer tmr;
 		size_t left = trainer->pd->size();
 		size_t n_used = 0;
@@ -247,14 +254,14 @@ void Worker::fspProcess()
 		if(trainer->needAveragedDelta())
 			averageDelta(n_used);
 		stat.t_dlt_calc += tmr.elapseSd();
-		VLOG_EVERY_N(ln, 2) << "  calculate delta with " << n_used << " data points";
-		VLOG_EVERY_N(ln, 2) << "  send delta";
+		DVLOG_EVERY_N(ln, 2) << "  calculate delta with " << n_used << " data points";
+		DVLOG_EVERY_N(ln, 2) << "  send delta";
 		tmr.restart();
 		sendDelta(bfDelta, n_used);
 		if(exitTrain == true){
 			break;
 		}
-		VLOG_EVERY_N(ln, 2) << "  wait for new parameter";
+		DVLOG_EVERY_N(ln, 2) << "  wait for new parameter";
 		waitParameter(); // resumeTrain() by handleParameterFsb()
 		if(exitTrain == true){
 			break;
@@ -277,7 +284,7 @@ void Worker::aapInit()
 void Worker::aapProcess()
 {
 	while(!exitTrain){
-		VLOG_EVERY_N(ln, 1) << "Iteration " << iter << ": calculate delta";// << ". msg waiting: " << driver.queSize();
+		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;// << ". msg waiting: " << driver.queSize();
 		Timer tmr;
 		size_t left = localBatchSize;
 		// make the reporting time more even
@@ -295,7 +302,7 @@ void Worker::aapProcess()
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
 			//DVLOG(3) <<"tmp: "<< tmp;
-			VLOG_EVERY_N(ln, 2) << "  calculate delta with " << dr.n_scanned << " data points, left: " << left;
+			DVLOG_EVERY_N(ln, 2) << "  calculate delta with " << dr.n_scanned << " data points, left: " << left;
 			if(dr.n_reported != 0){
 				accumulateDelta(dr.delta);
 			}
@@ -314,7 +321,7 @@ void Worker::aapProcess()
 		if(trainer->needAveragedDelta())
 			averageDelta(n_used);
 		stat.t_dlt_calc += tmr.elapseSd();
-		VLOG_EVERY_N(ln, 2) << "  send delta";
+		DVLOG_EVERY_N(ln, 2) << "  send delta";
 		sendDelta(bfDelta, n_used);
 		//if(conf->aapWait)
 		//	waitParameter();
@@ -337,6 +344,7 @@ void Worker::papProcess()
 	size_t n_delta = 0, n_report = 0;
 
 	while(!exitTrain){
+		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;// << ". msg waiting: " << driver.queSize();
 		Timer tmr;
 		// DVLOG(3) << "current parameter: " << model.getParameter().weights;
 		size_t n_used = 0;
@@ -349,12 +357,11 @@ void Worker::papProcess()
 			tmr.restart(); //
 			resumeTrain();
 			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
-			//tie(cnt, bfDelta) = trainer->batchDelta(allowTrain, dataPointer, remainCnt, dly, -1);
 			updatePointer(dr.n_scanned, dr.n_reported);
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
 			loss += dr.loss;
-			VLOG_EVERY_N(ln, 2) << "  calculate delta with " << dr.n_scanned << " data points";
+			DVLOG_EVERY_N(ln, 2) << "  calculate delta with " << dr.n_scanned << " data points";
 			if(dr.n_reported!= 0){
 				accumulateDelta(dr.delta);
 			}
@@ -366,7 +373,7 @@ void Worker::papProcess()
 				vector<double> report = { static_cast<double>(n_used),
 					t_data / n_used, t_delta / n_delta, t_report / n_report, loss };
 				// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending
-				VLOG_EVERY_N(ln, 2) << "  send report: " << report;
+				DVLOG_EVERY_N(ln, 2) << "  send report: " << report;
 				sendReport(report);
 				++n_report;
 				t_report += tmr.elapseSd();
@@ -383,7 +390,7 @@ void Worker::papProcess()
 			if(trainer->needAveragedDelta())
 				averageDelta(n_used);
 			stat.t_dlt_calc += tmr.elapseSd();
-			VLOG_EVERY_N(ln, 2) << "  send delta";
+			DVLOG_EVERY_N(ln, 2) << "  send delta";
 			tmr.restart();
 			sendDelta(bfDelta, n_used);
 			requestingDelta = false;

@@ -76,9 +76,8 @@ private:
 	void archiveProgress(const bool force = false);
 
 	size_t estimateGlobalBatchSize();
-	void broadcastBatchSize(const size_t gbs); // global batch size
 	size_t estimateLocalReportSize(const bool quick = false);
-	void broadcastReportSize(const size_t lrs); // local report size
+	// global batch size, local report size. send 0 means keeping the old one
 	void broadcastSizeConf(const size_t gbs, const size_t lrs);
 
 // signal logic
@@ -92,7 +91,7 @@ public:
 	void waitDeltaFromAny(); // dont reset suDeltaAny
 	void waitDeltaFromAll(); // reset suDeltaAll
 	void gatherDelta();
-	void gatherLoss();
+	double gatherLoss();
 
 // handler
 public:

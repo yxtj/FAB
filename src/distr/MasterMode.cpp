@@ -12,16 +12,22 @@ void Master::probeModeInit()
 	(this->*initFun)();
 	probeReached = false;
 	probeNeededPoint = static_cast<size_t>(conf->probeRatio * nPointTotal);
+	lossGlobal = 0.0;
+	suLoss.reset();
 }
 
 void Master::probeModeProcess()
 {
-	size_t gbs = conf->batchSize;
-	while(!probeReached){
+	Parameter p0 = model.getParameter();
+	suLoss.wait_n_reset();
+	double l0 = lossGlobal;
+	// TODO
+	vector<size_t> gbsList = { conf->batchSize, conf->batchSize / 2, conf->batchSize / 4 };
+	for(size_t gbs : gbsList){
 		probeNeededIter = probeNeededPoint / gbs;
 		probeNeededDelta = probeNeededPoint / gbs * nWorker;
 		probeReached = false;
-		broadcastBatchSize(gbs);
+		broadcastSizeConf(gbs, 0);
 		setTerminateCondition(0, probeNeededPoint, probeNeededDelta, probeNeededIter);
 		Timer tmr;
 		(this->*processFun)();

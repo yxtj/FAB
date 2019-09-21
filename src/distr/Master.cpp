@@ -461,11 +461,6 @@ size_t Master::estimateGlobalBatchSize()
 	return max(static_cast<size_t>(up / down), conf->batchSize); // conf->batchSize offline opt K
 }
 
-void Master::broadcastBatchSize(const size_t gbs)
-{
-	net->broadcast(CType::NormalControl, make_pair(MType::FGlobalBatchSize, gbs));
-}
-
 size_t Master::estimateLocalReportSize(const bool quick)
 {
 	double mtr = mtReportSum / nReport;
@@ -484,11 +479,6 @@ size_t Master::estimateLocalReportSize(const bool quick)
 		double down = nWorker * nWorker * (mtu + mtb) - nWorker * wtc - globalBatchSize * wtd;
 		return static_cast<size_t>(up / down);
 	}
-}
-
-void Master::broadcastReportSize(const size_t lrs)
-{
-	net->broadcast(CType::NormalControl, make_pair(MType::FLocalReportSize, lrs));
 }
 
 void Master::broadcastSizeConf(const size_t gbs, const size_t lrs)
@@ -546,12 +536,13 @@ void Master::gatherDelta()
 	suDeltaAll.wait();
 }
 
-void Master::gatherLoss()
+double Master::gatherLoss()
 {
 	suLoss.reset();
 	lossGlobal = 0.0;
 	net->broadcast(CType::NormalControl, MType::DRLoss);
 	suLoss.wait();
+	return lossGlobal;
 }
 
 // handler - normal control
