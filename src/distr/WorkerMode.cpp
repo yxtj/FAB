@@ -13,6 +13,7 @@ using namespace std;
 void Worker::probeModeInit()
 {
 	(this->*initFun)();
+	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterProbe));
 }
 
 void Worker::probeModeProcess()
@@ -20,10 +21,11 @@ void Worker::probeModeProcess()
 	size_t probeNeededPoint = static_cast<size_t>(conf->probeRatio * pdh->size());
 	double loss = calcLoss(0, probeNeededPoint);
 	sendLoss(loss);
-	while(1){
-		LOG(INFO) << "waiting for new batch size";
+	while(!exitRun){
+		LOG(INFO) << "waiting for new configuration";
 		suConf.wait_n_reset();
 		(this->*processFun)();
+		applyBufferParameter();
 	}
 }
 
@@ -352,6 +354,8 @@ void Worker::papInit()
 
 void Worker::papProcess()
 {
+	if(conf->papDynamicBatchSize)
+		papProbe(); 
 	double t_data = 0.0, t_delta = 0.0, t_report = 0.0;
 	size_t n_delta = 0, n_report = 0;
 
@@ -413,6 +417,14 @@ void Worker::papProcess()
 	}
 }
 
+void Worker::papProbe()
+{
+	double loss = calcLoss(0, localBatchSize);
+	sendLoss(loss);
+
+}
+
+// ---- pap2
 
 void Worker::pap2Process()
 {

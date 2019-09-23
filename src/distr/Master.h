@@ -49,8 +49,9 @@ private:
 	void aapProcess();
 	void papInit();
 	void papProcess();
-	void pap2Process();
 	void papProbe();
+	void pap2Process();
+	void pap2Probe();
 
 // local logic
 private:
@@ -74,6 +75,7 @@ private:
 	void broadcastParameter();
 	void multicastParameter(const int source);
 	void waitParameterConfirmed();
+	void broadcastReset(const int iter, const Parameter& p);
 
 	bool needArchive();
 	void archiveProgress(const bool force = false);
@@ -82,7 +84,9 @@ private:
 	size_t optFkGlobalBatchSize(); // compute opt k from f(k)
 	size_t estimateLocalReportSize(const bool quick = false);
 
-	void updateOnlineLoss(const double loss, const int source);
+	void updateOnlineLoss(const int source, const double loss);
+	void updateIterationTime(const int src, const double time);
+	void commonHandleDelta(const int src, const size_t n, const double loss, const double time);
 
 // signal logic
 public:
@@ -174,6 +178,9 @@ private:
 	std::map<size_t, double> gkProb; // cache probed gk
 	double minfk; // current minimum fk
 	double wtu;
+
+	std::vector<double> wtIteration; // worker side time per iteration (interval between delta reports)
+	std::vector<double> wtIterLast; // time of receiving the latest delta report
 
 	std::vector<double> wtDatapoint; // worker side time per data point
 	std::vector<double> wtDelta; // worker side time per delta sending

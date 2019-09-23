@@ -3,6 +3,7 @@
 #include "message/MType.h"
 #include "logging/logging.h"
 #include "math/accumulate.h"
+#include <algorithm>
 using namespace std;
 
 // ---- general probe mode
@@ -31,22 +32,17 @@ void Master::probeModeProcess()
 		setTerminateCondition(0, probeNeededPoint, probeNeededDelta, probeNeededIter);
 		Timer tmr;
 		(this->*processFun)();
+		broadcastReset(0, p0);
 		double time = tmr.elapseSd();
 		gatherLoss();
 		double rate = lossOnline / time;
-
-		gbs /= 2;
+		LOG(INFO) << "batch size: " << gbs << " gain: " << lossOnline << " rate: " << rate;
 	}
 }
 
 void Master::handleDeltaProbe(const std::string& data, const RPCInfo& info)
 {
 	(this->*deltaFun)(data, info);
-	++nDelta;
-	if(nDelta >= probeNeededDelta){
-		probeReached = true;
-		
-	}
 }
 
 // ---- bulk synchronous parallel
@@ -292,6 +288,8 @@ void Master::papInit()
 
 void Master::papProcess()
 {
+	papProbe();
+	VLOG(1) << "Finish prob with glb= " << globalBatchSize;
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
 		Timer tmr;
@@ -332,9 +330,33 @@ void Master::papProcess()
 	}
 }
 
+void Master::papProbe()
+{
+	suLoss.wait_n_reset();
+	double loss0 = lossOnline;
+	vector<size_t> gbsList = { globalBatchSize, globalBatchSize / 2, globalBatchSize / 4 };
+	vector<double> lossList(gbsList.size(), loss0);
+	vector<double> gainList(gbsList.size(), 0.0);
+	int loops = 10;
+	while(--loops > 0){
+		for(size_t i = 0; i < gbsList.size(); ++i){
+			size_t gbs = gbsList[i];
+			broadcastSizeConf(gbs, 0);
+			suDeltaAll.wait_n_reset();
+			double loss = lossOnline;
+			gainList[i] += lossList[i] - loss;
+			lossList[i] = loss;
+		}
+	}
+	auto it = max_element(gainList.begin(), gainList.end());
+	globalBatchSize = *it;
+}
+
+// ---- pap2
+
 void Master::pap2Process()
 {
-	papProbe();
+	pap2Probe();
 	VLOG(1) << "Finish prob with glb= " << globalBatchSize;
 	
 	double tl = tmrTrain.elapseSd();
@@ -380,7 +402,7 @@ void Master::pap2Process()
 }
 
 /// pap with online probe
-void Master::papProbe()
+void Master::pap2Probe()
 {
 	double tl = tmrTrain.elapseSd();
 	minfk = -1;
@@ -463,10 +485,8 @@ void Master::handleDeltaBsp(const std::string & data, const RPCInfo & info)
 	auto deltaMsg = deserialize<tuple<size_t, vector<double>, double>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	nPoint += get<0>(deltaMsg);
+	commonHandleDelta(s, get<0>(deltaMsg), get<2>(deltaMsg), tmrTrain.elapseSd());
 	applyDelta(get<1>(deltaMsg), s);
-	updateOnlineLoss(get<2>(deltaMsg), s);
-	++nDelta;
 
 	rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
@@ -479,10 +499,8 @@ void Master::handleDeltaTap(const std::string & data, const RPCInfo & info)
 	auto deltaMsg = deserialize<tuple<size_t, vector<double>, double>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	nPoint += get<0>(deltaMsg);
+	commonHandleDelta(s, get<0>(deltaMsg), get<2>(deltaMsg), tmrTrain.elapseSd());
 	applyDelta(get<1>(deltaMsg), s);
-	updateOnlineLoss(get<2>(deltaMsg), s);
-	++nDelta;
 
 	//rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
@@ -498,6 +516,7 @@ void Master::handleDeltaSsp(const std::string & data, const RPCInfo & info)
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
 	size_t n = get<0>(deltaMsg);
+	commonHandleDelta(s, get<0>(deltaMsg), get<2>(deltaMsg), tmrTrain.elapseSd());
 	{
 		++deltaIter[s];
 		lock_guard<mutex> lg(mbfd);
@@ -508,9 +527,6 @@ void Master::handleDeltaSsp(const std::string & data, const RPCInfo & info)
 			accumulateDeltaNext(deltaIter[s] - iter, get<1>(deltaMsg), n);
 		}
 	}
-	updateOnlineLoss(get<2>(deltaMsg), s);
-	nPoint += n;
-	++nDelta;
 	//applyDelta(deltaMsg.second, s); // called at the main process
 	//rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
@@ -524,10 +540,8 @@ void Master::handleDeltaSap(const std::string & data, const RPCInfo & info)
 	auto deltaMsg = deserialize<tuple<size_t, vector<double>, double>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	nPoint += get<0>(deltaMsg);
+	commonHandleDelta(s, get<0>(deltaMsg), get<2>(deltaMsg), tmrTrain.elapseSd());
 	applyDelta(get<1>(deltaMsg), s);
-	updateOnlineLoss(get<2>(deltaMsg), s);
-	++nDelta;
 
 	//rph.input(typeDDeltaAll, s);
 	rph.input(typeDDeltaAny, s);
@@ -542,11 +556,9 @@ void Master::handleDeltaFsp(const std::string & data, const RPCInfo & info)
 	auto deltaMsg = deserialize<tuple<size_t, vector<double>, double>>(data);
 	int s = wm.nid2lid(info.source);
 	size_t n = get<0>(deltaMsg);
-	nPoint += n;
+	commonHandleDelta(s, get<0>(deltaMsg), get<2>(deltaMsg), tmrTrain.elapseSd());
 	//applyDelta(get<1>(deltaMsg), s);
 	accumulateDelta(get<1>(deltaMsg), n); // applied in the main process
-	updateOnlineLoss(get<2>(deltaMsg), s);
-	++nDelta;
 
 	rph.input(typeDDeltaAll, s);
 	//rph.input(typeDDeltaAny, s);
@@ -559,10 +571,9 @@ void Master::handleDeltaAap(const std::string & data, const RPCInfo & info)
 	auto deltaMsg = deserialize<tuple<size_t, vector<double>, double>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	nPoint += get<0>(deltaMsg);
+	commonHandleDelta(s, get<0>(deltaMsg), get<2>(deltaMsg), tmrTrain.elapseSd());
 	applyDelta(get<1>(deltaMsg), s);
-	updateOnlineLoss(get<2>(deltaMsg), s);
-	++nDelta;
+
 	//static vector<int> cnt(nWorker, 0);
 	//++cnt[s];
 	//VLOG_EVERY_N(ln/10, 1) << "#-delta: " << nDelta << " rsp: " << cnt << " r-pkg: " << net->stat_recv_pkg;
@@ -580,10 +591,9 @@ void Master::handleDeltaPap(const std::string& data, const RPCInfo& info)
 	auto deltaMsg = deserialize<tuple<size_t, vector<double>, double>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
-	nPoint += get<0>(deltaMsg);
+	commonHandleDelta(s, get<0>(deltaMsg), get<2>(deltaMsg), tmrTrain.elapseSd());
 	applyDelta(get<1>(deltaMsg), s);
-	updateOnlineLoss(get<2>(deltaMsg), s);
-	++nDelta;
+
 	rph.input(typeDDeltaAll, s);
 	mtDeltaSum += tmr.elapseSd();
 }

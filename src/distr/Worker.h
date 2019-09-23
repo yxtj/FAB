@@ -45,8 +45,8 @@ private:
 	void aapProcess();
 	void papInit();
 	void papProcess();
+	void papProbe();
 	void pap2Process();
-	//void generalProcess();
 
 // local logic
 private:
@@ -94,6 +94,7 @@ public:
 	void handleDeltaRequest(const std::string& data, const RPCInfo& info);
 	void handleLossRequest(const std::string& data, const RPCInfo& info);
 
+	void handleReset(const std::string& data, const RPCInfo& info);
 	void handleMetaConf(const std::string& data, const RPCInfo& info);
 
 	void handleImmediateControl(const std::string& data, const RPCInfo& info);
@@ -138,6 +139,7 @@ private:
 	//std::mutex mTrain;
 	std::atomic<bool> allowTrain;
 	std::atomic<bool> exitTrain;
+	std::atomic<bool> exitRun; // used for multiple-phase cases like probing
 
 	// speed adjustment
 	RandomGenerator speedFactor;

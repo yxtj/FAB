@@ -6,7 +6,7 @@
 #include "math/accumulate.h"
 #include <tuple>
 #include <future>
-#include <numeric>
+#include <algorithm>
 
 using namespace std;
 
@@ -25,6 +25,7 @@ Master::Master() : Runner() {
 	nDelta = 0;
 	mtParameterSum = 0.0;
 	mtOther = 0.0;
+
 	timeOffset = 0.0;
 	lossOnline, lossGlobal = 0.0;
 	pie = nullptr;
@@ -55,6 +56,7 @@ void Master::init(const ConfData* conf, const size_t lid)
 	initializeParameter();
 	setTerminateCondition(conf->tcTime, conf->tcPoint, conf->tcDelta, conf->tcIter);
 
+	wtIteration.assign(nWorker, 0.0);
 	if(!conf->probe){
 		(this->*initFun)();
 	} else{
@@ -423,6 +425,12 @@ void Master::waitParameterConfirmed()
 	suParam.wait_n_reset();
 }
 
+void Master::broadcastReset(const int iter, const Parameter& p)
+{
+	net->broadcast(CType::ImmediateControl,
+		make_pair(MType::CReset, make_pair(iter, p.weights)));
+}
+
 bool Master::needArchive()
 {
 	if(!doArchive)
@@ -476,6 +484,12 @@ size_t Master::estimateGlobalBatchSize()
 }
 
 size_t Master::optFkGlobalBatchSize(){
+	auto it = max_element(gkProb.begin(), gkProb.end(),
+		[](const pair<const size_t, double>& l, const pair<const size_t, double>& r){
+			return l.second < r.second;
+		});
+	return it->first;
+
 	double curmin = -1;
 	size_t curk = -1;
 	std::map<size_t, double>::iterator itr;
@@ -509,9 +523,24 @@ size_t Master::estimateLocalReportSize(const bool quick)
 	}
 }
 
-void Master::updateOnlineLoss(const double loss, const int source)
+void Master::updateOnlineLoss(const int source, const double loss)
 {
 	lossOnline = (lossOnline * (nWorker - 1) + loss) / nWorker;
+}
+
+void Master::updateIterationTime(const int src, const double time)
+{
+	wtIteration[src] = time - wtIterLast[src];
+	//wtIteration[src] = 0.3 * wtIteration[src] + 0.7 * (time - wtIterLast[src]);
+	wtIterLast[src] = time;
+}
+
+void Master::commonHandleDelta(const int src, const size_t n, const double loss, const double time)
+{
+	nPoint += n;
+	++nDelta;
+	updateOnlineLoss(src, loss);
+	updateIterationTime(src, time);
 }
 
 void Master::broadcastSizeConf(const size_t gbs, const size_t lrs)

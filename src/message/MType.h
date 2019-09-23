@@ -22,6 +22,7 @@ struct MType {
 	// Working Control (0-19)
 	static constexpr int CTrainPause = 10;
 	static constexpr int CTrainContinue = 11;
+	static constexpr int CReset = 12;
 
 	// Immediate Control (20-29)
 	static constexpr int CTerminate = 20;

@@ -20,6 +20,7 @@ Worker::Worker() : Runner() {
 	hasNewParam = false;
 	allowTrain = true;
 	exitTrain = false;
+	exitRun = false;
 }
 
 void Worker::init(const ConfData* conf, const size_t lid)
@@ -368,6 +369,9 @@ void Worker::handleNormalControl(const std::string & data, const RPCInfo & info)
 	case MType::CTrainContinue:
 		handleContinue(data.substr(sizeof(int)), info);
 		break;
+	case MType::CReset:
+		handleReset(data.substr(sizeof(int)), info);
+		break;
 	case MType::FSizeConf:
 		handleMetaConf(data.substr(sizeof(int)), info);
 		break;
@@ -438,6 +442,17 @@ void Worker::handleLossRequest(const std::string& data, const RPCInfo& info)
 	sendLoss(loss);
 }
 
+void Worker::handleReset(const std::string& data, const RPCInfo& info)
+{
+	auto msg = deserialize<pair<int, vector<double>>>(data);
+	iter = msg.first;
+	Parameter p;
+	p.set(move(msg.second));
+	bufferParameter(p);
+	pauseTrain();
+	exitTrain = true;
+}
+
 void Worker::handleMetaConf(const std::string& data, const RPCInfo& info)
 {
 	pair<size_t, size_t> p = deserialize<pair<size_t, size_t>>(data);
@@ -461,6 +476,7 @@ void Worker::handleImmediateControl(const std::string & data, const RPCInfo & in
 void Worker::handleTerminate(const std::string & data, const RPCInfo & info)
 {
 	exitTrain = true;
+	exitRun = true;
 	pauseTrain(); // in case if the system is calculating delta
 	suParam.notify(); // in case if the system just calculated a delta (is waiting for new parameter)
 	sendReply(info, MType::CTerminate);
