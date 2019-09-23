@@ -461,7 +461,7 @@ void Worker::pap2Process()
 				double avgtd = n_delta == 0 ? 0 : t_delta / n_delta;
 				double avgtr = n_report == 0 ? 0 : t_report / n_report;
 				vector<double> report = { static_cast<double>(dr.n_reported), t_data / n_used, 
-					avgtd, avgtr, loss, t_updParam / n_updParam};
+					avgtd, avgtr, dr.loss, t_updParam / n_updParam};
 				// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending
 				DVLOG_EVERY_N(ln, 2) << "  send report: " << report;
 				sendReport(report);

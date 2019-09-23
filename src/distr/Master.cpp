@@ -57,6 +57,8 @@ void Master::init(const ConfData* conf, const size_t lid)
 	setTerminateCondition(conf->tcTime, conf->tcPoint, conf->tcDelta, conf->tcIter);
 
 	wtIteration.assign(nWorker, 0.0);
+	wtIterLast.assign(nWorker, 0.0);
+	lastDeltaLoss.assign(nWorker, 0.0);
 	if(!conf->probe){
 		(this->*initFun)();
 	} else{
@@ -174,7 +176,7 @@ void Master::bindMode()
 	} else if(conf->mode == "pap2"){
 		initFun = &Master::papInit;
 		processFun = &Master::pap2Process;
-		deltaFun = &Master::handleDeltaPap;
+		deltaFun = &Master::handleDeltaPap2;
 	} else{
 		LOG(FATAL) << "Unsupported mode: " << conf->mode;
 	}
@@ -475,7 +477,7 @@ size_t Master::estimateGlobalBatchSize()
 	double up = nWorker * (nWorker * (mtu + mtb) + mto - wtc);
 	double down = wtd + (wtr - nWorker * mtr) / localreportSize;
 
-	VLOG(2) << "e gbs: up= " << up << "\tdn= " << down << "\tmtu=" << mtu << "\tmtb=" 
+	VLOG(3) << "e gbs: up= " << up << "\tdn= " << down << "\tmtu=" << mtu << "\tmtb=" 
 		<< mtb << "\tmtr=" << mtr << "\tmto=" << mto << "\twtd=" << wtd << "\twtc=" 
 		<< wtc << "\twtr=" << wtr;
 
@@ -484,9 +486,10 @@ size_t Master::estimateGlobalBatchSize()
 }
 
 size_t Master::optFkGlobalBatchSize(){
+	double f1=hmean(wtDatapoint) / nWorker;
 	auto it = max_element(gkProb.begin(), gkProb.end(),
-		[](const pair<const size_t, double>& l, const pair<const size_t, double>& r){
-			return l.second < r.second;
+		[=](const pair<const size_t, double>& l, const pair<const size_t, double>& r){
+			return l.second / (f1 + wtu/l.first)< r.second/(f1+wtu/r.first);
 		});
 	return it->first;
 
@@ -494,7 +497,7 @@ size_t Master::optFkGlobalBatchSize(){
 	size_t curk = -1;
 	std::map<size_t, double>::iterator itr;
 	for (itr = gkProb.begin(); itr != gkProb.end(); itr++){
-		double fk = itr->second / ( hmean(wtDatapoint) / nWorker + wtu / globalBatchSize);
+		double fk = itr->second / ( hmean(wtDatapoint) / nWorker + wtu / itr->first);
 		if (curmin == -1 || curmin > fk){
 			curmin = fk;
 			curk = itr->first;
@@ -525,7 +528,8 @@ size_t Master::estimateLocalReportSize(const bool quick)
 
 void Master::updateOnlineLoss(const int source, const double loss)
 {
-	lossOnline = (lossOnline * (nWorker - 1) + loss) / nWorker;
+	lossOnline = lossOnline * (nWorker - 1) / nWorker + loss;
+	lastDeltaLoss[source] = loss;
 }
 
 void Master::updateIterationTime(const int src, const double time)
@@ -723,6 +727,9 @@ void Master::handleReport(const std::string& data, const RPCInfo& info)
 	vector<double> report = deserialize<vector<double>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int wid = wm.nid2lid(info.source);
+	// if (report.size() < 5) {
+		// VLOG(2) << "!!!!! report from " << wid << " w/size " << report.size() << "\t" << report;
+	// }
 	bool flag = false;
 	// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending, loss
 	{
@@ -732,8 +739,8 @@ void Master::handleReport(const std::string& data, const RPCInfo& info)
 		// int cnt = static_cast<int>(report[0]);
 		// reportProcEach[wid] = cnt;
 		// reportProcTotal += cnt - t;
-		reportProcEach[wid] = static_cast<int>(report[0]); /// only send the cnt between reports
-		reportProcTotal += reportProcEach[wid];
+		reportProcEach[wid] += static_cast<int>(report[0]); /// only send the cnt between reports
+		reportProcTotal += static_cast<int>(report[0]);
 
 		//if(conf->papSearchBatchSize || conf->papSearchReportFreq){
 		wtDatapoint[wid] = report[1];
@@ -741,15 +748,22 @@ void Master::handleReport(const std::string& data, const RPCInfo& info)
 		wtReport[wid] = report[3];
 		//}
 		// lossGlobal= (lossGlobal* (nWorker - 1) + report[4]) / nWorker; // estimated loss
-		updateOnlineLoss(report[4], wid); // estimated loss
-
-		lossGlobal += report[4]; /// accumulate loss
-		wtu = wtu == 0 ? report[5] : (report[5] + wtu)/2; /// worker update time
-		if(reportProcTotal >= globalBatchSize) /// > conf->batchSize)
+		if (report.size() > 4) {
+			// updateOnlineLoss(wid, report[4]); // estimated loss
+			lossGlobal += report[4]; /// accumulate loss
+		}
+		if (report.size() > 5)
+			wtu = wtu == 0 ? report[5] : (report[5] + wtu)/2; /// worker update time
+		if(reportProcTotal >= globalBatchSize) {
 			suPap.notify();
+			reportProcTotal = 0; // request delta and reset counter
+		} /// > conf->batchSize)
+
+		// VLOG(2) << "Recieve report from: " << wid << " with " << report
+		// 	<< "\ttt: " << reportProcTotal << "\tgbs: " << globalBatchSize;
 	}
-	if(reportProcTotal > conf->batchSize)
-		suPap.notify();
+	// if(reportProcTotal > conf->batchSize)
+	// 	suPap.notify();
 	++nReport;
 	mtReportSum += tmr.elapseSd();
 }

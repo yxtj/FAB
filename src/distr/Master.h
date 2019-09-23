@@ -127,6 +127,7 @@ public:
 	void handleDeltaFsp(const std::string& data, const RPCInfo& info);
 	void handleDeltaAap(const std::string& data, const RPCInfo& info);
 	void handleDeltaPap(const std::string& data, const RPCInfo& info);
+	void handleDeltaPap2(const std::string& data, const RPCInfo& info);
 	void handleDeltaTail(const std::string& data, const RPCInfo& info);
 	void handleDeltaIgnore(const std::string& data, const RPCInfo& info);
 
@@ -160,6 +161,7 @@ private:
 	double mtParameterSum; // master side time for sending all parameters
 	double mtOther; // time other than processing/sending parameter, delta and report. include: archive, log
 	double lossOnline, lossGlobal; // the loss for one global batch
+	std::vector<double> lastDeltaLoss;
 
 	double timeOffset; // used for accounting time if resumed from previous archive
 	Timer tmrTrain;
