@@ -428,6 +428,9 @@ void Worker::papProbe()
 
 void Worker::pap2Process()
 {
+	double loss = calcLoss(0, localBatchSize);
+	sendLoss(loss);
+
 	double t_data = 0.0, t_delta = 0.0, t_report = 0.0;
 	size_t n_delta = 0, n_report = 0;
 

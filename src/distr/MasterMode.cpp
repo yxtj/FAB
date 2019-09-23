@@ -414,7 +414,9 @@ void Master::pap2Probe()
 	minfk = -1;
 	double maxfk = -1;
 	probeReached = false;
-	double lastLoss = 5.05*conf->batchSize;
+	suLoss.wait_n_reset();
+	double lastLoss = lossOnline;
+
 	lossOnline = lastLoss;
 
 	while(!terminateCheck() && !probeReached){
@@ -446,7 +448,7 @@ void Master::pap2Probe()
 
 		/// reset gbs
 		if (conf->papDynamicBatchSize && nPoint > nPointTotal * conf->probeRatio) {
-			double gk = (lastLoss - lossOnline)/nPoint;
+			double gk = (lastLoss - lossOnline)/globalBatchSize;
 			lastLoss = lossOnline;
 			gkProb[globalBatchSize] = gk;
 			double wtd = hmean(wtDatapoint);
