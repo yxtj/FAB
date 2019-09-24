@@ -317,7 +317,7 @@ void Master::papProcess()
 		//// online change globalBatchSize
 		if(conf->papDynamicBatchSize) {
 			globalBatchSize = estimateGlobalBatchSize();
-			VLOG(2) << "gbs=" << globalBatchSize << "\tlrs=" << localreportSize;
+			VLOG(2) << "gbs=" << globalBatchSize << "\tlrs=" << localReportSize;
 		}
 		gatherDelta();
 		stat.t_dlt_wait += tmr.elapseSd();
@@ -356,17 +356,17 @@ void Master::papProbe()
 
 void Master::pap2Process()
 {
-	VLOG(1) << "Start prob phase with gbs= " << globalBatchSize;
+	VLOG(1) << "Start prob phase with gbs=" << globalBatchSize;
 	if(conf->papDynamicBatchSize) {
 		pap2Probe();
 		size_t gbs = max(optFkGlobalBatchSize(), estimateGlobalBatchSize());
 		if(gbs != globalBatchSize){
 			globalBatchSize = gbs;
-			localreportSize = globalBatchSize / nWorker / 2;
-			broadcastSizeConf(globalBatchSize, localreportSize);
+			localReportSize = globalBatchSize / nWorker / 2;
+			broadcastSizeConf(globalBatchSize, localReportSize);
 		}
 	}
-	VLOG(1) << "Finish prob with gbs= " << globalBatchSize << " gkProb:" << gkProb;
+	VLOG(1) << "Finish prob phase with gbs=" << globalBatchSize << " time=" << tmrTrain.elapseSd() << " gkProb:" << gkProb;
 	
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
@@ -396,15 +396,18 @@ void Master::pap2Process()
 		if(conf->papDynamicBatchSize) {
 			size_t ogbs = optFkGlobalBatchSize();
 			size_t egbs = estimateGlobalBatchSize();
+			size_t old_gbs = globalBatchSize;
 			globalBatchSize = max(ogbs, egbs);
 			size_t olrs = globalBatchSize / nWorker / 2;
 			size_t elrs = estimateLocalReportSize();
+			size_t old_lrs = localReportSize;
 			if(conf->papDynamicReportFreq){
-				localreportSize = max(olrs, elrs);
+				localReportSize = max(olrs, elrs);
 			}
-			VLOG_IF(iter % 1 == 0, 2) << "gbs=" << globalBatchSize << " (o=" << ogbs << ", e=" << egbs << ")"
-				<< " lrs=" << localreportSize << "(o=" << olrs << ", e=" << elrs << ")";
-			broadcastSizeConf(globalBatchSize, localreportSize);
+			VLOG_IF(old_gbs != globalBatchSize || old_lrs != localReportSize, 2)
+				<< "gbs=" << globalBatchSize << " (o=" << ogbs << ", e=" << egbs << ")"
+				<< " lrs=" << localReportSize << "(o=" << olrs << ", e=" << elrs << ")";
+			broadcastSizeConf(globalBatchSize, localReportSize);
 		}
 		// VLOG(2) << "gather Delta";
 		gatherDelta();
@@ -422,15 +425,15 @@ void Master::pap2Process()
 /// pap with online probe
 void Master::pap2Probe()
 {
+	const double toleranceFactor = 0.8;
 	double tl = tmrTrain.elapseSd();
-	minfk = -1;
 	double maxfk = -1;
 	probeReached = false;
-	suLoss.reset();
-	suLoss.wait_n_reset();
 	double lastLoss = lossOnline;
-	double toleranceFactor = 0.8;
+	size_t probeSize = static_cast<size_t>(nPointTotal * conf->probeRatio);
+	size_t lastNPoint = nPoint;
 
+	suLoss.wait_n_reset();
 	while(!terminateCheck() && !probeReached){
 		Timer tmr;
 		if(VLOG_IS_ON(2) && iter % ln == 0){
@@ -457,7 +460,7 @@ void Master::pap2Probe()
 		stat.t_dlt_wait += tmr.elapseSd();
 
 		/// reset gbs
-		if (conf->papDynamicBatchSize && nPoint > nPointTotal * conf->probeRatio) {
+		if (conf->papDynamicBatchSize && (nPoint- lastNPoint) > probeSize) {
 			double gk = (lastLoss - lossOnline) / globalBatchSize;
 			lastLoss = lossOnline;
 			gkProb[globalBatchSize] = gk;
@@ -480,19 +483,18 @@ void Master::pap2Probe()
 				}
 				globalBatchSize /= 2;
 				// model.setParameter(initP);
-				localreportSize = globalBatchSize/nWorker/2;
-				broadcastSizeConf(globalBatchSize, localreportSize);
+				localReportSize = globalBatchSize/nWorker/2;
+				broadcastSizeConf(globalBatchSize, localReportSize);
 			} else {
 				// TODO:
 				//globalBatchSize *= 2; 
-				//localreportSize = globalBatchSize/nWorker/2;
-				//broadcastSizeConf(globalBatchSize, localreportSize);
+				//localReportSize = globalBatchSize/nWorker/2;
+				//broadcastSizeConf(globalBatchSize, localReportSize);
 				// probeReached = true;
 				break;
 			}
 			// iter = 0;
-			// TODO: local nPoint
-			nPoint = 0;
+			lastNPoint = nPoint;
 			lossGlobal = 0;
 		}
 

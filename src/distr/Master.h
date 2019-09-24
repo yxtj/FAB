@@ -173,12 +173,11 @@ private:
 	std::vector<int> reportProcEach; // how many data point is processed
 	int reportProcTotal;
 	SyncUnit suPap; // reported count reached a batch
-	size_t localreportSize;
+	size_t localReportSize;
 	size_t globalBatchSize;
 
 	Parameter initP; // cache init parameter for probe
 	std::map<size_t, double> gkProb; // cache probed gk
-	double minfk; // current minimum fk
 	double wtu;
 
 	std::vector<double> wtIteration; // worker side time per iteration (interval between delta reports)

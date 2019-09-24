@@ -42,7 +42,7 @@ void Master::init(const ConfData* conf, const size_t lid)
 	this->conf = conf;
 	nWorker = conf->nw;
 	globalBatchSize = conf->batchSize;
-	localreportSize = conf->reportSize;
+	localReportSize = conf->reportSize;
 	nPointWorker.assign(nWorker, 0);
 	localID = lid;
 	ln = conf->logIter;
@@ -475,7 +475,7 @@ size_t Master::estimateGlobalBatchSize()
 	double wtr = mean(wtReport);
 
 	double up = nWorker * (nWorker * (mtu + mtb) + mto - wtc);
-	double down = wtd + (wtr - nWorker * mtr) / localreportSize;
+	double down = wtd + (wtr - nWorker * mtr) / localReportSize;
 
 	VLOG(3) << "e gbs: up= " << up << "\tdn= " << down << "\tmtu=" << mtu << "\tmtb=" 
 		<< mtb << "\tmtr=" << mtr << "\tmto=" << mto << "\twtd=" << wtd << "\twtc=" 
