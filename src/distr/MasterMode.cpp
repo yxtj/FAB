@@ -360,7 +360,7 @@ void Master::pap2Process()
 	if(conf->papDynamicBatchSize) {
 		pap2Probe();
 	}
-	VLOG(1) << "Finish prob with gbs= " << globalBatchSize;
+	VLOG(1) << "Finish prob with gbs= " << globalBatchSize << " gkProb:" << gkProb;
 	
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
@@ -468,8 +468,9 @@ void Master::pap2Probe()
 		
 			// if (minfk < 0 || minfk > fk) {
 			// 	minfk = fk;
-			if (maxfk < 0 || fk > maxfk) {
-				maxfk = fk;
+			double decayFactor = 0.8;
+			if (maxfk < 0 || fk > maxfk * decayFactor) {
+				maxfk = max(fk, maxfk);
 				if (globalBatchSize / 2 < mink) {
 					// probeReached = true;
 					break;
