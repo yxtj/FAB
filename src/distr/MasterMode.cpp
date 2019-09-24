@@ -429,7 +429,7 @@ void Master::pap2Probe()
 	suLoss.reset();
 	suLoss.wait_n_reset();
 	double lastLoss = lossOnline;
-	double decayFactor = 0.8;
+	double toleranceFactor = 0.8;
 
 	while(!terminateCheck() && !probeReached){
 		Timer tmr;
@@ -473,7 +473,7 @@ void Master::pap2Probe()
 				<< "\tunitloss=" << lossGlobal/nPoint << "\tlastTTloss=" << lastTTloss
 				<< "\tlastunitLoss=" << lastTTloss/globalBatchSize;
 		
-			if (maxfk < 0 || fk > maxfk * decayFactor) {
+			if (maxfk < 0 || fk > maxfk * toleranceFactor) {
 				maxfk = max(fk, maxfk);
 				if (globalBatchSize / 2 < mink) {
 					break;
