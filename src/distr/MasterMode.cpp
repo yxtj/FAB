@@ -349,7 +349,7 @@ void Master::papProbe()
 		}
 	}
 	auto it = max_element(gainList.begin(), gainList.end());
-	globalBatchSize = *it;
+	globalBatchSize = gbsList[it-gainList.begin()];
 }
 
 // ---- pap2
