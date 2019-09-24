@@ -414,10 +414,11 @@ void Master::pap2Probe()
 	minfk = -1;
 	double maxfk = -1;
 	probeReached = false;
+	suLoss.reset();
 	suLoss.wait_n_reset();
 	double lastLoss = lossOnline;
-
-	lossOnline = lastLoss;
+	double initL0 = lossOnline / globalBatchSize;
+	VLOG(1) << " Init Loss " << lastLoss;
 
 	while(!terminateCheck() && !probeReached){
 		Timer tmr;
@@ -448,8 +449,10 @@ void Master::pap2Probe()
 
 		/// reset gbs
 		if (conf->papDynamicBatchSize && nPoint > nPointTotal * conf->probeRatio) {
-			double gk = (lastLoss - lossOnline)/globalBatchSize;
+			double gk = (lastLoss - lossOnline) / globalBatchSize;
 			lastLoss = lossOnline;
+
+			// gk = lossGlobal/nPoint; ///// TODO:
 			gkProb[globalBatchSize] = gk;
 			double wtd = hmean(wtDatapoint);
 			double tk =(wtd/nWorker + wtu/globalBatchSize);
@@ -460,7 +463,8 @@ void Master::pap2Probe()
 			VLOG(2) << "PROB k=" << globalBatchSize << "\ttk=" << tk << "\tnp=" << nPoint << "\tgk=" << gk 
 				<< "\tfk=" << fk << "\twtd=" << wtd << "\twtu=" << wtu << "\tmaxfk=" << maxfk 
 				<< "\tmink=" << mink << "\tonlineloss=" << lossOnline << "\tloss=" << lossGlobal
-				<< "\tlastTTloss=" << lastTTloss;
+				<< "\tunitloss=" << lossGlobal/nPoint << "\tlastTTloss=" << lastTTloss
+				<< "\tlastunitLoss=" << lastTTloss/globalBatchSize;
 		
 			// if (minfk < 0 || minfk > fk) {
 			// 	minfk = fk;
@@ -477,7 +481,7 @@ void Master::pap2Probe()
 			}
 			else {
 				// TODO:
-				globalBatchSize *= 1.5; 
+				globalBatchSize *= 2; 
 				localreportSize = globalBatchSize/nWorker/2;
 				broadcastSizeConf(globalBatchSize, localreportSize);
 				// probeReached = true;
