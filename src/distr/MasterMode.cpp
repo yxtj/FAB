@@ -429,13 +429,10 @@ void Master::pap2Probe()
 	suLoss.reset();
 	suLoss.wait_n_reset();
 	double lastLoss = lossOnline;
-	double initL0 = lossOnline / globalBatchSize;
-	VLOG(1) << " Init Loss " << lastLoss;
+	double decayFactor = 0.8;
 
 	while(!terminateCheck() && !probeReached){
 		Timer tmr;
-		// VLOG_EVERY_N(ln, 1) << "Start iteration: " << iter;
-		//DVLOG_EVERY_N(ln / 10, 1) << "un-send: " << net->pending_pkgs() << ", un-recv: " << net->unpicked_pkgs();
 		if(VLOG_IS_ON(2) && iter % ln == 0){
 			double t = tmrTrain.elapseSd();
 			VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl);
@@ -463,8 +460,6 @@ void Master::pap2Probe()
 		if (conf->papDynamicBatchSize && nPoint > nPointTotal * conf->probeRatio) {
 			double gk = (lastLoss - lossOnline) / globalBatchSize;
 			lastLoss = lossOnline;
-
-			// gk = lossGlobal/nPoint; ///// TODO:
 			gkProb[globalBatchSize] = gk;
 			double wtd = hmean(wtDatapoint);
 			double tk =(wtd/nWorker + wtu/globalBatchSize);
@@ -478,13 +473,9 @@ void Master::pap2Probe()
 				<< "\tunitloss=" << lossGlobal/nPoint << "\tlastTTloss=" << lastTTloss
 				<< "\tlastunitLoss=" << lastTTloss/globalBatchSize;
 		
-			// if (minfk < 0 || minfk > fk) {
-			// 	minfk = fk;
-			double decayFactor = 0.8;
 			if (maxfk < 0 || fk > maxfk * decayFactor) {
 				maxfk = max(fk, maxfk);
 				if (globalBatchSize / 2 < mink) {
-					// probeReached = true;
 					break;
 				}
 				globalBatchSize /= 2;
