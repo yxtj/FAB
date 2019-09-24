@@ -446,7 +446,7 @@ void Master::pap2Probe()
 		Timer tmr;
 		if(VLOG_IS_ON(2) && iter % ln == 0){
 			double t = tmrTrain.elapseSd();
-			VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl);
+			VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl) << " data-points: " << nPoint - lastProbeNPoint;
 			tl = t;
 			double mtu = mtDeltaSum / nDelta;
 			double mtb = mtParameterSum / stat.n_par_send;
@@ -467,27 +467,27 @@ void Master::pap2Probe()
 		stat.t_dlt_wait += tmr.elapseSd();
 
 		/// reset gbs
-		if (conf->papDynamicBatchSize && (nPoint- lastProbeNPoint) > probeSize) {
-			double nloss1 = lossOnline;
-			double nloss2 = sum(lastDeltaLoss);
-			double nloss3 = lossGlobal;
-			double gk1 = lastLoss - nloss1 / globalBatchSize;
-			double gk2 = lastLoss - nloss2 / globalBatchSize;
+		if ((nPoint- lastProbeNPoint) > probeSize) {
+			double nloss1 = lossOnline / globalBatchSize;
+			double nloss2 = sum(lastDeltaLoss) / (nPoint - lastProbeNPoint);
+			double nloss3 = lossGlobal / globalBatchSize;
+			double nloss = max(max(nloss1, nloss2), nloss3);
+			double gk = lastLoss - nloss;
 			//lastLoss = nloss1 / globalBatchSize;
 			lastLoss = nloss2 / globalBatchSize;
-			gkProb[globalBatchSize] = gk2;
+			gkProb[globalBatchSize] = gk;
 			double wtd = hmean(wtDatapoint);
 			double wtc = mean(wtDelta);
 			double tk1 =(wtd/nWorker + wtc/globalBatchSize);
 			double tk2 = tmrTrain.elapseSd() - lastProbeTime;
-			double fk = gk2 / tk2;
+			double fk = gk / tk2;
 			size_t mink = estimateMinGlobalBatchSize();
 
 			VLOG(2) << "probe k=" << globalBatchSize << "\titer=" << iter - lastProbeIter << "\tnp=" << nPoint - lastProbeNPoint
-				<< "\ttk=" << tk1 << ", " << tk2 << "\tgk=" << gk1 << ", " << gk2 << "\tfk=" << gk2 / tk1 << ", " << gk2 / tk2 << "\n"
+				<< "\ttk=" << tk1 << ", " << tk2 << "\tgk=" << gk << "\tfk=" << gk / tk1 << ", " << gk / tk2 << "\n"
 				<< "wtd=" << wtd << ", " << wtDatapoint << "\twtc=" << wtc << ", " << wtDelta << "\n"
-				<< "maxfk=" << maxfk << "\tmink=" << mink << "\tunit-loss-online=" << nloss1/globalBatchSize
-				<< "\tunit-loss-sum=" << nloss3/(nPoint- lastProbeNPoint) << "\tunit-loss-recent=" << nloss2/globalBatchSize;
+				<< "maxfk=" << maxfk << "\tmink=" << mink << "\tunit-loss-online=" << nloss1
+				<< "\tunit-loss-sum=" << nloss3 << "\tunit-loss-recent=" << nloss2;
 		
 			if (maxfk < 0 || fk > maxfk * toleranceFactor) {
 				maxfk = max(fk, maxfk);
