@@ -359,6 +359,12 @@ void Master::pap2Process()
 	VLOG(1) << "Start prob phase with gbs= " << globalBatchSize;
 	if(conf->papDynamicBatchSize) {
 		pap2Probe();
+		size_t gbs = max(optFkGlobalBatchSize(), estimateGlobalBatchSize());
+		if(gbs != globalBatchSize){
+			globalBatchSize = gbs;
+			localreportSize = globalBatchSize / nWorker / 2;
+			broadcastSizeConf(globalBatchSize, localreportSize);
+		}
 	}
 	VLOG(1) << "Finish prob with gbs= " << globalBatchSize;
 	
@@ -388,10 +394,16 @@ void Master::pap2Process()
 		suPap.wait_n_reset();
 		//// online change globalBatchSize
 		if(conf->papDynamicBatchSize) {
-			globalBatchSize = max(optFkGlobalBatchSize(), estimateGlobalBatchSize());
-			localreportSize = globalBatchSize/nWorker/2;
-			VLOG_IF(iter % 1 == 0, 2) << "gbs=" << globalBatchSize << "\tlrs=" << localreportSize
-				<< "\testimatedlrs=" << estimateLocalReportSize();
+			size_t ogbs = optFkGlobalBatchSize();
+			size_t egbs = estimateGlobalBatchSize();
+			globalBatchSize = max(ogbs, egbs);
+			size_t olrs = globalBatchSize / nWorker / 2;
+			size_t elrs = estimateLocalReportSize();
+			if(conf->papDynamicReportFreq){
+				localreportSize = max(olrs, elrs);
+			}
+			VLOG_IF(iter % 1 == 0, 2) << "gbs=" << globalBatchSize << " (o=" << ogbs << ", e=" << egbs << ")"
+				<< " lrs=" << localreportSize << "(o=" << olrs << ", e=" << elrs << ")";
 			broadcastSizeConf(globalBatchSize, localreportSize);
 		}
 		// VLOG(2) << "gather Delta";
