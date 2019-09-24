@@ -359,7 +359,7 @@ void Master::papProbe()
 void Master::pap2Process()
 {
 	VLOG(1) << "Start probe phase with gbs=" << globalBatchSize;
-	{
+	if(conf->papProbeBatchSize || conf->papDynamicBatchSize){
 		pap2Probe();
 		size_t gbs = max(optFkGlobalBatchSize(), estimateMinGlobalBatchSize());
 		if(gbs != globalBatchSize){
