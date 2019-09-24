@@ -278,10 +278,11 @@ void Master::papInit()
 	reportProcEach.assign(nWorker, 0);
 	reportProcTotal = 0;
 	//if(conf->papSearchBatchSize || conf->papSearchReportFreq){
-	wtDatapoint.assign(nWorker, 0.0);
+	wtDatapoint.assign(nWorker, 9.0e99);
 	wtDelta.assign(nWorker, 0.0);
 	wtReport.assign(nWorker, 0.0);
 	//}
+	suPap.reset();
 	regDSPProcess(MType::DDelta, localCBBinder(&Master::handleDeltaPap));
 	regDSPProcess(MType::DReport, localCBBinder(&Master::handleReportPap));
 }
@@ -430,12 +431,13 @@ void Master::pap2Probe()
 	double maxfk = -1;
 	probeReached = false;
 	size_t probeSize = static_cast<size_t>(nPointTotal * conf->probeRatio);
-	size_t lastNPoint = nPoint;
 
 	suLoss.wait_n_reset();
-	double lastLoss = lossOnline;
-	VLOG(2) << "loss_0 = " << lossOnline;
+	double lastLoss = lossOnline / globalBatchSize;
+	VLOG(2) << "loss_0 = " << lastLoss << "\tprobeSize=" << probeSize;
 
+	size_t lastProbeNPoint = nPoint;
+	int lastProbeIter = iter;
 	double lastProbeTime = tmrTrain.elapseSd();
 	while(!terminateCheck() && !probeReached){
 		Timer tmr;
@@ -458,54 +460,54 @@ void Master::pap2Probe()
 		mtOther += tmr.elapseSd();
 		// wait until the report counts reach a global mini batch
 		suPap.wait_n_reset();
-
 		gatherDelta();
 		stat.t_dlt_wait += tmr.elapseSd();
 
 		/// reset gbs
-		if (conf->papDynamicBatchSize && (nPoint- lastNPoint) > probeSize) {
-			double gk = (lastLoss - lossOnline) / globalBatchSize;
-			lastLoss = lossOnline;
-			gkProb[globalBatchSize] = gk;
+		if (conf->papDynamicBatchSize && (nPoint- lastProbeNPoint) > probeSize) {
+			double nloss1 = lossOnline;
+			double nloss2 = sum(lastDeltaLoss);
+			double gk1 = lastLoss - nloss1 / globalBatchSize;
+			double gk2 = lastLoss - nloss2 / globalBatchSize;
+			//lastLoss = nloss1 / globalBatchSize;
+			lastLoss = nloss2 / globalBatchSize;
+			gkProb[globalBatchSize] = gk2;
 			double wtd = hmean(wtDatapoint);
 			double wtc = mean(wtDelta);
 			double tk1 =(wtd/nWorker + wtc/globalBatchSize);
 			double tk2 = tmrTrain.elapseSd() - lastProbeTime;
-			double fk = gk / tk2;
-			double mink = estimateGlobalBatchSize();
-			double lastTTloss = sum(lastDeltaLoss);
+			double fk = gk2 / tk2;
+			size_t mink = estimateGlobalBatchSize();
 
-			VLOG(2) << "PROB k=" << globalBatchSize << "\ttk=" << tk1 << ", " << tk2
-				<< "\tnp=" << nPoint << "\tgk=" << gk << "\tfk=" << gk / tk1 << ", " << gk / tk2 << "\n"
-				<< "wtd=" << wtd << ", " << wtDatapoint << "\twtu=" << wtc << ", " << wtDelta << "\n"
-				<< "maxfk=" << maxfk << "\tmink=" << mink << "\tonlineloss=" << lossOnline << "\tsumloss=" << lossGlobal
-				<< "\tunitloss=" << lossGlobal/nPoint << "\tlastTTloss=" << lastTTloss
-				<< "\tlastunitLoss=" << lastTTloss/globalBatchSize;
+			VLOG(2) << "PROB k=" << globalBatchSize << "\titer=" << iter - lastProbeIter << "\tnp=" << nPoint - lastProbeNPoint
+				<< "\ttk=" << tk1 << ", " << tk2 << "\tgk=" << gk1 << ", " << gk2 << "\tfk=" << gk2 / tk1 << ", " << gk2 / tk2 << "\n"
+				<< "wtd=" << wtd << ", " << wtDatapoint << "\twtc=" << wtc << ", " << wtDelta << "\n"
+				<< "maxfk=" << maxfk << "\tmink=" << mink << "\tunit-loss-online=" << nloss1/globalBatchSize
+				<< "\tunit-loss-sum=" << lossGlobal/(nPoint- lastProbeNPoint) << "\tunit-loss-recent=" << nloss2/globalBatchSize;
 		
 			if (maxfk < 0 || fk > maxfk * toleranceFactor) {
 				maxfk = max(fk, maxfk);
-				if (globalBatchSize / 2 < mink) {
-					break;
+				if(globalBatchSize / 2 >= mink) {
+					globalBatchSize /= 2;
+					localReportSize = globalBatchSize / nWorker / 2;
+					broadcastSizeConf(globalBatchSize, localReportSize);
+					lossOnline /= 2;
 				}
-				globalBatchSize /= 2;
-				// model.setParameter(initP);
-				localReportSize = globalBatchSize/nWorker/2;
-				broadcastSizeConf(globalBatchSize, localReportSize);
 			} else {
 				// TODO:
 				//globalBatchSize *= 2; 
 				//localReportSize = globalBatchSize/nWorker/2;
 				//broadcastSizeConf(globalBatchSize, localReportSize);
 				// probeReached = true;
-				break;
+				//break;
 			}
-			// iter = 0;
-			lastNPoint = nPoint;
+			lastProbeNPoint = nPoint;
+			lastProbeIter = iter;
+			lastProbeTime = tmrTrain.elapseSd();
 			lossGlobal = 0;
 		}
 
 		broadcastParameter();
-
 		tmr.restart();
 		archiveProgress();
 		++iter;
@@ -528,14 +530,14 @@ void Master::handleReportPap(const std::string& data, const RPCInfo& info)
 		reportProcTotal += static_cast<int>(report[0]);
 
 		//if(conf->papSearchBatchSize || conf->papSearchReportFreq){
-		wtDatapoint[wid] = (1 - emaFactor) * wtDatapoint[wid] + emaFactor * report[1];
-		wtDelta[wid] = (1 - emaFactor) * wtDelta[wid] + emaFactor * report[2];
-		wtReport[wid] = (1 - emaFactor) * wtDelta[wid] + emaFactor * report[3];
-		//}
+		wtDatapoint[wid] = wtDatapoint[wid] == 9e99 ? report[1] : (1 - emaFactor) * wtDatapoint[wid] + emaFactor * report[1];
+		wtDelta[wid] = wtDelta[wid] == 0.0 ? report[2] : (1 - emaFactor) * wtDelta[wid] + emaFactor * report[2];
+		wtReport[wid] = wtReport[wid] == 0.0 ? report[3] : (1 - emaFactor) * wtDelta[wid] + emaFactor * report[3];
 		// updateOnlineLoss(wid, report[4]); // estimated loss
 		lossGlobal += report[4]; /// accumulate loss
 		if(report.size() > 5)
 			wtu = wtu == 0 ? report[5] : (wtu * (nWorker - 1) + report[5]) / nWorker; /// worker update time
+		//}
 		if(reportProcTotal >= globalBatchSize) {
 			suPap.notify();
 			reportProcTotal = 0; // request delta and reset counter

@@ -428,8 +428,16 @@ void Worker::papProbe()
 
 void Worker::pap2Process()
 {
-	double loss = calcLoss(0, localBatchSize);
-	sendLoss(loss);
+	if(conf->papDynamicBatchSize){
+		Timer tmr;
+		double loss = calcLoss(0, localBatchSize);
+		double t1 = tmr.elapseSd();
+		sendLoss(loss);
+		double t2 = tmr.elapseSd() - t1;
+		// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending, loss, time-per-new-parameter
+		vector<double> report = { 0.0, t1 / localBatchSize, t2, t2, 0.0, 0.0 };
+		sendReport(report);
+	}
 
 	double t_data = 0.0, t_delta = 0.0, t_report = 0.0;
 	size_t n_delta = 0, n_report = 0;
@@ -465,7 +473,7 @@ void Worker::pap2Process()
 				double avgtr = n_report == 0 ? 0 : t_report / n_report;
 				vector<double> report = { static_cast<double>(n_used - n_used_since_report),
 					t_data / n_used, avgtd, avgtr, loss - loss_since_report, t_updParam / n_updParam};
-				// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending, loss
+				// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending, loss, time-per-new-parameter
 				DVLOG_EVERY_N(ln, 2) << "  send report: " << report;
 				n_used_since_report = n_used;
 				loss_since_report = loss;

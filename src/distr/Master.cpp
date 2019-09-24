@@ -482,8 +482,7 @@ size_t Master::estimateGlobalBatchSize()
 		<< mtb << "\tmtr=" << mtr << "\tmto=" << mto << "\twtd=" << wtd << "\twtc=" 
 		<< wtc << "\twtr=" << wtr;
 
-	return static_cast<size_t>(up / down);
-	// return max(static_cast<size_t>(up / down), conf->batchSize); // conf->batchSize offline opt K
+	return max(static_cast<size_t>(up / down), nWorker);
 }
 
 size_t Master::optFkGlobalBatchSize(){

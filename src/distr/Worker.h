@@ -73,7 +73,7 @@ private:
 	double calcLoss(const size_t start, const size_t cnt);
 	void sendLoss(const double loss);
 
-	void sendReport(const std::vector<double>& cnt); // pap progress
+	void sendReport(const std::vector<double>& report); // pap progress
 
 	void pauseTrain();
 	void resumeTrain();
