@@ -278,7 +278,7 @@ void Master::papInit()
 	reportProcEach.assign(nWorker, 0);
 	reportProcTotal = 0;
 	//if(conf->papSearchBatchSize || conf->papSearchReportFreq){
-	wtDatapoint.assign(nWorker, 9.0e99);
+	wtDatapoint.assign(nWorker, 9e99);
 	wtDelta.assign(nWorker, 0.0);
 	wtReport.assign(nWorker, 0.0);
 	//}
