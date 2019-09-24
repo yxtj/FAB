@@ -98,6 +98,7 @@ log-*/
 
 # temporary files:
 *~
+.DS_Store
 
 # project specific ignore files:
 /[dD]ata/
