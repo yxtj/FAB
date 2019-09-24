@@ -475,8 +475,8 @@ void Master::pap2Probe()
 			double mink = estimateGlobalBatchSize();
 			double lastTTloss = sum(lastDeltaLoss);
 
-			VLOG(2) << "PROB k=" << globalBatchSize << "\ttk=" << tk1 << "," << tk2
-				<< "\tnp=" << nPoint << "\tgk=" << gk << "\tfk=" << gk / tk1 << gk / tk2 << "\n"
+			VLOG(2) << "PROB k=" << globalBatchSize << "\ttk=" << tk1 << ", " << tk2
+				<< "\tnp=" << nPoint << "\tgk=" << gk << "\tfk=" << gk / tk1 << ", " << gk / tk2 << "\n"
 				<< "wtd=" << wtd << ", " << wtDatapoint << "\twtu=" << wtc << ", " << wtDelta << "\n"
 				<< "maxfk=" << maxfk << "\tmink=" << mink << "\tonlineloss=" << lossOnline << "\tsumloss=" << lossGlobal
 				<< "\tunitloss=" << lossGlobal/nPoint << "\tlastTTloss=" << lastTTloss
