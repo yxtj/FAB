@@ -23,3 +23,6 @@ target_link_libraries(distr
 	driver logging network
 	${CMAKE_THREAD_LIBS_INIT}
 )
+if(NEED_MESSAGE_CPP)
+  target_link_libraries(distr message)
+endif()

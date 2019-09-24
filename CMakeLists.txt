@@ -99,6 +99,10 @@ set(CXX_DEFINE "-DELPP_THREAD_SAFE -DELPP_STL_LOGGING")
 #set(CXX_WARN "-Wall -Wno-unused-function -Wno-unused-variable -Wno-unused-result")
 set(CMAKE_CXX_FLAGS "${CXX_DEFAULT} ${CXX_WARN} ${CXX_DEFINE} ${CMAKE_THREAD_LIBS_INIT}")
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+  set(NEED_MESSAGE_CPP on)
+endif()
+
 add_subdirectory(src)
 
 set(UNIT_TEST "${UNIT_TEST}")
