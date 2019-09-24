@@ -464,7 +464,7 @@ void Master::archiveProgress(const bool force)
 	}, iter, timeOffset + tmrTrain.elapseSd(), ref(model.getParameter()));
 }
 
-size_t Master::estimateGlobalBatchSize()
+size_t Master::estimateMinGlobalBatchSize()
 {
 	double mtu = mtDeltaSum / nDelta;
 	double mtb = mtParameterSum / stat.n_par_send;
@@ -492,21 +492,9 @@ size_t Master::optFkGlobalBatchSize(){
 			return l.second / (f1 + wtu/l.first)< r.second/(f1+wtu/r.first);
 		});
 	return it->first;
-
-	double curmin = -1;
-	size_t curk = -1;
-	std::map<size_t, double>::iterator itr;
-	for (itr = gkProb.begin(); itr != gkProb.end(); itr++){
-		double fk = itr->second / ( hmean(wtDatapoint) / nWorker + wtu / itr->first);
-		if (curmin == -1 || curmin > fk){
-			curmin = fk;
-			curk = itr->first;
-		}
-	}
-	return curk;
 }
 
-size_t Master::estimateLocalReportSize(const bool quick)
+size_t Master::estimateMinLocalReportSize(const bool quick)
 {
 	double mtr = mtReportSum / nReport;
 	double wtr = mean(wtReport);

@@ -317,7 +317,7 @@ void Master::papProcess()
 		suPap.wait_n_reset();
 		//// online change globalBatchSize
 		if(conf->papDynamicBatchSize) {
-			globalBatchSize = estimateGlobalBatchSize();
+			globalBatchSize = estimateMinGlobalBatchSize();
 			VLOG(2) << "gbs=" << globalBatchSize << "\tlrs=" << localReportSize;
 		}
 		gatherDelta();
@@ -357,17 +357,17 @@ void Master::papProbe()
 
 void Master::pap2Process()
 {
-	VLOG(1) << "Start prob phase with gbs=" << globalBatchSize;
-	if(conf->papDynamicBatchSize) {
+	VLOG(1) << "Start probe phase with gbs=" << globalBatchSize;
+	{
 		pap2Probe();
-		size_t gbs = max(optFkGlobalBatchSize(), estimateGlobalBatchSize());
+		size_t gbs = max(optFkGlobalBatchSize(), estimateMinGlobalBatchSize());
 		if(gbs != globalBatchSize){
 			globalBatchSize = gbs;
 			localReportSize = globalBatchSize / nWorker / 2;
 			broadcastSizeConf(globalBatchSize, localReportSize);
 		}
 	}
-	VLOG(1) << "Finish prob phase with gbs=" << globalBatchSize << " time=" << tmrTrain.elapseSd() << " gkProb:" << gkProb;
+	VLOG(1) << "Finish probe phase with gbs=" << globalBatchSize << " time=" << tmrTrain.elapseSd() << " gkProb:" << gkProb;
 	
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
@@ -386,9 +386,11 @@ void Master::pap2Process()
 			double wtd = hmean(wtDatapoint);
 			double wtc = mean(wtDelta);
 			double wtr = mean(wtReport);
+			size_t gbs = estimateMinGlobalBatchSize();
 
-			VLOG(2) << "mtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto=" << mto
-				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr << "\tloss=" << lossOnline;
+			VLOG(2) << "min-gbs=" << gbs << "\tloss-est=" << lossOnline << "\tloss-last="<<sum(lastDeltaLoss)
+				<< "\tmtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto=" << mto
+				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr;
 		}
 		mtOther += tmr.elapseSd();
 		// wait until the report counts reach a global mini batch
@@ -396,11 +398,11 @@ void Master::pap2Process()
 		//// online change globalBatchSize
 		if(conf->papDynamicBatchSize) {
 			size_t ogbs = optFkGlobalBatchSize();
-			size_t egbs = estimateGlobalBatchSize();
+			size_t egbs = estimateMinGlobalBatchSize();
 			size_t old_gbs = globalBatchSize;
 			globalBatchSize = max(ogbs, egbs);
 			size_t olrs = globalBatchSize / nWorker / 2;
-			size_t elrs = estimateLocalReportSize();
+			size_t elrs = estimateMinLocalReportSize();
 			size_t old_lrs = localReportSize;
 			if(conf->papDynamicReportFreq){
 				localReportSize = max(olrs, elrs);
@@ -467,6 +469,7 @@ void Master::pap2Probe()
 		if (conf->papDynamicBatchSize && (nPoint- lastProbeNPoint) > probeSize) {
 			double nloss1 = lossOnline;
 			double nloss2 = sum(lastDeltaLoss);
+			double nloss3 = lossGlobal;
 			double gk1 = lastLoss - nloss1 / globalBatchSize;
 			double gk2 = lastLoss - nloss2 / globalBatchSize;
 			//lastLoss = nloss1 / globalBatchSize;
@@ -477,13 +480,13 @@ void Master::pap2Probe()
 			double tk1 =(wtd/nWorker + wtc/globalBatchSize);
 			double tk2 = tmrTrain.elapseSd() - lastProbeTime;
 			double fk = gk2 / tk2;
-			size_t mink = estimateGlobalBatchSize();
+			size_t mink = estimateMinGlobalBatchSize();
 
-			VLOG(2) << "PROB k=" << globalBatchSize << "\titer=" << iter - lastProbeIter << "\tnp=" << nPoint - lastProbeNPoint
+			VLOG(2) << "probe k=" << globalBatchSize << "\titer=" << iter - lastProbeIter << "\tnp=" << nPoint - lastProbeNPoint
 				<< "\ttk=" << tk1 << ", " << tk2 << "\tgk=" << gk1 << ", " << gk2 << "\tfk=" << gk2 / tk1 << ", " << gk2 / tk2 << "\n"
 				<< "wtd=" << wtd << ", " << wtDatapoint << "\twtc=" << wtc << ", " << wtDelta << "\n"
 				<< "maxfk=" << maxfk << "\tmink=" << mink << "\tunit-loss-online=" << nloss1/globalBatchSize
-				<< "\tunit-loss-sum=" << lossGlobal/(nPoint- lastProbeNPoint) << "\tunit-loss-recent=" << nloss2/globalBatchSize;
+				<< "\tunit-loss-sum=" << nloss3/(nPoint- lastProbeNPoint) << "\tunit-loss-recent=" << nloss2/globalBatchSize;
 		
 			if (maxfk < 0 || fk > maxfk * toleranceFactor) {
 				maxfk = max(fk, maxfk);
@@ -492,6 +495,8 @@ void Master::pap2Probe()
 					localReportSize = globalBatchSize / nWorker / 2;
 					broadcastSizeConf(globalBatchSize, localReportSize);
 					lossOnline /= 2;
+					for(auto& v : lastDeltaLoss)
+						v /= 2;
 				} else{
 					probeReached = true;
 				}

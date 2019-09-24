@@ -80,9 +80,9 @@ private:
 	bool needArchive();
 	void archiveProgress(const bool force = false);
 
-	size_t estimateGlobalBatchSize();
+	size_t estimateMinGlobalBatchSize();
 	size_t optFkGlobalBatchSize(); // compute opt k from f(k)
-	size_t estimateLocalReportSize(const bool quick = false);
+	size_t estimateMinLocalReportSize(const bool quick = false);
 
 	void updateOnlineLoss(const int source, const double loss);
 	void updateIterationTime(const int src, const double time);

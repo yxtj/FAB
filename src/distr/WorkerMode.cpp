@@ -428,7 +428,8 @@ void Worker::papProbe()
 
 void Worker::pap2Process()
 {
-	if(conf->papDynamicBatchSize){
+	// probe phase
+	{
 		Timer tmr;
 		double loss = calcLoss(0, localBatchSize);
 		double t1 = tmr.elapseSd();
