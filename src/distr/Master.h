@@ -115,11 +115,11 @@ public:
 	void handleClosed(const std::string& data, const RPCInfo& info);
 
 	void handleParameter(const std::string& data, const RPCInfo& info);
-	void handleReport(const std::string& data, const RPCInfo& info);
 	void handleLoss(const std::string& data, const RPCInfo& info);
 
-	void handleDeltaProbe(const std::string& data, const RPCInfo& info);
+	void handleReportPap(const std::string& data, const RPCInfo& info);
 
+	void handleDeltaProbe(const std::string& data, const RPCInfo& info);
 	void handleDeltaBsp(const std::string& data, const RPCInfo& info);
 	void handleDeltaTap(const std::string& data, const RPCInfo& info);
 	void handleDeltaSsp(const std::string& data, const RPCInfo& info);

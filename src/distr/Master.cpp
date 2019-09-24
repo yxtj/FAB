@@ -27,7 +27,8 @@ Master::Master() : Runner() {
 	mtOther = 0.0;
 
 	timeOffset = 0.0;
-	lossOnline, lossGlobal = 0.0;
+	lossOnline = 0;
+	lossGlobal = 0.0;
 	pie = nullptr;
 	prs = nullptr;
 	lastArchIter = 0;
@@ -719,53 +720,6 @@ void Master::handleParameter(const std::string & data, const RPCInfo & info)
 	++stat.n_dlt_recv;
 	stat.t_par_calc += tmr.elapseSd();
 	rph.input(MType::DParameter, s);
-}
-
-void Master::handleReport(const std::string& data, const RPCInfo& info)
-{
-	Timer tmr;
-	vector<double> report = deserialize<vector<double>>(data);
-	stat.t_data_deserial += tmr.elapseSd();
-	int wid = wm.nid2lid(info.source);
-	// if (report.size() < 5) {
-		// VLOG(2) << "!!!!! report from " << wid << " w/size " << report.size() << "\t" << report;
-	// }
-	bool flag = false;
-	// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending, loss
-	{
-		lock_guard<mutex> lg(mReportProc);
-		
-		// int t = reportProcEach[wid];
-		// int cnt = static_cast<int>(report[0]);
-		// reportProcEach[wid] = cnt;
-		// reportProcTotal += cnt - t;
-		reportProcEach[wid] += static_cast<int>(report[0]); /// only send the cnt between reports
-		reportProcTotal += static_cast<int>(report[0]);
-
-		//if(conf->papSearchBatchSize || conf->papSearchReportFreq){
-		wtDatapoint[wid] = report[1];
-		wtDelta[wid] = report[2];
-		wtReport[wid] = report[3];
-		//}
-		// lossGlobal= (lossGlobal* (nWorker - 1) + report[4]) / nWorker; // estimated loss
-		if (report.size() > 4) {
-			// updateOnlineLoss(wid, report[4]); // estimated loss
-			lossGlobal += report[4]; /// accumulate loss
-		}
-		if (report.size() > 5)
-			wtu = wtu == 0 ? report[5] : (report[5] + wtu)/2; /// worker update time
-		if(reportProcTotal >= globalBatchSize) {
-			suPap.notify();
-			reportProcTotal = 0; // request delta and reset counter
-		} /// > conf->batchSize)
-
-		// VLOG(2) << "Recieve report from: " << wid << " with " << report
-		// 	<< "\ttt: " << reportProcTotal << "\tgbs: " << globalBatchSize;
-	}
-	// if(reportProcTotal > conf->batchSize)
-	// 	suPap.notify();
-	++nReport;
-	mtReportSum += tmr.elapseSd();
 }
 
 void Master::handleLoss(const std::string& data, const RPCInfo& info)
