@@ -354,7 +354,7 @@ void Worker::papInit()
 
 void Worker::papProcess()
 {
-	if(conf->papDynamicBatchSize)
+	if(conf->papProbeBatchSize || conf->papDynamicBatchSize)
 		papProbe(); 
 	double t_data = 0.0, t_delta = 0.0, t_report = 0.0;
 	size_t n_delta = 0, n_report = 0;

@@ -52,7 +52,7 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 	pimpl->desc.add_options()
 		("help,h", "Print help messages.")
 		// parallel
-		("mode,m", value(&conf.mode)->default_value("bsp"), "The parallel mode: bsp, tap, ssp:<n>, sap:<n>, fsp, aap, pap:<n>.")
+		("mode,m", value(&conf.mode)->default_value("bsp"), "The parallel mode: bsp, tap, ssp:<n>, sap:<n>, fsp, aap, pap:<p>:<d>.")
 		// parallel - broadcast
 		("cast_mode,c", value(&tmp_cast)->default_value("broadcast"),
 			"The method to send out new parameters. Supports: broadcast/all, ring:k, random:k,seed, hash:k.")
@@ -207,8 +207,9 @@ bool Option::processMode(){
 	} else if(t[0]=="aap"){
 		conf.aapWait = t.size() >= 2 && beTrueOption(t[1]);
 	} else if(t[0] == "pap" || t[0] == "pap2"){
-		conf.papDynamicBatchSize = t.size() > 1 ? beTrueOption(t[1]) : false;
-		conf.papDynamicReportFreq = t.size() > 2 ? beTrueOption(t[2]) : false;
+		conf.papProbeBatchSize = t.size() > 1 ? beTrueOption(t[1]) : false;
+		conf.papDynamicBatchSize = t.size() > 2 ? beTrueOption(t[2]) : false;
+		conf.papDynamicReportFreq = t.size() > 3 ? beTrueOption(t[3]) : false;
 	}
 	return true;
 }

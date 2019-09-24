@@ -289,7 +289,8 @@ void Master::papInit()
 
 void Master::papProcess()
 {
-	papProbe();
+	if(conf->papProbeBatchSize || conf->papDynamicBatchSize)
+		papProbe();
 	VLOG(1) << "Finish prob with gbs= " << globalBatchSize;
 	double tl = tmrTrain.elapseSd();
 	while(!terminateCheck()){
