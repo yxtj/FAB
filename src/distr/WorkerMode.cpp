@@ -438,10 +438,10 @@ void Worker::pap2Process()
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;// << ". msg waiting: " << driver.queSize();
 		Timer tmr;
 		// DVLOG(3) << "current parameter: " << model.getParameter().weights;
-		size_t n_used = 0;
+		size_t n_used = 0, n_used_since_report = 0;
 		t_data = 0.0;
 		size_t left = localReportSize;
-		double loss = 0.0;
+		double loss = 0.0, loss_since_report = 0.0;
 		double dly = speedFactor.generate();
 		clearDelta();
 		while(exitTrain == false && !requestingDelta){
@@ -463,10 +463,12 @@ void Worker::pap2Process()
 				tmr.restart();
 				double avgtd = n_delta == 0 ? 0 : t_delta / n_delta;
 				double avgtr = n_report == 0 ? 0 : t_report / n_report;
-				vector<double> report = { static_cast<double>(dr.n_reported), t_data / n_used, 
-					avgtd, avgtr, dr.loss, t_updParam / n_updParam};
+				vector<double> report = { static_cast<double>(n_used - n_used_since_report),
+					t_data / n_used, avgtd, avgtr, loss - loss_since_report, t_updParam / n_updParam};
 				// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending
 				DVLOG_EVERY_N(ln, 2) << "  send report: " << report;
+				n_used_since_report = n_used;
+				loss_since_report = loss;
 				sendReport(report);
 				++n_report;
 				t_report += tmr.elapseSd();
