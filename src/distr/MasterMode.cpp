@@ -478,12 +478,11 @@ void Master::pap2Probe()
 				// model.setParameter(initP);
 				localreportSize = globalBatchSize/nWorker/2;
 				broadcastSizeConf(globalBatchSize, localreportSize);
-			}
-			else {
+			} else {
 				// TODO:
-				globalBatchSize *= 2; 
-				localreportSize = globalBatchSize/nWorker/2;
-				broadcastSizeConf(globalBatchSize, localreportSize);
+				//globalBatchSize *= 2; 
+				//localreportSize = globalBatchSize/nWorker/2;
+				//broadcastSizeConf(globalBatchSize, localreportSize);
 				// probeReached = true;
 				break;
 			}
