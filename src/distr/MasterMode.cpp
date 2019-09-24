@@ -492,13 +492,15 @@ void Master::pap2Probe()
 					localReportSize = globalBatchSize / nWorker / 2;
 					broadcastSizeConf(globalBatchSize, localReportSize);
 					lossOnline /= 2;
+				} else{
+					probeReached = true;
 				}
 			} else {
 				// TODO:
 				//globalBatchSize *= 2; 
 				//localReportSize = globalBatchSize/nWorker/2;
 				//broadcastSizeConf(globalBatchSize, localReportSize);
-				// probeReached = true;
+				probeReached = true;
 				//break;
 			}
 			lastProbeNPoint = nPoint;
