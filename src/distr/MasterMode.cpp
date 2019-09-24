@@ -470,7 +470,7 @@ void Master::pap2Probe()
 			double wtd = hmean(wtDatapoint);
 			double wtc = mean(wtDelta);
 			double tk1 =(wtd/nWorker + wtc/globalBatchSize);
-			double tk2 = tmr.elapseSd() - lastProbeTime;
+			double tk2 = tmrTrain.elapseSd() - lastProbeTime;
 			double fk = gk / tk2;
 			double mink = estimateGlobalBatchSize();
 			double lastTTloss = sum(lastDeltaLoss);
