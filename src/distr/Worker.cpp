@@ -287,11 +287,8 @@ void Worker::fetchParmeter()
 double Worker::calcLoss(const size_t start, const size_t cnt)
 {
 	double loss = 0.0;
-	// size_t end = start + cnt;
-	// if(end > pdh->size())
-	// 	end = pdh->size();
-	size_t tt = min(cnt, pdh->size());
-	for(size_t i = 0; i < tt; ++i){
+	// size_t end = min(cnt, pdh->size());
+	for(size_t i = 0; i < cnt; ++i){
 		size_t dp = (start+i) % pdh->size();
 		double l = model.loss(pdh->get(dp));
 		loss += l;
