@@ -174,10 +174,6 @@ void Master::bindMode()
 		initFun = &Master::papInit;
 		processFun = &Master::papProcess;
 		deltaFun = &Master::handleDeltaPap;
-	} else if(conf->mode == "pap2"){
-		initFun = &Master::papInit;
-		processFun = &Master::pap2Process;
-		deltaFun = &Master::handleDeltaPap2;
 	} else{
 		LOG(FATAL) << "Unsupported mode: " << conf->mode;
 	}
@@ -723,9 +719,8 @@ void Master::handleDeltaTail(const std::string & data, const RPCInfo & info)
 	auto deltaMsg = deserialize<tuple<size_t, vector<double>, double>>(data);
 	stat.t_data_deserial += tmr.elapseSd();
 	int s = wm.nid2lid(info.source);
+	commonHandleDelta(s, get<0>(deltaMsg), get<2>(deltaMsg), tmrTrain.elapseSd());
 	applyDelta(get<1>(deltaMsg), s);
-	updateOnlineLoss(get<2>(deltaMsg), s);
-	++nDelta;
 }
 
 void Master::handleDeltaIgnore(const std::string& data, const RPCInfo& info)

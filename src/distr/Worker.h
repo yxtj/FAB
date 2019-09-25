@@ -45,9 +45,11 @@ private:
 	void aapProcess();
 	void papInit();
 	void papProcess();
-	void papProbe();
-	void pap2Process();
-	void pap2Probe();
+
+	void papOnlineProbe1();
+	void papOnlineProbe2();
+	void papOnlineProbe3();
+	void papOnlineProbe4();
 
 // local logic
 private:

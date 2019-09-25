@@ -207,7 +207,7 @@ bool Option::processMode(){
 	} else if(t[0]=="aap"){
 		conf.aapWait = t.size() >= 2 && beTrueOption(t[1]);
 	} else if(t[0] == "pap" || t[0] == "pap2"){
-		conf.papProbeBatchSize = t.size() > 1 ? beTrueOption(t[1]) : false;
+		conf.papOnlineProbeVersion = t.size() > 1 ? stoi(t[1]) : false;
 		conf.papDynamicBatchSize = t.size() > 2 ? beTrueOption(t[2]) : false;
 		conf.papDynamicReportFreq = t.size() > 3 ? beTrueOption(t[3]) : false;
 	}

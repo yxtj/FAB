@@ -49,9 +49,11 @@ private:
 	void aapProcess();
 	void papInit();
 	void papProcess();
-	void papProbe();
-	void pap2Process();
-	void pap2Probe();
+
+	void papOnlineProbe1();
+	void papOnlineProbe2();
+	void papOnlineProbe3();
+	void papOnlineProbe4();
 
 // local logic
 private:
@@ -127,7 +129,6 @@ public:
 	void handleDeltaFsp(const std::string& data, const RPCInfo& info);
 	void handleDeltaAap(const std::string& data, const RPCInfo& info);
 	void handleDeltaPap(const std::string& data, const RPCInfo& info);
-	void handleDeltaPap2(const std::string& data, const RPCInfo& info);
 	void handleDeltaTail(const std::string& data, const RPCInfo& info);
 	void handleDeltaIgnore(const std::string& data, const RPCInfo& info);
 

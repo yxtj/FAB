@@ -138,11 +138,6 @@ void Worker::bindMode()
 		processFun = &Worker::papProcess;
 		paramFun = &Worker::handleParameterPap;
 		lbsFun = &Worker::calcLocalBatchSizeDivide;
-	} else if(conf->mode == "pap2"){
-		initFun = &Worker::papInit;
-		processFun = &Worker::pap2Process;
-		paramFun = &Worker::handleParameterPap;
-		lbsFun = &Worker::calcLocalBatchSizeDivide;
 	} else{
 		LOG(FATAL) << "Unsupported mode: " << conf->mode;
 	}
