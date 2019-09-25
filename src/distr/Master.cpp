@@ -591,13 +591,14 @@ void Master::gatherDelta()
 	suDeltaAll.wait();
 }
 
-double Master::gatherLoss()
+double Master::gatherLoss(const double startRatio, const double amountRatio)
 {
 	suLoss.reset();
-	lossOnline = 0.0;
-	net->broadcast(CType::NormalControl, MType::DRLoss);
+	lossGathered = 0.0;
+	pair<double, double> req = make_pair(startRatio, amountRatio);
+	net->broadcast(CType::NormalControl, make_pair(MType::DRLoss, req));
 	suLoss.wait();
-	return lossOnline;
+	return lossGathered;
 }
 
 // handler - normal control
@@ -714,7 +715,7 @@ void Master::handleLoss(const std::string& data, const RPCInfo& info)
 {
 	double loss = deserialize<double>(data);
 	int s = wm.nid2lid(info.source);
-	lossOnline += loss;
+	lossGathered += loss;
 	rph.input(MType::DLoss, s);
 }
 

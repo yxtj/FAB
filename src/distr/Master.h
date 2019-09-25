@@ -104,7 +104,7 @@ public:
 	void waitDeltaFromAny(); // dont reset suDeltaAny
 	void waitDeltaFromAll(); // reset suDeltaAll
 	void gatherDelta();
-	double gatherLoss();
+	double gatherLoss(const double startRatio = 0.0, const double amountRatio = 1.0);
 
 // handler
 public:
@@ -165,6 +165,7 @@ private:
 
 	double lossOnline; // the estimated loss for one global batch
 	double lossGlobal; // the accumulated loss from all reports
+	double lossGathered;
 	std::vector<double> lastDeltaLoss;
 
 	double timeOffset; // used for accounting time if resumed from previous archive
