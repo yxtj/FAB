@@ -47,6 +47,7 @@ private:
 	void papProcess();
 	void papProbe();
 	void pap2Process();
+	void pap2Probe();
 
 // local logic
 private:
