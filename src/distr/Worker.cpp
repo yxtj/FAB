@@ -375,6 +375,9 @@ void Worker::handleNormalControl(const std::string & data, const RPCInfo & info)
 	case MType::DRLoss:
 		handleLossRequest(data.substr(sizeof(int)), info);
 		break;
+	case MType::CProbeDone:
+		handleProbeDone(data.substr(sizeof(int)), info);
+		break;
 		// MType::DParameter is handled directly by message type
 	}
 }
@@ -432,8 +435,15 @@ void Worker::handleDeltaRequest(const std::string& data, const RPCInfo& info)
 
 void Worker::handleLossRequest(const std::string& data, const RPCInfo& info)
 {
-	double loss = calcLoss(0, pdh->size());
-	sendLoss(loss);
+	auto reqRatio = deserialize<pair<double, double>>(data);
+	lossReqStart = static_cast<size_t>(reqRatio.first * pdh->size());
+	lossReqCount = static_cast<size_t>(reqRatio.second * pdh->size());
+	suLossReq.notify();
+}
+
+void Worker::handleProbeDone(const std::string& data, const RPCInfo& info)
+{
+	suProbeDone.notify();
 }
 
 void Worker::handleReset(const std::string& data, const RPCInfo& info)

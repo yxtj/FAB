@@ -98,6 +98,7 @@ public:
 	void broadcastSignalPause();
 	void broadcastSignalContinue();
 	void broadcastSignalTerminate();
+	void broadcastProbeDone();
 	// global batch size, local report size. send 0 means keeping the old one
 	void broadcastSizeConf(const size_t gbs, const size_t lrs);
 	void waitDeltaFromAny(); // dont reset suDeltaAny
@@ -161,7 +162,9 @@ private:
 	size_t nDelta; // # of received delta, usually used for asynchronous cases
 	double mtParameterSum; // master side time for sending all parameters
 	double mtOther; // time other than processing/sending parameter, delta and report. include: archive, log
-	double lossOnline, lossGlobal; // the loss for one global batch
+
+	double lossOnline; // the estimated loss for one global batch
+	double lossGlobal; // the accumulated loss from all reports
 	std::vector<double> lastDeltaLoss;
 
 	double timeOffset; // used for accounting time if resumed from previous archive
@@ -210,4 +213,5 @@ private:
 	// probe
 	size_t probeNeededDelta, probeNeededPoint, probeNeededIter;
 	bool probeReached;
+	SyncUnit suProbeDone;
 };

@@ -512,6 +512,8 @@ void Worker::papOnlineProbe2()
 	size_t n_delta = 0, n_report = 0;
 	size_t prevStart = 0;
 	Parameter prevParam = model.getParameter();
+	bool probeReached = false;
+	size_t n_probe;
 
 	while(!exitTrain || probeReached){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;// << ". msg waiting: " << driver.queSize();
@@ -566,6 +568,7 @@ void Worker::papOnlineProbe2()
 				averageDelta(n_used);
 			stat.t_dlt_calc += tmr.elapseSd();
 			DVLOG_EVERY_N(ln, 2) << "  send delta";
+			n_probe += n_used;
 			tmr.restart();
 			sendDelta(bfDelta, n_used, loss);
 			requestingDelta = false;

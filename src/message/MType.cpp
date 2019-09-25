@@ -11,6 +11,7 @@ constexpr int MType::CStart;
 constexpr int MType::CTrainPause;
 constexpr int MType::CTrainContinue;
 constexpr int MType::CReset;
+constexpr int MType::CProbeDone;
 
 // Immediate Control (20-29)
 constexpr int MType::CTerminate;

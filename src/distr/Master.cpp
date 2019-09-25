@@ -571,6 +571,11 @@ void Master::broadcastSignalTerminate()
 	net->broadcast(CType::ImmediateControl, MType::CTerminate);
 }
 
+void Master::broadcastProbeDone()
+{
+	net->broadcast(CType::NormalControl, MType::CProbeDone);
+}
+
 void Master::waitDeltaFromAny(){
 	suDeltaAny.wait_n_reset();
 }

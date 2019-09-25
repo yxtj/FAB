@@ -96,6 +96,7 @@ public:
 	void handleContinue(const std::string& data, const RPCInfo& info);
 	void handleDeltaRequest(const std::string& data, const RPCInfo& info);
 	void handleLossRequest(const std::string& data, const RPCInfo& info);
+	void handleProbeDone(const std::string& data, const RPCInfo& info);
 
 	void handleReset(const std::string& data, const RPCInfo& info);
 	void handleMetaConf(const std::string& data, const RPCInfo& info);
@@ -123,6 +124,9 @@ private:
 	SyncUnit suDatasetInfo;
 	SyncUnit suStart;
 	SyncUnit suConf;
+
+	SyncUnit suLossReq;
+	size_t lossReqStart, lossReqCount; // the data points to be used for calculating loss
 	
 	bool hasNewParam;
 	std::mutex mParam;
@@ -146,4 +150,7 @@ private:
 
 	// speed adjustment
 	RandomGenerator speedFactor;
+
+	// online probe
+	SyncUnit suProbeDone;
 };
