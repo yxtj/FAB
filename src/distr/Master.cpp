@@ -477,7 +477,8 @@ size_t Master::estimateMinGlobalBatchSize()
 		<< mtb << "\tmtr=" << mtr << "\tmto=" << mto << "\twtd=" << wtd << "\twtc=" 
 		<< wtc << "\twtr=" << wtr;
 
-	return max(static_cast<size_t>(up / down), nWorker);
+	size_t res = static_cast<size_t>(up / down);
+	return max(min(res, nPointTotal), nWorker);
 }
 
 size_t Master::optFkGlobalBatchSize(){

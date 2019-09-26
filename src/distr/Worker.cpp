@@ -14,13 +14,12 @@ Worker::Worker() : Runner() {
 	iterParam = 0;
 	localBatchSize = 1;
 	//bfDeltaDpCount = 0;
-	n_updParam = 0;
-	t_updParam = 0;
+	n_report = 0;
+	t_report = 0.0;
 
 	hasNewParam = false;
 	allowTrain = true;
 	exitTrain = false;
-	exitRun = false;
 }
 
 void Worker::init(const ConfData* conf, const size_t lid)
@@ -255,7 +254,6 @@ void Worker::bufferParameter(Parameter & p)
 
 void Worker::applyBufferParameter()
 {
-	Timer tmr;
 	//DLOG(INFO)<<"has new parameter: "<<hasNewParam;
 	if(!hasNewParam)
 		return;
@@ -268,8 +266,6 @@ void Worker::applyBufferParameter()
 	//mModel.unlock();
 	hasNewParam = false;
 	//mParam.unlock();
-	n_updParam++;
-	t_updParam += tmr.elapseSd();
 }
 
 void Worker::waitParameter()
@@ -334,7 +330,7 @@ size_t Worker::calcLocalBatchSizeWhole(const size_t gbs)
 void Worker::initSpeedAdjustment()
 {
 	const double fixSlowFactor = conf->adjustSpeedHetero ? conf->speedHeterogenerity[localID] : 0.0;
-	unsigned seed = conf->seed + 123 + localID;
+	unsigned seed = static_cast<unsigned>(conf->seed + 123 + localID);
 
 	const vector<string>& param = conf->adjustSpeedRandom ? conf->speedRandomParam : vector<string>();
 	DLOG(DEBUG) << param << "," << fixSlowFactor << "," << seed;
@@ -480,7 +476,6 @@ void Worker::handleImmediateControl(const std::string & data, const RPCInfo & in
 void Worker::handleTerminate(const std::string & data, const RPCInfo & info)
 {
 	exitTrain = true;
-	exitRun = true;
 	pauseTrain(); // in case if the system is calculating delta
 	suParam.notify(); // in case if the system just calculated a delta (is waiting for new parameter)
 	sendReply(info, MType::CTerminate);

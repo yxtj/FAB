@@ -21,7 +21,8 @@ void Master::probeModeProcess()
 {
 	Parameter p0 = model.getParameter();
 	suLoss.wait_n_reset();
-	double l0 = lossOnline;
+	double l0 = lossGathered;
+	LOG(INFO) << "initialize loss=" << l0;
 	// TODO
 	vector<size_t> gbsList = { conf->batchSize, conf->batchSize / 2, conf->batchSize / 4 };
 	for(size_t gbs : gbsList){
@@ -34,10 +35,12 @@ void Master::probeModeProcess()
 		(this->*processFun)();
 		broadcastReset(0, p0);
 		double time = tmr.elapseSd();
-		gatherLoss();
-		double rate = lossOnline / time;
-		LOG(INFO) << "batch size: " << gbs << " gain: " << lossOnline << " rate: " << rate;
+		double loss = gatherLoss();
+		double gain = loss - l0;
+		double rate = gain / time;
+		LOG(INFO) << "batch size: " << gbs << " loss=" << loss << " gain=" << gain << " rate=" << rate;
 	}
+	broadcastProbeDone();
 }
 
 void Master::handleDeltaProbe(const std::string& data, const RPCInfo& info)
@@ -308,13 +311,16 @@ void Master::papProcess()
 		else
 			LOG(FATAL) << "Online probe version " << conf->papOnlineProbeVersion << " not supported";
 
-		size_t gbs = max(optFkGlobalBatchSize(), estimateMinGlobalBatchSize());
+		size_t byRate = optFkGlobalBatchSize();
+		size_t byTime = estimateMinGlobalBatchSize();
+		size_t gbs = max(byRate, byTime);
 		if(gbs != globalBatchSize){
 			globalBatchSize = gbs;
 			localReportSize = globalBatchSize / nWorker / 2;
 			broadcastSizeConf(globalBatchSize, localReportSize);
 		}
-		VLOG(1) << "Finish probe phase with gbs=" << globalBatchSize << " time=" << tmrTrain.elapseSd() << " gkProb:" << gkProb;
+		VLOG(1) << "Finish probe phase with gbs=" << gbs << " (by-rate=" << byRate << "by-time=" << byTime
+			<< ") time=" << tmrTrain.elapseSd() << " gkProb:" << gkProb;
 	}
 	
 	double tl = tmrTrain.elapseSd();
@@ -354,10 +360,11 @@ void Master::papProcess()
 			if(conf->papDynamicReportFreq){
 				localReportSize = max(olrs, elrs);
 			}
-			VLOG_IF(old_gbs != globalBatchSize || old_lrs != localReportSize, 2)
-				<< "gbs=" << globalBatchSize << " (o=" << ogbs << ", e=" << egbs << ")"
-				<< " lrs=" << localReportSize << "(o=" << olrs << ", e=" << elrs << ")";
-			broadcastSizeConf(globalBatchSize, localReportSize);
+			if(old_gbs != globalBatchSize || old_lrs != localReportSize){
+				VLOG(2) << "gbs=" << globalBatchSize << " (o=" << ogbs << ", e=" << egbs << ")"
+					<< " lrs=" << localReportSize << "(o=" << olrs << ", e=" << elrs << ")";
+				broadcastSizeConf(globalBatchSize, localReportSize);
+			}
 		}
 		// VLOG(2) << "gather Delta";
 		gatherDelta();

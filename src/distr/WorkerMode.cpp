@@ -364,9 +364,10 @@ void Worker::papProcess()
 		papOnlineProbe4();
 	else if(conf->papOnlineProbeVersion == 5)
 		papOnlineProbeBenchmark();
+	else if(conf->papOnlineProbeVersion == 9)
+		papOnlineProbeFile();
 
-	double t_data = 0.0, t_delta = 0.0, t_report = 0.0;
-	size_t n_delta = 0, n_report = 0;
+	double t_data = 0.0; // data point processing time of current iteration
 
 	while(!exitTrain){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;// << ". msg waiting: " << driver.queSize();
@@ -395,8 +396,8 @@ void Worker::papProcess()
 			stat.t_dlt_calc += t;
 			if(left == 0){
 				tmr.restart();
-				double avgtd = n_delta == 0 ? 0 : t_delta / n_delta;
-				double avgtu = n_updParam == 0 ? 0 : t_updParam / n_updParam;
+				double avgtd = stat.n_dlt_send == 0 ? 0 : stat.t_dlt_send / stat.n_dlt_send;
+				double avgtu = stat.t_par_calc == 0 ? 0 : stat.n_par_recv / stat.t_par_calc;
 				double avgtr = n_report == 0 ? 0 : t_report / n_report;
 				vector<double> report = { static_cast<double>(n_used - n_used_since_report),
 					t_data / n_used, avgtd + avgtu, avgtr, loss - loss_since_report };
@@ -424,8 +425,7 @@ void Worker::papProcess()
 			tmr.restart();
 			sendDelta(bfDelta, n_used, loss);
 			requestingDelta = false;
-			++n_delta;
-			t_delta += tmr.elapseSd();
+			stat.t_dlt_send += tmr.elapseSd();
 		}
 		++iter;
 	}
@@ -448,8 +448,7 @@ void Worker::papOnlineProbe1()
 
 void Worker::papOnlineProbe2()
 {
-	double t_data = 0.0, t_delta = 0.0, t_report = 0.0;
-	size_t n_delta = 0, n_report = 0;
+	double t_data = 0.0;
 	size_t prevStart = 0;
 	Parameter prevParam = model.getParameter();
 	size_t n_probe = 0;
@@ -481,8 +480,8 @@ void Worker::papOnlineProbe2()
 			stat.t_dlt_calc += t;
 			if(left == 0){
 				tmr.restart();
-				double avgtd = n_delta == 0 ? 0 : t_delta / n_delta;
-				double avgtu = n_updParam == 0 ? 0 : t_updParam / n_updParam;
+				double avgtd = stat.n_dlt_send == 0 ? 0 : stat.t_dlt_send / stat.n_dlt_send;
+				double avgtu = stat.t_par_calc == 0 ? 0 : stat.n_par_recv / stat.t_par_calc;
 				double avgtr = n_report == 0 ? 0 : t_report / n_report;
 				vector<double> report = { static_cast<double>(n_used - n_used_since_report),
 					t_data / n_used, avgtd + avgtu, avgtr, loss - loss_since_report };
@@ -510,8 +509,7 @@ void Worker::papOnlineProbe2()
 			tmr.restart();
 			sendDelta(bfDelta, n_used, loss);
 			requestingDelta = false;
-			++n_delta;
-			t_delta += tmr.elapseSd();
+			stat.t_dlt_send += tmr.elapseSd();
 			n_probe += n_used;
 		}
 		// send init loss for current probe
@@ -550,8 +548,7 @@ void Worker::papOnlineProbe3()
 
 void Worker::papOnlineProbe4()
 {
-	double t_data = 0.0, t_delta = 0.0, t_report = 0.0;
-	size_t n_delta = 0, n_report = 0;
+	double t_data = 0.0;
 	size_t prevStart = 0;
 	size_t n_probe = 0;
 
@@ -582,8 +579,8 @@ void Worker::papOnlineProbe4()
 			stat.t_dlt_calc += t;
 			if(left == 0){
 				tmr.restart();
-				double avgtd = n_delta == 0 ? 0 : t_delta / n_delta;
-				double avgtu = n_updParam == 0 ? 0 : t_updParam / n_updParam;
+				double avgtd = stat.n_dlt_send == 0 ? 0 : stat.t_dlt_send / stat.n_dlt_send;
+				double avgtu = stat.t_par_calc == 0 ? 0 : stat.n_par_recv / stat.t_par_calc;
 				double avgtr = n_report == 0 ? 0 : t_report / n_report;
 				vector<double> report = { static_cast<double>(n_used - n_used_since_report),
 					t_data / n_used, avgtd + avgtu, avgtr, loss - loss_since_report };
@@ -611,8 +608,7 @@ void Worker::papOnlineProbe4()
 			tmr.restart();
 			sendDelta(bfDelta, n_used, loss);
 			requestingDelta = false;
-			++n_delta;
-			t_delta += tmr.elapseSd();
+			stat.t_dlt_send += tmr.elapseSd();
 			n_probe += n_used;
 		}
 		// send init loss for current probe
@@ -632,6 +628,40 @@ void Worker::papOnlineProbe4()
 
 void Worker::papOnlineProbeBenchmark()
 {
+}
+
+void Worker::papOnlineProbeFile()
+{
+	Timer tmr;
+	// DVLOG(3) << "current parameter: " << model.getParameter().weights;
+	double dly = speedFactor.generate();
+	clearDelta();
+	resumeTrain();
+	Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, localReportSize, false, dly);
+	updatePointer(dr.n_scanned, dr.n_reported);
+	size_t n_used = dr.n_reported;
+	DVLOG_EVERY_N(ln, 2) << "  calculate delta with " << dr.n_scanned << " data points";
+	if(dr.n_reported != 0){
+		accumulateDelta(dr.delta);
+	}
+	double t_data = tmr.elapseSd();
+	stat.t_dlt_calc += t_data;
+	if(n_used != 0){
+		tmr.restart();
+		double wtd = t_data / n_used;
+		vector<double> report = { static_cast<double>(n_used),
+			wtd, wtd, wtd, dr.loss };
+		// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending, loss
+		DVLOG_EVERY_N(ln, 2) << "  send report: " << report;
+		sendReport(report);
+		++n_report;
+		t_report += tmr.elapseSd();
+	}
+	if(hasNewParam){
+		tmr.restart();
+		applyBufferParameter();
+		stat.t_par_calc += tmr.elapseSd();
+	}
 }
 
 // ---- handlers ----
