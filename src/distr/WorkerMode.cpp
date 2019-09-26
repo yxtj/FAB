@@ -397,7 +397,7 @@ void Worker::papProcess()
 			if(left == 0){
 				tmr.restart();
 				double avgtd = stat.n_dlt_send == 0 ? 0 : stat.t_dlt_send / stat.n_dlt_send;
-				double avgtu = stat.t_par_calc == 0 ? 0 : stat.n_par_recv / stat.t_par_calc;
+				double avgtu = stat.t_par_calc == 0 ? 0 : stat.t_par_calc / stat.n_par_send;
 				double avgtr = n_report == 0 ? 0 : t_report / n_report;
 				vector<double> report = { static_cast<double>(n_used - n_used_since_report),
 					t_data / n_used, avgtd + avgtu, avgtr, loss - loss_since_report };
@@ -481,7 +481,7 @@ void Worker::papOnlineProbe2()
 			if(left == 0){
 				tmr.restart();
 				double avgtd = stat.n_dlt_send == 0 ? 0 : stat.t_dlt_send / stat.n_dlt_send;
-				double avgtu = stat.t_par_calc == 0 ? 0 : stat.n_par_recv / stat.t_par_calc;
+				double avgtu = stat.t_par_calc == 0 ? 0 : stat.t_par_calc / stat.n_par_send;
 				double avgtr = n_report == 0 ? 0 : t_report / n_report;
 				vector<double> report = { static_cast<double>(n_used - n_used_since_report),
 					t_data / n_used, avgtd + avgtu, avgtr, loss - loss_since_report };
@@ -580,7 +580,7 @@ void Worker::papOnlineProbe4()
 			if(left == 0){
 				tmr.restart();
 				double avgtd = stat.n_dlt_send == 0 ? 0 : stat.t_dlt_send / stat.n_dlt_send;
-				double avgtu = stat.t_par_calc == 0 ? 0 : stat.n_par_recv / stat.t_par_calc;
+				double avgtu = stat.t_par_calc == 0 ? 0 : stat.t_par_calc / stat.n_par_send;
 				double avgtr = n_report == 0 ? 0 : t_report / n_report;
 				vector<double> report = { static_cast<double>(n_used - n_used_since_report),
 					t_data / n_used, avgtd + avgtu, avgtr, loss - loss_since_report };

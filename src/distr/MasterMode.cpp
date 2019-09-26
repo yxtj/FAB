@@ -363,6 +363,7 @@ void Master::papProcess()
 			if(old_gbs != globalBatchSize || old_lrs != localReportSize){
 				VLOG(2) << "gbs=" << globalBatchSize << " (o=" << ogbs << ", e=" << egbs << ")"
 					<< " lrs=" << localReportSize << "(o=" << olrs << ", e=" << elrs << ")";
+				lossOnline *= globalBatchSize / old_gbs;
 				broadcastSizeConf(globalBatchSize, localReportSize);
 			}
 		}
