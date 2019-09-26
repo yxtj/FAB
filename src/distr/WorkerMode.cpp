@@ -512,10 +512,9 @@ void Worker::papOnlineProbe2()
 	size_t n_delta = 0, n_report = 0;
 	size_t prevStart = 0;
 	Parameter prevParam = model.getParameter();
-	bool probeReached = false;
-	size_t n_probe;
+	size_t n_probe = 0;
 
-	while(!exitTrain || probeReached){
+	while(!exitTrain && !suProbeDone.ready()){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;// << ". msg waiting: " << driver.queSize();
 		Timer tmr;
 		// DVLOG(3) << "current parameter: " << model.getParameter().weights;
@@ -525,7 +524,7 @@ void Worker::papOnlineProbe2()
 		double loss = 0.0, loss_since_report = 0.0;
 		double dly = speedFactor.generate();
 		clearDelta();
-		while(exitTrain == false && !requestingDelta && !suConf.ready() && !probeReached){
+		while(exitTrain == false && !requestingDelta && !suLossReq.ready() && !suProbeDone.ready()){
 			tmr.restart(); //
 			resumeTrain();
 			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
@@ -576,22 +575,31 @@ void Worker::papOnlineProbe2()
 			t_delta += tmr.elapseSd();
 		}
 		// send init loss for current probe
-		if (suConf.ready()) {
+		if (suLossReq.ready()) {
 			Timer tmr;
+			// VLOG(2) << " calc loss 4 cur probe batch from " << prevStart << " for " << n_probe;
 			lock_guard<mutex> lk(mParam); // lock prameter
 			
+			double L1 = calcLoss(prevStart, n_probe);
+			double LB1_100 = calcLoss(0, 100);
+			// double LB1_200 = calcLoss(0, 200);
+			double LB1_500 = calcLoss(0, 500);
 			Parameter curParam = model.getParameter();
 			model.setParameter(prevParam);
 			double L0 = calcLoss(prevStart, n_probe);
-			sendLoss(L0);
+			double LB0_100 = calcLoss(0, 100);
+			// double LB0_200 = calcLoss(0, 200);
+			double LB0_500 = calcLoss(0, 500);
+			// VLOG(2) << " send loss " << L0;
+			sendLoss({L0, L1, LB0_100 - LB1_100, LB0_500 - LB1_500});
 
 			prevParam = curParam;
 			model.setParameter(curParam);
-			VLOG(2) << "Probe recalculate L for lrs=" << localReportSize 
+			VLOG(2) << "Probe recalculate L for lrs=" << localReportSize << " w/n " << n_probe
 					<< "\ttime: " << tmr.elapseSd();
 			prevStart = dataPointer;
 			n_probe = 0;
-			suConf.reset();
+			suLossReq.reset();
 		}
 
 		++iter;

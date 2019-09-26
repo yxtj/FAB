@@ -514,6 +514,7 @@ void Master::updateOnlineLoss(const int source, const double loss)
 {
 	lossOnline = lossOnline * (nWorker - 1) / nWorker + loss;
 	lastDeltaLoss[source] = loss;
+	loss4Probe += loss;
 }
 
 void Master::updateIterationTime(const int src, const double time)
@@ -713,9 +714,14 @@ void Master::handleParameter(const std::string & data, const RPCInfo & info)
 
 void Master::handleLoss(const std::string& data, const RPCInfo& info)
 {
-	double loss = deserialize<double>(data);
+	// double loss = deserialize<double>(data);
+	vector<double> loss = deserialize<vector<double> >(data);
 	int s = wm.nid2lid(info.source);
-	lossGathered += loss;
+	lossGathered += loss[0];
+	lossCurGa += loss[1];
+	lossBench100 += loss[2];
+	lossBench500 += loss[3];
+	VLOG(2) << " get loss from " << s << " with " << loss << " tt " << lossGathered;
 	rph.input(MType::DLoss, s);
 }
 

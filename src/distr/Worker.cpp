@@ -300,6 +300,10 @@ void Worker::sendLoss(const double loss)
 {
 	net->send(masterNID, CType::NormalControl, make_pair(MType::DLoss, loss));
 }
+void Worker::sendLoss(const vector<double> loss)
+{
+	net->send(masterNID, CType::NormalControl, make_pair(MType::DLoss, loss));
+}
 
 void Worker::sendReport(const std::vector<double>& report)
 {
