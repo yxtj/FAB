@@ -473,7 +473,7 @@ size_t Master::estimateMinGlobalBatchSize()
 	double up = nWorker * (nWorker * (mtu + mtb) + mto - wtc);
 	double down = wtd + (wtr - nWorker * mtr) / localReportSize;
 
-	VLOG(3) << "e gbs: up= " << up << "\tdn= " << down << "\tmtu=" << mtu << "\tmtb=" 
+	VLOG(3) << "e gbs: up=" << up << "\tdn=" << down << "\tmtu=" << mtu << "\tmtb=" 
 		<< mtb << "\tmtr=" << mtr << "\tmto=" << mto << "\twtd=" << wtd << "\twtc=" 
 		<< wtc << "\twtr=" << wtr;
 
@@ -725,7 +725,7 @@ void Master::handleLoss(const std::string& data, const RPCInfo& info)
 		lossBench100 += loss[2];
 		lossBench500 += loss[3];
 	}
-	VLOG(2) << " get loss from " << s << " with " << loss << " tt " << lossGathered;
+	// VLOG(2) << " get loss from " << s << " with " << loss << " tt " << lossGathered;
 	rph.input(MType::DLoss, s);
 }
 
