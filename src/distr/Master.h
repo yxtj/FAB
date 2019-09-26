@@ -50,10 +50,12 @@ private:
 	void papInit();
 	void papProcess();
 
-	void papOnlineProbe1();
-	void papOnlineProbe2();
-	void papOnlineProbe3();
-	void papOnlineProbe4();
+	void papOnlineProbe1(); // sum_i L(p_{i+1}, b_{i+1}) - L(p_i, b_i)
+	void papOnlineProbe2(); // sum_i L(p_i, b_i) - L(p_0, b_i)
+	void papOnlineProbe3(); // sum_i L(p_{i+1}, b_i) - L(p_i, b_i)
+	void papOnlineProbe4(); // sum_i L(p_n, b_i) - L(p_i, b_i)
+	void papOnlineProbeBenchmark(); // L(p_n, b*) - L(p_i, b*)
+	void papOnlineProbeFile(); // read file for gain
 
 // local logic
 private:
@@ -164,9 +166,10 @@ private:
 	double mtOther; // time other than processing/sending parameter, delta and report. include: archive, log
 
 	double lossOnline; // the estimated loss for one global batch
-	double lossGlobal; // the accumulated loss from all reports
-	double lossGathered;
-	double loss4Probe, lossCurGa, lossBench100, lossBench500;
+	double lossReportSum; // the accumulated loss from all report messages
+	double lossDeltaSum; // the accumulated loss from all delta messages
+	double lossGathered; // the variable used to accumulate loss by gatherLoss()
+	double lossCurGa, lossBench100, lossBench500;
 	std::vector<double> lastDeltaLoss;
 
 	double timeOffset; // used for accounting time if resumed from previous archive
@@ -184,14 +187,13 @@ private:
 
 	Parameter initP; // cache init parameter for probe
 	std::map<size_t, double> gkProb; // cache probed gk
-	double wtu;
 
 	std::vector<double> wtIteration; // worker side time per iteration (interval between delta reports)
 	std::vector<double> wtIterLast; // time of receiving the latest delta report
 
-	std::vector<double> wtDatapoint; // worker side time per data point
-	std::vector<double> wtDelta; // worker side time per delta sending
-	std::vector<double> wtReport;  // worker side time per report sending
+	std::vector<double> wtDatapoint; // worker side time per data point (k/n per pap iter)
+	std::vector<double> wtDelta; // worker side time per delta sending (1 per pap iter)
+	std::vector<double> wtReport;  // worker side time per report sending (c/n per pap iter)
 
 	SyncUnit suOnline;
 	SyncUnit suWorker;

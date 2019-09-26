@@ -50,6 +50,7 @@ private:
 	void papOnlineProbe2();
 	void papOnlineProbe3();
 	void papOnlineProbe4();
+	void papOnlineProbeBenchmark();
 
 // local logic
 private:

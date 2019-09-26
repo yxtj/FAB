@@ -28,14 +28,13 @@ Master::Master() : Runner() {
 
 	timeOffset = 0.0;
 	lossOnline = 0;
-	lossGlobal = 0.0;
+	lossReportSum = 0.0;
 	pie = nullptr;
 	prs = nullptr;
 	lastArchIter = 0;
 	tmrArch.restart();
 	doArchive = false;
 	archDoing = false;
-	wtu = 0;
 }
 
 void Master::init(const ConfData* conf, const size_t lid)
@@ -483,9 +482,10 @@ size_t Master::estimateMinGlobalBatchSize()
 
 size_t Master::optFkGlobalBatchSize(){
 	double f1=hmean(wtDatapoint) / nWorker;
+	double f2 = mean(wtDelta);
 	auto it = max_element(gkProb.begin(), gkProb.end(),
 		[=](const pair<const size_t, double>& l, const pair<const size_t, double>& r){
-			return l.second / (f1 + wtu/l.first)< r.second/(f1+wtu/r.first);
+			return l.second / (f1 + f2 / l.first) < r.second / (f1 + f2 / r.first);
 		});
 	return it->first;
 }
@@ -514,7 +514,7 @@ void Master::updateOnlineLoss(const int source, const double loss)
 {
 	lossOnline = lossOnline * (nWorker - 1) / nWorker + loss;
 	lastDeltaLoss[source] = loss;
-	loss4Probe += loss;
+	lossDeltaSum += loss;
 }
 
 void Master::updateIterationTime(const int src, const double time)
