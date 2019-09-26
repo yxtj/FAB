@@ -319,7 +319,7 @@ void Master::papProcess()
 			localReportSize = globalBatchSize / nWorker / 2;
 			broadcastSizeConf(globalBatchSize, localReportSize);
 		}
-		VLOG(1) << "Finish probe phase with gbs=" << gbs << " (by-rate=" << byRate << "by-time=" << byTime
+		VLOG(1) << "Finish probe phase with gbs=" << gbs << " (by-rate=" << byRate << " by-time=" << byTime
 			<< ") time=" << tmrTrain.elapseSd() << " gkProb:" << gkProb;
 	}
 	
@@ -361,7 +361,7 @@ void Master::papProcess()
 				localReportSize = max(olrs, elrs);
 			}
 			if(old_gbs != globalBatchSize || old_lrs != localReportSize){
-				VLOG(2) << "gbs=" << globalBatchSize << " (o=" << ogbs << ", e=" << egbs << ")"
+				VLOG(2) << "change gbs=" << globalBatchSize << " (o=" << ogbs << ", e=" << egbs << ")"
 					<< " lrs=" << localReportSize << "(o=" << olrs << ", e=" << elrs << ")";
 				lossOnline *= globalBatchSize / old_gbs;
 				broadcastSizeConf(globalBatchSize, localReportSize);
