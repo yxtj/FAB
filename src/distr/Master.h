@@ -50,11 +50,12 @@ private:
 	void papInit();
 	void papProcess();
 
-	void papOnlineProbeDummy(); // read file for gain
 	void papOnlineProbe1(); // sum_i L(p_{i+1}, b_{i+1}) - L(p_i, b_i)
 	void papOnlineProbe2(); // sum_i L(p_i, b_i) - L(p_0, b_i)
 	void papOnlineProbe3(); // sum_i L(p_{i+1}, b_i) - L(p_i, b_i)
-	void papOnlineProbe4();// sum_i L(p_n, b_i) - L(p_i, b_i)
+	void papOnlineProbe4(); // sum_i L(p_n, b_i) - L(p_i, b_i)
+	void papOnlineProbeBenchmark(); // L(p_n, b*) - L(p_i, b*)
+	void papOnlineProbeFile(); // read file for gain
 
 // local logic
 private:

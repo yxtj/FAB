@@ -291,7 +291,7 @@ void Master::papInit()
 
 void Master::papProcess()
 {
-	if(conf->papOnlineProbeVersion >= 0){
+	if(conf->papOnlineProbeVersion > 0){
 		VLOG(1) << "Start probe phase with gbs=" << globalBatchSize;
 		if(conf->papOnlineProbeVersion == 1)
 			papOnlineProbe1();
@@ -301,8 +301,10 @@ void Master::papProcess()
 			papOnlineProbe3();
 		else if(conf->papOnlineProbeVersion == 4)
 			papOnlineProbe4();
-		else if(conf->papOnlineProbeVersion == 0)
-			papOnlineProbeDummy();
+		else if(conf->papOnlineProbeVersion == 5)
+			papOnlineProbeBenchmark();
+		else if(conf->papOnlineProbeVersion == 9)
+			papOnlineProbeFile();
 		else
 			LOG(FATAL) << "Online probe version " << conf->papOnlineProbeVersion << " not supported";
 
@@ -370,18 +372,6 @@ void Master::papProcess()
 	}
 }
 
-void Master::papOnlineProbeDummy()
-{
-	ifstream fin("gk.txt");
-	string line;
-	while(fin >> line){
-		size_t p = line.find(':');
-		size_t k = stoi(line.substr(0, p));
-		double g = stod(line.substr(p + 1));
-		gkProb[k] = g;
-	}
-}
-
 // sum_i L(p_{i+1}, b_{i+1}) - L(p_i, b_i)
 void Master::papOnlineProbe1()
 {
@@ -433,9 +423,9 @@ void Master::papOnlineProbe1()
 			double nloss2 = sum(lastDeltaLoss) / (nPoint - lastProbeNPoint);
 			double nloss3 = lossReportSum / globalBatchSize;
 			double nloss = max(max(nloss1, nloss2), nloss3);
-			double gk = lastLoss - nloss;
+			double gk = lastLoss - nloss2;
 			//lastLoss = nloss1 / globalBatchSize;
-			lastLoss = nloss2 / globalBatchSize;
+			lastLoss = nloss2;
 			gkProb[globalBatchSize] = gk;
 			double wtd = hmean(wtDatapoint);
 			double wtc = mean(wtDelta);
@@ -463,12 +453,7 @@ void Master::papOnlineProbe1()
 					probeReached = true;
 				}
 			} else {
-				// TODO:
-				//globalBatchSize *= 2; 
-				//localReportSize = globalBatchSize/nWorker/2;
-				//broadcastSizeConf(globalBatchSize, localReportSize);
 				probeReached = true;
-				//break;
 			}
 			lastProbeNPoint = nPoint;
 			lastProbeIter = iter;
@@ -680,6 +665,22 @@ void Master::papOnlineProbe4()
 			lossDeltaSum = 0;
 		}
 	}
+}
+
+void Master::papOnlineProbeFile()
+{
+	ifstream fin("gk.txt");
+	string line;
+	while(fin >> line){
+		size_t p = line.find(':');
+		size_t k = stoi(line.substr(0, p));
+		double g = stod(line.substr(p + 1));
+		gkProb[k] = g;
+	}
+}
+
+void Master::papOnlineProbeBenchmark()
+{
 }
 
 void Master::handleReportPap(const std::string& data, const RPCInfo& info)
