@@ -21,7 +21,7 @@ void Worker::probeModeProcess()
 	size_t probeNeededPoint = static_cast<size_t>(conf->probeRatio * pdh->size());
 	double loss = calcLoss(0, probeNeededPoint);
 	sendLoss({loss});
-	while(!exitRun){
+	while(!suProbeDone.ready()){
 		LOG(INFO) << "waiting for new configuration";
 		suConf.wait_n_reset();
 		(this->*processFun)();
