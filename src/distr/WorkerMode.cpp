@@ -20,7 +20,7 @@ void Worker::probeModeProcess()
 {
 	size_t probeNeededPoint = static_cast<size_t>(conf->probeRatio * pdh->size());
 	double loss = calcLoss(0, probeNeededPoint);
-	sendLoss({loss});
+	sendLoss(loss);
 	while(!suProbeDone.ready()){
 		LOG(INFO) << "waiting for new configuration";
 		suConf.wait_n_reset();
@@ -436,7 +436,7 @@ void Worker::papOnlineProbe1()
 	Timer tmr;
 	double loss = calcLoss(0, localBatchSize);
 	double t1 = tmr.elapseSd();
-	sendLoss({loss});
+	sendLoss(loss);
 	double t2 = tmr.elapseSd() - t1;
 	// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending, loss, time-per-new-parameter
 	vector<double> report = { 0.0, t1 / localBatchSize, t2, t2, 0.0, 0.0 };
@@ -521,7 +521,7 @@ void Worker::papOnlineProbe2()
 			Parameter curParam = model.getParameter();
 			model.setParameter(prevParam);
 			double L0 = calcLoss(prevStart, n_probe);
-			sendLoss({L0});
+			sendLoss(L0);
 			prevParam = curParam;
 			model.setParameter(curParam);
 			t_calcLoss += tmr.elapseSd();
@@ -607,7 +607,7 @@ void Worker::papOnlineProbe4()
 		if(suLossReq.ready()) {
 			Timer tmr;
 			double Ln = calcLoss(prevStart, n_probe);
-			sendLoss({ Ln, 0.0, 0.0, 0.0 });
+			sendLoss(Ln);
 			VLOG(2) << "Probe loss for lrs=" << localReportSize << " from " << prevStart << " with " << n_probe
 				<< " time: " << tmr.elapseSd() << " Ln=" << Ln << " unit-loss=" << Ln / n_probe;
 			prevStart = dataPointer;
@@ -625,7 +625,7 @@ void Worker::papOnlineProbeBenchmark()
 	Parameter prevParam = model.getParameter();
 	size_t n_probe = 0, n_bench = 100;
 	double LB = calcLoss(0, n_bench);
-	sendLoss({LB});
+	sendLoss(LB);
 
 	while(!exitTrain && !suProbeDone.ready()){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;// << ". msg waiting: " << driver.queSize();
@@ -694,7 +694,7 @@ void Worker::papOnlineProbeBenchmark()
 			// VLOG(2) << " calc loss 4 cur probe batch from " << prevStart << " for " << n_probe;
 			lock_guard<mutex> lk(mParam); // lock prameter
 			LB = calcLoss(0, n_bench);
-			sendLoss({LB});
+			sendLoss(LB);
 			t_calcLoss += tmr.elapseSd();
 			VLOG(2) << "Probe recalculate L for n_bench " << n_bench << "\ttime: " << tmr.elapseSd();
 			prevStart = dataPointer;

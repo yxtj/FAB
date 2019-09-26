@@ -292,7 +292,7 @@ double Worker::calcLoss(const size_t start, const size_t cnt)
 	return loss;
 }
 
-void Worker::sendLoss(const vector<double> loss)
+void Worker::sendLoss(const double loss)
 {
 	net->send(masterNID, CType::NormalControl, make_pair(MType::DLoss, loss));
 }
