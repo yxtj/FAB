@@ -14,8 +14,8 @@ Worker::Worker() : Runner() {
 	iterParam = 0;
 	localBatchSize = 1;
 	//bfDeltaDpCount = 0;
-	n_updParam = 0;
-	t_updParam = 0;
+	n_report = 0;
+	t_report = 0.0;
 
 	hasNewParam = false;
 	allowTrain = true;
@@ -254,7 +254,6 @@ void Worker::bufferParameter(Parameter & p)
 
 void Worker::applyBufferParameter()
 {
-	Timer tmr;
 	//DLOG(INFO)<<"has new parameter: "<<hasNewParam;
 	if(!hasNewParam)
 		return;
@@ -267,8 +266,6 @@ void Worker::applyBufferParameter()
 	//mModel.unlock();
 	hasNewParam = false;
 	//mParam.unlock();
-	n_updParam++;
-	t_updParam += tmr.elapseSd();
 }
 
 void Worker::waitParameter()
@@ -337,7 +334,7 @@ size_t Worker::calcLocalBatchSizeWhole(const size_t gbs)
 void Worker::initSpeedAdjustment()
 {
 	const double fixSlowFactor = conf->adjustSpeedHetero ? conf->speedHeterogenerity[localID] : 0.0;
-	unsigned seed = conf->seed + 123 + localID;
+	unsigned seed = static_cast<unsigned>(conf->seed + 123 + localID);
 
 	const vector<string>& param = conf->adjustSpeedRandom ? conf->speedRandomParam : vector<string>();
 	DLOG(DEBUG) << param << "," << fixSlowFactor << "," << seed;

@@ -51,6 +51,7 @@ private:
 	void papOnlineProbe3();
 	void papOnlineProbe4();
 	void papOnlineProbeBenchmark();
+	void papOnlineProbeFile();
 
 // local logic
 private:
@@ -142,8 +143,8 @@ private:
 
 	int iterParam;
 
-	size_t n_updParam; // pap: moniter paramter update time
-	double t_updParam;
+	size_t n_report; // pap: moniter report processing time
+	double t_report;
 
 	//std::mutex mTrain;
 	std::atomic<bool> allowTrain;
