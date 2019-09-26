@@ -714,13 +714,16 @@ void Master::handleParameter(const std::string & data, const RPCInfo & info)
 
 void Master::handleLoss(const std::string& data, const RPCInfo& info)
 {
-	// double loss = deserialize<double>(data);
-	vector<double> loss = deserialize<vector<double> >(data);
 	int s = wm.nid2lid(info.source);
+	// double loss = deserialize<double>(data);
+	// lossGathered += loss;
+	vector<double> loss = deserialize<vector<double> >(data);
 	lossGathered += loss[0];
-	lossCurGa += loss[1];
-	lossBench100 += loss[2];
-	lossBench500 += loss[3];
+	if (loss.size() > 3) {
+		lossCurGa += loss[1];
+		lossBench100 += loss[2];
+		lossBench500 += loss[3];
+	}
 	VLOG(2) << " get loss from " << s << " with " << loss << " tt " << lossGathered;
 	rph.input(MType::DLoss, s);
 }

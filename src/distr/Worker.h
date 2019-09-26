@@ -74,7 +74,6 @@ private:
 
 	// calculate loss with data in range [start, start+cnt] using current model parameter
 	double calcLoss(const size_t start, const size_t cnt);
-	void sendLoss(const double loss);
 	void sendLoss(const std::vector<double> loss);
 
 	void sendReport(const std::vector<double>& report); // pap progress

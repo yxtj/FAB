@@ -20,7 +20,7 @@ void Worker::probeModeProcess()
 {
 	size_t probeNeededPoint = static_cast<size_t>(conf->probeRatio * pdh->size());
 	double loss = calcLoss(0, probeNeededPoint);
-	sendLoss(loss);
+	sendLoss({loss});
 	while(!exitRun){
 		LOG(INFO) << "waiting for new configuration";
 		suConf.wait_n_reset();
@@ -434,7 +434,7 @@ void Worker::papOnlineProbe1()
 	Timer tmr;
 	double loss = calcLoss(0, localBatchSize);
 	double t1 = tmr.elapseSd();
-	sendLoss(loss);
+	sendLoss({loss});
 	double t2 = tmr.elapseSd() - t1;
 	// format: #-processed-data-points, time-per-data-point, time-per-delta-sending, time-per-report-sending, loss, time-per-new-parameter
 	vector<double> report = { 0.0, t1 / localBatchSize, t2, t2, 0.0, 0.0 };
@@ -582,16 +582,15 @@ void Worker::papOnlineProbe2()
 			
 			double L1 = calcLoss(prevStart, n_probe);
 			double LB1_100 = calcLoss(0, 100);
-			// double LB1_200 = calcLoss(0, 200);
-			double LB1_500 = calcLoss(0, 500);
+			double LB1_500 = calcLoss(0, 20);
 			Parameter curParam = model.getParameter();
 			model.setParameter(prevParam);
 			double L0 = calcLoss(prevStart, n_probe);
 			double LB0_100 = calcLoss(0, 100);
-			// double LB0_200 = calcLoss(0, 200);
-			double LB0_500 = calcLoss(0, 500);
-			// VLOG(2) << " send loss " << L0;
+			double LB0_500 = calcLoss(0, 20);
+			VLOG(2) << " send loss " << L0;
 			sendLoss({L0, L1, LB0_100 - LB1_100, LB0_500 - LB1_500});
+			// sendLoss({L0, 0,0,0});
 
 			prevParam = curParam;
 			model.setParameter(curParam);
