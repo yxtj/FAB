@@ -148,7 +148,6 @@ private:
 	//std::mutex mTrain;
 	std::atomic<bool> allowTrain;
 	std::atomic<bool> exitTrain;
-	std::atomic<bool> exitRun; // used for multiple-phase cases like probing
 
 	// speed adjustment
 	RandomGenerator speedFactor;

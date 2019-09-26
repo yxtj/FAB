@@ -21,7 +21,8 @@ void Master::probeModeProcess()
 {
 	Parameter p0 = model.getParameter();
 	suLoss.wait_n_reset();
-	double l0 = lossOnline;
+	double l0 = lossGathered;
+	LOG(INFO) << "initialize loss=" << l0;
 	// TODO
 	vector<size_t> gbsList = { conf->batchSize, conf->batchSize / 2, conf->batchSize / 4 };
 	for(size_t gbs : gbsList){
@@ -34,10 +35,12 @@ void Master::probeModeProcess()
 		(this->*processFun)();
 		broadcastReset(0, p0);
 		double time = tmr.elapseSd();
-		gatherLoss();
-		double rate = lossOnline / time;
-		LOG(INFO) << "batch size: " << gbs << " gain: " << lossOnline << " rate: " << rate;
+		double loss = gatherLoss();
+		double gain = loss - l0;
+		double rate = gain / time;
+		LOG(INFO) << "batch size: " << gbs << " loss=" << loss << " gain=" << gain << " rate=" << rate;
 	}
+	broadcastProbeDone();
 }
 
 void Master::handleDeltaProbe(const std::string& data, const RPCInfo& info)

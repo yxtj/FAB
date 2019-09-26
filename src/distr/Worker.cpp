@@ -20,7 +20,6 @@ Worker::Worker() : Runner() {
 	hasNewParam = false;
 	allowTrain = true;
 	exitTrain = false;
-	exitRun = false;
 }
 
 void Worker::init(const ConfData* conf, const size_t lid)
@@ -484,7 +483,6 @@ void Worker::handleImmediateControl(const std::string & data, const RPCInfo & in
 void Worker::handleTerminate(const std::string & data, const RPCInfo & info)
 {
 	exitTrain = true;
-	exitRun = true;
 	pauseTrain(); // in case if the system is calculating delta
 	suParam.notify(); // in case if the system just calculated a delta (is waiting for new parameter)
 	sendReply(info, MType::CTerminate);
