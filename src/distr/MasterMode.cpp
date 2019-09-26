@@ -488,16 +488,103 @@ void Master::papOnlineProbe2()
 		// check gbs condition
 			// if so send conf
 			// else send probe done
-
+	Parameter initP = model.getParameter();
+	loss4Probe = 0;
+	lossCurGa = 0;
 	const double toleranceFactor = 0.8;
 	double tl = tmrTrain.elapseSd();
 	double maxfk = -1;
 	probeReached = false;
 	size_t probeSize = static_cast<size_t>(nPointTotal * conf->probeRatio);
+	size_t lastProbeNPoint = nPoint;
+	int lastProbeIter = iter;
+	double lastProbeTime = tmrTrain.elapseSd();
 
-	suLoss.wait_n_reset();
-	double lastLoss = lossOnline / globalBatchSize;
-	VLOG(2) << "loss_0 = " << lastLoss << "\tprobeSize=" << probeSize;
+	while(!terminateCheck() && !probeReached){
+		Timer tmr;
+		if(VLOG_IS_ON(2) && iter % ln == 0){
+			double t = tmrTrain.elapseSd();
+			VLOG(2) << "  Time of recent " << ln << " iterations: " << (t - tl) 
+					<< " data-points: " << nPoint - lastProbeNPoint;
+			tl = t;
+			double mtu = mtDeltaSum / nDelta;
+			double mtb = mtParameterSum / stat.n_par_send;
+			double mtr = mtReportSum / nReport;
+			double mto = mtOther / iter;
+
+			double wtd = hmean(wtDatapoint);
+			double wtc = mean(wtDelta);
+			double wtr = mean(wtReport);
+
+			VLOG(2) << "mtu=" << mtu << "\tmtb=" << mtb << "\tmtr=" << mtr << "\tmto=" << mto
+				<< "\twtd=" << wtd << "\twtc=" << wtc << "\twtr=" << wtr << "\tloss=" << lossOnline;
+		}
+		mtOther += tmr.elapseSd();
+		// wait until the report counts reach a global mini batch
+		suPap.wait_n_reset();
+		gatherDelta();
+		stat.t_dlt_wait += tmr.elapseSd();
+		broadcastParameter();
+		tmr.restart();
+		archiveProgress();
+		++iter;
+		mtOther += tmr.elapseSd();
+
+		/// reset gbs
+		if ((nPoint- lastProbeNPoint) > probeSize) {
+			
+			// current probe loss --> loss4Probe
+			VLOG(2) << " wait for loss Gathered ";
+			gatherLoss(); // wait for lossGathered
+			double gk = -(lossGathered - loss4Probe); // - for test
+			suLoss.reset();
+
+			gkProb[globalBatchSize] = gk;
+			double wtd = hmean(wtDatapoint);
+			double wtc = mean(wtDelta);
+			double tk1 =(wtd/nWorker + wtc/globalBatchSize);
+			double tk2 = tmrTrain.elapseSd() - lastProbeTime;
+			double fk = gk / tk2;
+			size_t mink = estimateMinGlobalBatchSize();
+
+			VLOG(2) << "probe k=" << globalBatchSize << "\titer=" << iter - lastProbeIter 
+				<< "\tnp=" << nPoint - lastProbeNPoint << "\ttk=" << tk1 << ", " << tk2 
+				<< "\tgk=" << gk << "\tloss4Probe=" << loss4Probe << "\tcurL=" << lossCurGa 
+				<< "\tL0=" << lossGathered << "\tLossDiff=" << lossCurGa - loss4Probe 
+				<< "\tLB100=" << lossBench100 << "\tLB500=" << lossBench500
+				<< "\tfk=" << gk / tk1 << ", " << gk / tk2 << "\n" << "wtd=" << wtd 
+				<< ", " << wtDatapoint << "\twtc=" << wtc << ", " << wtDelta << "\n"
+				<< "maxfk=" << maxfk << "\tmink=" << mink; 
+		
+			if (maxfk < 0 || fk > maxfk * toleranceFactor) {
+				maxfk = max(fk, maxfk);
+				if(globalBatchSize / 2 >= mink) {
+					globalBatchSize /= 2;
+					localReportSize = globalBatchSize / nWorker / 2;
+					broadcastSizeConf(globalBatchSize, localReportSize);
+					lossOnline /= 2;
+					for(auto& v : lastDeltaLoss)
+						v /= 2;
+				} else {
+					broadcastProbeDone();
+					probeReached = true;
+				}
+			} else {
+				broadcastProbeDone();
+				probeReached = true;
+			}
+			lastProbeNPoint = nPoint;
+			lastProbeIter = iter;
+			lastProbeTime = tmrTrain.elapseSd();
+			lossGlobal = 0;
+			loss4Probe = 0;
+			lossCurGa = 0;
+			lossBench100 = 0;
+			lossBench500 = 0;
+			lossGathered = 0;
+		}
+	}
+}
 
 	size_t lastProbeNPoint = nPoint;
 	int lastProbeIter = iter;
@@ -578,9 +665,13 @@ void Master::papOnlineProbe2()
 			lastProbeIter = iter;
 			lastProbeTime = tmrTrain.elapseSd();
 			lossGlobal = 0;
+			loss4Probe = 0;
+			lossCurGa = 0;
+			lossBench100 = 0;
+			lossBench500 = 0;
+			lossGathered = 0;
 		}
 	}
-
 }
 
 // sum_i L(p_{i+1}, b_i) - L(p_i, b_i)

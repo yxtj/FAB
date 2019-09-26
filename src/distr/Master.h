@@ -167,6 +167,7 @@ private:
 	double lossOnline; // the estimated loss for one global batch
 	double lossGlobal; // the accumulated loss from all reports
 	double lossGathered;
+	double loss4Probe, lossCurGa, lossBench100, lossBench500;
 	std::vector<double> lastDeltaLoss;
 
 	double timeOffset; // used for accounting time if resumed from previous archive
