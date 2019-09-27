@@ -11,36 +11,52 @@ using namespace std;
 void Master::probeModeInit()
 {
 	(this->*initFun)();
-	probeReached = false;
-	probeNeededPoint = static_cast<size_t>(conf->probeRatio * nPointTotal);
 	lossOnline = 0.0;
+	lossGathered = 0.0;
 	suLoss.reset();
 }
 
 void Master::probeModeProcess()
 {
+	double pdp = ceil(conf->probeRatio * nPointTotal);
+	size_t probeNeededPoint = static_cast<size_t>(pdp);
+
 	Parameter p0 = model.getParameter();
 	suLoss.wait_n_reset();
 	double l0 = lossGathered;
-	LOG(INFO) << "initialize loss=" << l0;
+	LOG(INFO) << "initialize loss=" << l0 << " probe size=" << probeNeededPoint;
 	// TODO
 	vector<size_t> gbsList = { conf->batchSize, conf->batchSize / 2, conf->batchSize / 4 };
+	map<size_t, double> res;
 	for(size_t gbs : gbsList){
-		probeNeededIter = probeNeededPoint / gbs;
-		probeNeededDelta = probeNeededPoint / gbs * nWorker;
-		probeReached = false;
+		size_t probeNeededIter = static_cast<size_t>(ceil(pdp / gbs));
+		size_t probeNeededDelta = static_cast<size_t>(ceil(pdp / gbs * nWorker));
+		LOG(INFO) << "probe gbs=" << gbs << " term-point=" << probeNeededPoint
+			<< " term-delta=" << probeNeededDelta << " term-iter=" << probeNeededIter;
+		// reset parameters
+		clearAccumulatedDelta();
+		model.setParameter(p0);
+		(this->*initFun)();
+		// start workers
 		broadcastSizeConf(gbs, 0);
 		setTerminateCondition(0, probeNeededPoint, probeNeededDelta, probeNeededIter);
 		Timer tmr;
 		(this->*processFun)();
+		LOG(INFO) << "reset and gather loss";
 		broadcastReset(0, p0);
 		double time = tmr.elapseSd();
 		double loss = gatherLoss();
 		double gain = loss - l0;
 		double rate = gain / time;
-		LOG(INFO) << "batch size: " << gbs << " loss=" << loss << " gain=" << gain << " rate=" << rate;
+		res[gbs] = rate;
+		LOG(INFO) << "finish one probe: gbs=" << gbs << " loss=" << loss
+			<< " gain=" << gain << " time=" << time << " rate=" << rate;
+		nPoint = 0;
+		nDelta = 0;
+		iter = 0;
 	}
 	broadcastProbeDone();
+	LOG(INFO) << "probe result: " << res;
 }
 
 void Master::handleDeltaProbe(const std::string& data, const RPCInfo& info)
@@ -386,7 +402,7 @@ void Master::papOnlineProbe1()
 	const double toleranceFactor = 0.8;
 	double tl = tmrTrain.elapseSd();
 	double maxfk = -1;
-	probeReached = false;
+	bool probeReached = false;
 	size_t probeSize = static_cast<size_t>(nPointTotal * conf->probeRatio);
 
 	suLoss.wait_n_reset();
@@ -479,7 +495,7 @@ void Master::papOnlineProbe2()
 	const double toleranceFactor = 0.8;
 	double tl = tmrTrain.elapseSd();
 	double maxfk = -1;
-	probeReached = false;
+	bool probeReached = false;
 	size_t probeSize = static_cast<size_t>(nPointTotal * conf->probeRatio);
 	size_t lastProbeNPoint = nPoint;
 	int lastProbeIter = iter;
@@ -583,7 +599,7 @@ void Master::papOnlineProbe4()
 	lossDeltaSum = 0;
 	double tl = tmrTrain.elapseSd();
 	double maxfk = -1;
-	probeReached = false;
+	bool probeReached = false;
 	size_t probeSize = static_cast<size_t>(nPointTotal * conf->probeRatio);
 	size_t lastProbeNPoint = nPoint;
 	int lastProbeIter = iter;
@@ -685,7 +701,7 @@ void Master::papOnlineProbeBenchmark()
 	const double toleranceFactor = 0.0001;
 	double tl = tmrTrain.elapseSd();
 	double maxfk = -1;
-	probeReached = false;
+	bool probeReached = false;
 	size_t probeSize = static_cast<size_t>(nPointTotal * conf->probeRatio);
 	size_t lastProbeNPoint = nPoint;
 	int lastProbeIter = iter;

@@ -20,13 +20,26 @@ void Worker::probeModeProcess()
 {
 	size_t probeNeededPoint = static_cast<size_t>(conf->probeRatio * pdh->size());
 	double loss = calcLoss(0, probeNeededPoint);
+	LOG(INFO) << "send initialize loss: " << loss;
 	sendLoss(loss);
 	while(!suProbeDone.ready()){
 		LOG(INFO) << "waiting for new configuration";
 		suConf.wait_n_reset();
+		if(suProbeDone.ready())
+			break;
+		VLOG(2) << "probe local lbs=" << localBatchSize << " lrs=" << localReportSize;
+		clearDelta();
+		exitTrain = false;
+		allowTrain = true;
 		(this->*processFun)();
-		applyBufferParameter();
+		LOG(INFO) << "finish one probe";
+		suLossReq.wait_n_reset();
+		double loss = calcLoss(0, probeNeededPoint);
+		LOG(INFO) << "send loss:" << loss;
+		sendLoss(loss);
+		applyBufferParameter(); // reset to the initialing parameter
 	}
+	LOG(INFO) << "probe done";
 }
 
 void Worker::handleParameterProbe(const std::string& data, const RPCInfo& info)

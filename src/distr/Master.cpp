@@ -28,7 +28,9 @@ Master::Master() : Runner() {
 
 	timeOffset = 0.0;
 	lossOnline = 0;
+	lossGathered = 0.0;
 	lossReportSum = 0.0;
+	lossDeltaSum = 0.0;
 	pie = nullptr;
 	prs = nullptr;
 	lastArchIter = 0;
@@ -335,10 +337,13 @@ void Master::setTerminateCondition(const double time,
 	termPoint = nPoint != 0 ? nPoint : numeric_limits<size_t>::max();
 	termDelta = nDelta != 0 ? nDelta : numeric_limits<size_t>::max();
 	termIter = nIter != 0 ? nIter : numeric_limits<size_t>::max();
+	VLOG(2) << "Terminate condition: time=" << termTime << " dp=" << termPoint
+		<< " dlt=" << termDelta << " iter=" << termIter;
 }
 
 bool Master::terminateCheck()
 {
+	DVLOG(2) << "dp:" << nPoint << " dlt:" << nDelta << " iter:" << iter << " time:" << tmrTrain.elapseSd();
 	return (nPoint > termPoint)
 		|| (nDelta > termDelta)
 		|| (iter > termIter)
@@ -425,7 +430,7 @@ void Master::waitParameterConfirmed()
 
 void Master::broadcastReset(const int iter, const Parameter& p)
 {
-	net->broadcast(CType::ImmediateControl,
+	net->broadcast(CType::NormalControl,
 		make_pair(MType::CReset, make_pair(iter, p.weights)));
 }
 

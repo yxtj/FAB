@@ -215,7 +215,5 @@ private:
 	bool archDoing;
 
 	// probe
-	size_t probeNeededDelta, probeNeededPoint, probeNeededIter;
-	bool probeReached;
 	SyncUnit suProbeDone;
 };

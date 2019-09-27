@@ -270,7 +270,7 @@ void Worker::applyBufferParameter()
 
 void Worker::waitParameter()
 {
-	suParam.wait();
+	suParam.wait_n_reset();
 }
 
 void Worker::fetchParmeter()
@@ -431,6 +431,7 @@ void Worker::handleDeltaRequest(const std::string& data, const RPCInfo& info)
 
 void Worker::handleLossRequest(const std::string& data, const RPCInfo& info)
 {
+	//DLOG(INFO) << "receive loss request";
 	auto reqRatio = deserialize<pair<double, double>>(data);
 	lossReqStart = static_cast<size_t>(reqRatio.first * pdh->size());
 	lossReqCount = static_cast<size_t>(reqRatio.second * pdh->size());
@@ -439,18 +440,21 @@ void Worker::handleLossRequest(const std::string& data, const RPCInfo& info)
 
 void Worker::handleProbeDone(const std::string& data, const RPCInfo& info)
 {
+	suConf.notify(); // for offline probe mode
 	suProbeDone.notify();
 }
 
 void Worker::handleReset(const std::string& data, const RPCInfo& info)
 {
+	//DLOG(INFO) << "receive reset";
 	auto msg = deserialize<pair<int, vector<double>>>(data);
 	iter = msg.first;
 	Parameter p;
 	p.set(move(msg.second));
 	bufferParameter(p);
-	pauseTrain();
 	exitTrain = true;
+	pauseTrain(); // in case if the system is calculating delta
+	suParam.notify(); // in case if the system just calculated a delta (is waiting for new parameter)
 }
 
 void Worker::handleMetaConf(const std::string& data, const RPCInfo& info)
