@@ -448,7 +448,7 @@ void Worker::papOnlineProbe1()
 
 void Worker::papOnlineProbe2()
 {
-	double t_data = 0.0, t_calcLoss = 0.0;
+	double t_calcLoss = 0.0;
 	size_t prevStart = 0;
 	Parameter prevParam = model.getParameter();
 	size_t n_probe = 0;
@@ -457,7 +457,7 @@ void Worker::papOnlineProbe2()
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;// << ". msg waiting: " << driver.queSize();
 		Timer tmr;
 		// DVLOG(3) << "current parameter: " << model.getParameter().weights;
-		t_data = 0.0;
+		double t_data = 0.0;
 		size_t left = localReportSize;
 		size_t n_used = 0, n_used_since_report = 0;
 		double loss = 0.0, loss_since_report = 0.0;
@@ -517,12 +517,11 @@ void Worker::papOnlineProbe2()
 			Timer tmr;
 			// VLOG(2) << " calc loss 4 cur probe batch from " << prevStart << " for " << n_probe;
 			lock_guard<mutex> lk(mParam); // lock prameter
-			
 			Parameter curParam = model.getParameter();
-			model.setParameter(prevParam);
+			model.setParameter(move(prevParam));
 			double L0 = calcLoss(prevStart, n_probe);
 			sendLoss(L0);
-			prevParam = curParam;
+			prevParam = move(curParam);
 			model.setParameter(curParam);
 			t_calcLoss += tmr.elapseSd();
 			VLOG(2) << "Probe recalculate L for lrs=" << localReportSize << " w/n " << n_probe
@@ -540,7 +539,6 @@ void Worker::papOnlineProbe3()
 
 void Worker::papOnlineProbe4()
 {
-	double t_data = 0.0;
 	size_t prevStart = 0;
 	size_t n_probe = 0;
 
@@ -548,7 +546,7 @@ void Worker::papOnlineProbe4()
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;// << ". msg waiting: " << driver.queSize();
 		Timer tmr;
 		// DVLOG(3) << "current parameter: " << model.getParameter().weights;
-		t_data = 0.0;
+		double t_data = 0.0;
 		size_t left = localReportSize;
 		size_t n_used = 0, n_used_since_report = 0;
 		double loss = 0.0, loss_since_report = 0.0;
@@ -620,7 +618,7 @@ void Worker::papOnlineProbe4()
 
 void Worker::papOnlineProbeBenchmark()
 {
-	double t_data = 0.0, t_calcLoss = 0.0;
+	double t_calcLoss = 0.0;
 	size_t prevStart = 0;
 	Parameter prevParam = model.getParameter();
 	size_t n_probe = 0, n_bench = 100;
@@ -631,7 +629,7 @@ void Worker::papOnlineProbeBenchmark()
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;// << ". msg waiting: " << driver.queSize();
 		Timer tmr;
 		// DVLOG(3) << "current parameter: " << model.getParameter().weights;
-		t_data = 0.0;
+		double t_data = 0.0;
 		size_t left = localReportSize;
 		size_t n_used = 0, n_used_since_report = 0;
 		double loss = 0.0, loss_since_report = 0.0;
