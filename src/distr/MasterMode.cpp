@@ -4,6 +4,7 @@
 #include "logging/logging.h"
 #include "math/accumulate.h"
 #include <algorithm>
+#include <cmath>
 using namespace std;
 
 // ---- general probe mode
