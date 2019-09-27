@@ -397,7 +397,7 @@ void Master::papProcess()
 	}
 }
 
-// sum_i L(p_{i+1}, b_{i+1}) - L(p_i, b_i)
+// sum_i L(p_i, b_i) - L(p_{i+1}, b_{i+1})
 void Master::papOnlineProbe1()
 {
 	const double toleranceFactor = 0.8;
@@ -448,7 +448,7 @@ void Master::papOnlineProbe1()
 			double nloss2 = sum(lastDeltaLoss) / (nPoint - lastProbeNPoint);
 			double nloss3 = lossReportSum / globalBatchSize;
 			double nloss = max(max(nloss1, nloss2), nloss3);
-			double gk = lastLoss - nloss2;
+			double gk = nloss2 - lastLoss;
 			//lastLoss = nloss1 / globalBatchSize;
 			lastLoss = nloss2;
 			gkProb[globalBatchSize] = gk;
@@ -488,7 +488,7 @@ void Master::papOnlineProbe1()
 	}
 }
 
-// sum_i L(p_i, b_i) - L(p_0, b_i)
+// sum_i L(p_0, b_i) - L(p_i, b_i)
 void Master::papOnlineProbe2()
 {
 	lossDeltaSum = 0;
@@ -537,7 +537,7 @@ void Master::papOnlineProbe2()
 			// current probe loss --> lossDeltaSum
 			VLOG(2) << " wait for loss Gathered ";
 			gatherLoss(); // wait for lossGathered
-			double gk = (lossGathered - lossDeltaSum); // - for test
+			double gk = lossGathered - lossDeltaSum;
 			suLoss.reset();
 
 			gkProb[globalBatchSize] = gk;
@@ -593,7 +593,7 @@ void Master::papOnlineProbe3()
 	// calculate L(p_{i+1}, b_i) after calculated p_{i+1} from b_i
 }
 
-// sum_i L(p_n, b_i) - L(p_i, b_i)
+// sum_i L(p_i, b_i) - L(p_n, b_i)
 void Master::papOnlineProbe4()
 {
 	const double toleranceFactor = 0.8;
@@ -642,7 +642,7 @@ void Master::papOnlineProbe4()
 			double time = tmrTrain.elapseSd(); // the time before calculating reference loss
 			VLOG(2) << " wait for loss Gathered ";
 			gatherLoss(); // wait for lossGathered
-			double gk = lossGathered - lossDeltaSum; // - for test
+			double gk = lossDeltaSum - lossGathered; // - for test
 
 			gkProb[globalBatchSize] = gk;
 			double wtd = hmean(wtDatapoint);

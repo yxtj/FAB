@@ -50,11 +50,12 @@ private:
 	void papInit();
 	void papProcess();
 
-	void papOnlineProbe1(); // sum_i L(p_{i+1}, b_{i+1}) - L(p_i, b_i)
-	void papOnlineProbe2(); // sum_i L(p_i, b_i) - L(p_0, b_i)
-	void papOnlineProbe3(); // sum_i L(p_{i+1}, b_i) - L(p_i, b_i)
-	void papOnlineProbe4(); // sum_i L(p_n, b_i) - L(p_i, b_i)
-	void papOnlineProbeBenchmark(); // L(p_n, b*) - L(p_i, b*)
+	// since loss should be descreasing, so our gain is defined as earlier value - later value
+	void papOnlineProbe1(); // sum_i L(p_i, b_i) - L(p_{i+1}, b_{i+1})
+	void papOnlineProbe2(); // sum_i L(p_0, b_i) - L(p_i, b_i)
+	void papOnlineProbe3(); // sum_i L(p_i, b_i) - L(p_{i+1}, b_i)
+	void papOnlineProbe4(); // sum_i L(p_i, b_i) - L(p_n, b_i)
+	void papOnlineProbeBenchmark(); // L(p_0, b*) - L(p_n, b*)
 	void papOnlineProbeFile(); // read file for gain
 
 // local logic
