@@ -170,7 +170,6 @@ private:
 	double lossReportSum; // the accumulated loss from all report messages
 	double lossDeltaSum; // the accumulated loss from all delta messages
 	double lossGathered; // the variable used to accumulate loss by gatherLoss()
-	double lossCurGa, lossBench100, lossBench500;
 	std::vector<double> lastDeltaLoss;
 
 	double timeOffset; // used for accounting time if resumed from previous archive
