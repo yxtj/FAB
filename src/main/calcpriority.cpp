@@ -333,12 +333,13 @@ int main(int argc, char* argv[]){
 
 	int iter;
 	double time;
+	size_t ndp;
 	Parameter param;
 	int idx = 0;
 	int ndump = 0;
 	// skip the processed
 	while(ndump < processed.first && !archiver.eof() && archiver.valid()){
-		if(!archiver.load(iter, time, param))
+		if(!archiver.load(iter, time, ndp, param))
 			continue;
 		int state = checkRecordLineId(opt.rlines, idx++);
 		if(state == -1){
@@ -352,7 +353,7 @@ int main(int argc, char* argv[]){
 	// process
 	if(opt.nthread == 1){
 		while(!archiver.eof() && archiver.valid()){
-			if(!archiver.load(iter, time, param))
+			if(!archiver.load(iter, time, ndp, param))
 				continue;
 			int state = checkRecordLineId(opt.rlines, idx++);
 			if(state == -1){
@@ -372,7 +373,7 @@ int main(int argc, char* argv[]){
 			vector<future<vector<double>>> handlers;
 			int i = 0;
 			while(i < opt.nthread && !archiver.eof() && archiver.valid()){
-				if(!archiver.load(iter, time, param))
+				if(!archiver.load(iter, time, ndp, param))
 					continue;
 				int state = checkRecordLineId(opt.rlines, idx++);
 				if(state == -1){

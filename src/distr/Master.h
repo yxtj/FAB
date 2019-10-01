@@ -50,11 +50,12 @@ private:
 	void papInit();
 	void papProcess();
 
-	void papOnlineProbe1(); // sum_i L(p_{i+1}, b_{i+1}) - L(p_i, b_i)
-	void papOnlineProbe2(); // sum_i L(p_i, b_i) - L(p_0, b_i)
-	void papOnlineProbe3(); // sum_i L(p_{i+1}, b_i) - L(p_i, b_i)
-	void papOnlineProbe4(); // sum_i L(p_n, b_i) - L(p_i, b_i)
-	void papOnlineProbeBenchmark(); // L(p_n, b*) - L(p_i, b*)
+	// since loss should be descreasing, so our gain is defined as earlier value - later value
+	void papOnlineProbe1(); // sum_i L(p_i, b_i) - L(p_{i+1}, b_{i+1})
+	void papOnlineProbe2(); // sum_i L(p_0, b_i) - L(p_i, b_i)
+	void papOnlineProbe3(); // sum_i L(p_i, b_i) - L(p_{i+1}, b_i)
+	void papOnlineProbe4(); // sum_i L(p_i, b_i) - L(p_n, b_i)
+	void papOnlineProbeBenchmark(); // L(p_0, b*) - L(p_n, b*)
 	void papOnlineProbeFile(); // read file for gain
 
 // local logic
@@ -84,9 +85,9 @@ private:
 	bool needArchive();
 	void archiveProgress(const bool force = false);
 
-	size_t estimateMinGlobalBatchSize();
+	size_t estimateMinGlobalBatchSize(const size_t grs = 0); // if grs is 0, estimate with worst case
 	size_t optFkGlobalBatchSize(); // compute opt k from f(k)
-	size_t estimateMinLocalReportSize(const bool quick = false);
+	size_t estimateMinLocalReportSize(const size_t gbs);
 
 	void updateOnlineLoss(const int source, const double loss);
 	void updateIterationTime(const int src, const double time);

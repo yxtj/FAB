@@ -183,10 +183,11 @@ int main(int argc, char* argv[]){
 
 	int iter;
 	double time;
+	size_t ndp;
 	Parameter param;
 	int idx = 0;
 	while(!archiver.eof() && archiver.valid()){
-		if(!archiver.load(iter, time, param))
+		if(!archiver.load(iter, time, ndp, param))
 			continue;
 		if(!binary_search(opt.rlines.begin(), opt.rlines.end(), idx++)){
 			if(idx > opt.rlines.back())
