@@ -366,8 +366,12 @@ void Master::papProcess()
 		mtOther += tmr.elapseSd();
 		// wait until the report counts reach a global mini batch
 		suPap.wait_n_reset();
-		//// online change globalBatchSize
+		// VLOG(2) << "gather Delta";
+		gatherDelta();
+		stat.t_dlt_wait += tmr.elapseSd();
+		// online change globalBatchSize
 		if(conf->papDynamicBatchSize) {
+			tmr.restart();
 			size_t ogbs = optFkGlobalBatchSize();
 			size_t egbs = estimateMinGlobalBatchSize();
 			size_t old_gbs = globalBatchSize;
@@ -384,10 +388,8 @@ void Master::papProcess()
 				lossOnline *= globalBatchSize / old_gbs;
 				broadcastSizeConf(globalBatchSize, localReportSize);
 			}
+			mtOther += tmr.elapseSd();
 		}
-		// VLOG(2) << "gather Delta";
-		gatherDelta();
-		stat.t_dlt_wait += tmr.elapseSd();
 		// VLOG(2) << "received Delta " << nDelta << " with " << nPoint;
 		broadcastParameter();
 
