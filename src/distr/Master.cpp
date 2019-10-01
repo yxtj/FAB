@@ -519,20 +519,18 @@ size_t Master::optFkGlobalBatchSize(){
 size_t Master::estimateMinLocalReportSize(const size_t gbs)
 {
 	double mtr = mtReportSum / nReport;
+	double mtu = mtDeltaSum / nDelta;
+	double mtb = mtParameterSum / stat.n_par_send;
+	double mto = mtOther / iter;
+
+	double wtc = mean(wtDelta);
 	double wtr = mean(wtReport);
 	double wtd = hmean(wtDatapoint);
-	if(gbs == 0){
-		return static_cast<size_t>((nWorker * mtr - wtr) / wtd);
-	} else{
-		double mtu = mtDeltaSum / nDelta;
-		double mtb = mtParameterSum / stat.n_par_send;
-		double mto = mtOther / iter;
-		double wtc = mean(wtDelta);
 
-		double up = gbs * wtr - nWorker * mtr;
-		double down = nWorker * nWorker * (mtu + mtb) - nWorker * wtc - gbs * wtd;
-		return static_cast<size_t>(up / down);
-	}
+	double up = nWorker * (nWorker * (mtu + mtb) + mto - wtc) + gbs * wtd;
+	double down = wtr - nWorker * mtr; // very likely be negative
+	size_t res = static_cast<size_t>(up / down / nWorker); // convert to local report size
+	return max(res, nWorker);
 }
 
 void Master::updateOnlineLoss(const int source, const double loss)
