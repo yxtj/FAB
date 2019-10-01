@@ -303,14 +303,15 @@ int main(int argc, char* argv[]){
 			for(size_t i = 0; i < handlers.size(); ++i){
 				int iter = get<0>(data[i]);
 				double time = get<1>(data[i]);
+				size_t ndp = get<2>(data[i]);
 				TaskResult tr = handlers[i].get();
 				double accuracy = tr.correct * accuracy_factor;
 				if(opt.show){
-					cout << showpoint << iter << "\t" << time << "\t" << tr.loss << "\t"
+					cout << showpoint << iter << "\t" << time << "\t" << ndp << "\t" << tr.loss << "\t"
 						<< noshowpoint << accuracy << "\t" << tr.diff << "\t" << improvements[i] << endl;
 				}
 				if(write){
-					fout << showpoint << iter << "," << time << "," << tr.loss << ","
+					fout << showpoint << iter << "," << time << "," << ndp << "," << tr.loss << ","
 						<< noshowpoint << accuracy << "," << tr.diff << "," << improvements[i] << "\n";
 				}
 			}
