@@ -37,6 +37,7 @@ Master::Master() : Runner() {
 	tmrArch.restart();
 	doArchive = false;
 	archDoing = false;
+	reachMinRndK = false;
 }
 
 void Master::init(const ConfData* conf, const size_t lid)
@@ -521,6 +522,7 @@ void Master::updateOnlineLoss(const int source, const double loss)
 	lossOnline = lossOnline * (nWorker - 1) / nWorker + loss;
 	lastDeltaLoss[source] = loss;
 	lossDeltaSum += loss;
+	// VLOG(2) << "GOT delta from " << source << " with loss " << loss << " to " << lossDeltaSum;
 }
 
 void Master::updateIterationTime(const int src, const double time)
@@ -533,6 +535,7 @@ void Master::updateIterationTime(const int src, const double time)
 void Master::commonHandleDelta(const int src, const size_t n, const double loss, const double time)
 {
 	nPoint += n;
+	nRecvDp += n;
 	++nDelta;
 	updateOnlineLoss(src, loss);
 	updateIterationTime(src, time);

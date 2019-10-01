@@ -18,7 +18,8 @@ void Master::probeModeInit()
 
 void Master::probeModeProcess()
 {
-	double pdp = ceil(conf->probeRatio * nPointTotal);
+	// double pdp = ceil(conf->probeRatio * nPointTotal);
+	double pdp = conf->probeRatio * nPointTotal;
 	size_t probeNeededPoint = static_cast<size_t>(pdp);
 
 	Parameter p0 = model.getParameter();
@@ -29,8 +30,8 @@ void Master::probeModeProcess()
 	vector<size_t> gbsList = { conf->batchSize, conf->batchSize / 2, conf->batchSize / 4 };
 	map<size_t, double> res;
 	for(size_t gbs : gbsList){
-		size_t probeNeededIter = static_cast<size_t>(ceil(pdp / gbs));
-		size_t probeNeededDelta = static_cast<size_t>(ceil(pdp / gbs * nWorker));
+		size_t probeNeededIter = static_cast<size_t>((pdp / gbs));
+		size_t probeNeededDelta = static_cast<size_t>((pdp / gbs * nWorker));
 		LOG(INFO) << "probe gbs=" << gbs << " term-point=" << probeNeededPoint
 			<< " term-delta=" << probeNeededDelta << " term-iter=" << probeNeededIter;
 		// reset parameters
@@ -491,7 +492,6 @@ void Master::papOnlineProbe1()
 void Master::papOnlineProbe2()
 {
 	lossDeltaSum = 0;
-	lossCurGa = 0;
 	const double toleranceFactor = 0.8;
 	double tl = tmrTrain.elapseSd();
 	double maxfk = -1;
@@ -578,9 +578,6 @@ void Master::papOnlineProbe2()
 			lastProbeTime = tmrTrain.elapseSd();
 			lossReportSum = 0;
 			lossDeltaSum = 0;
-			lossCurGa = 0;
-			lossBench100 = 0;
-			lossBench500 = 0;
 			lossGathered = 0;
 		}
 	}
@@ -698,19 +695,22 @@ void Master::papOnlineProbeFile()
 
 void Master::papOnlineProbeBenchmark()
 {
-	const double toleranceFactor = 0.0001;
+	const double toleranceFactor = 0.1;
 	double tl = tmrTrain.elapseSd();
 	double maxfk = -1;
 	bool probeReached = false;
 	size_t probeSize = static_cast<size_t>(nPointTotal * conf->probeRatio);
 	size_t lastProbeNPoint = nPoint;
+	size_t prevNPoint = 0;
 	int lastProbeIter = iter;
 	double lastProbeTime = tmrTrain.elapseSd();
 
-	suLoss.wait_n_reset();
-	double lastLossSum = lossGathered;
-
-	lossDeltaSum = 0;
+	suLoss.wait_n_reset(); // wait init loss from all workers
+	double prevUnitLoss = lossGathered / nWorker; // inital loss from init param
+	double prevLoss = prevUnitLoss;
+	double prevGain = -1;
+	double decay = 1;
+	lossDeltaSum = 0; /// for the total loss from 
 	lossGathered = 0;
 
 	while(!terminateCheck() && !probeReached){
@@ -736,8 +736,23 @@ void Master::papOnlineProbeBenchmark()
 		// wait until the report counts reach a global mini batch
 		suPap.wait_n_reset();
 		gatherDelta();
+
+		double newLoss = lossDeltaSum / (nPoint - prevNPoint);
+		double gain = (prevLoss - newLoss);
+		if (prevGain > 0) {
+			decay = gain / prevGain;
+			lossDecay.push_back(decay);
+		}
+		VLOG(2) << "Iter " << iter << "\tgain=" << gain << "\tdecay=" << decay << "\tprevLoss=" 
+				<< prevLoss << "\tnewLoss=" << newLoss << "\tprevGain=" << prevGain; 
+		prevGain = gain;
+		prevLoss = newLoss;
+		prevNPoint = nPoint;
+		lossDeltaSum = 0;
+
 		stat.t_dlt_wait += tmr.elapseSd();
 		broadcastParameter();
+		// if ((nPoint - prevNPoint) > globalBatchSize)
 		tmr.restart();
 		archiveProgress();
 		++iter;
@@ -745,10 +760,10 @@ void Master::papOnlineProbeBenchmark()
 
 		/// reset gbs
 		if ((nPoint- lastProbeNPoint) > probeSize) {
-			// current probe loss --> lossDeltaSum
 			gatherLoss(); // wait for lossGathered
-			double gk = (lastLossSum - lossGathered); // - for test
 			suLoss.reset();
+				
+			double gk = (prevUnitLoss - lossGathered / nWorker);
 
 			gkProb[globalBatchSize] = gk;
 			double wtd = hmean(wtDatapoint);
@@ -760,9 +775,12 @@ void Master::papOnlineProbeBenchmark()
 
 			VLOG(2) << "probeInfo\tk=" << globalBatchSize << "\titer=" << iter - lastProbeIter 
 				<< "\tnp=" << nPoint - lastProbeNPoint << "\ttk=" << tk1 << ", " << tk2 
-				<< "\tgk=" << gk << "\tlossDeltaSum=" << lossDeltaSum << "\tL0=" << lossGathered
-				<< "\tfk=" << gk / tk1 << ", " << gk / tk2 << "\n" << "wtd=" << wtd 
-				<< ", " << wtDatapoint << "\twtc=" << wtc << ", " << wtDelta << "\n"
+				<< "\tgk=" << gk << "\tfk=" << gk / tk1 << ", " << gk / tk2 << "\tprevUnitLoss"
+				<< prevUnitLoss << "\tLossGat=" << lossGathered
+				<< "\tavgDecay=" << decay << "\testLoss=" << lossGathered * mean(lossDecay)
+				// << "\tlastEstLoss" << prevProbeLoss * prevAvgDecay 
+				<< "\tDecay" << lossDecay << "\n"
+				<< "\nwtd=" << wtd << ", " << wtDatapoint << "\twtc=" << wtc << ", " << wtDelta << "\n"
 				<< "maxfk=" << maxfk << "\tmink=" << mink; 
 		
 			if (maxfk < 0 || fk > maxfk * toleranceFactor) {
@@ -782,12 +800,14 @@ void Master::papOnlineProbeBenchmark()
 				broadcastProbeDone();
 				probeReached = true;
 			}
+			// }
+			prevUnitLoss = lossGathered/nWorker;
 			lastProbeNPoint = nPoint;
 			lastProbeIter = iter;
 			lastProbeTime = tmrTrain.elapseSd();
 			lossReportSum = 0;
 			lossDeltaSum = 0;
-			lastLossSum = lossGathered;
+			lossDecay.clear();
 			lossGathered = 0;
 		}
 	}
@@ -941,5 +961,9 @@ void Master::handleDeltaPap(const std::string& data, const RPCInfo& info)
 	applyDelta(get<1>(deltaMsg), s);
 
 	rph.input(typeDDeltaAll, s);
+	if (nRecvDp > globalBatchSize){
+		suDeltaAll.notify();
+		nRecvDp = 0;
+	}
 	mtDeltaSum += tmr.elapseSd();
 }
