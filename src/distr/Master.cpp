@@ -363,9 +363,11 @@ void Master::initializeParameter()
 	if(conf->resume){
 		int i;
 		double t;
-		if(archiver.load_last(i, t, p)){
+		size_t n;
+		if(archiver.load_last(i, t, n, p)){
 			iter = i;
 			timeOffset = t;
+			nPoint = n;
 			trainer->pm->setParameter(move(p));
 		}
 		LOG(INFO) << "Resume to iteration: " << i << ", at time: " << t;
@@ -456,12 +458,12 @@ void Master::archiveProgress(const bool force)
 	lastArchIter = iter;
 	tmrArch.restart();
 	++stat.n_archive;
-	std::async(launch::async, [&](int iter, double time, Parameter param){
+	std::async(launch::async, [&](int iter, double time, size_t point, Parameter param){
 		Timer t;
-		archiver.dump(iter, time, param);
+		archiver.dump(iter, time, point, param);
 		archDoing = false;
 		stat.t_archive += t.elapseSd();
-	}, iter, timeOffset + tmrTrain.elapseSd(), ref(model.getParameter()));
+	}, iter, timeOffset + tmrTrain.elapseSd(), nPoint, ref(model.getParameter()));
 }
 
 size_t Master::estimateMinGlobalBatchSize(const size_t C)

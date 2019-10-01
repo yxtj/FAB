@@ -238,19 +238,21 @@ int main(int argc, char* argv[]){
 	if(opt.resume){
 		int iter;
 		double time;
+		size_t ndp;
 		Parameter param;
 		idx = processed.first;
 		if(opt.resume){
-			archiver.load_nth(processed.first, iter, time, param);
+			archiver.load_nth(processed.first, iter, time, ndp, param);
 		}
 	}
 	if(opt.nthread == 1){ // 1-thread
 		vector<double> last(dh.xlength(), 0.0);
 		int iter;
 		double time;
+		size_t ndp;
 		Parameter param;
 		while(!archiver.eof() && archiver.valid()){
-			if(!archiver.load(iter, time, param))
+			if(!archiver.load(iter, time, ndp, param))
 				continue;
 			if(!opt.show && idx % opt.logIter == 0)
 				cout << "  processed: " << idx << endl;
@@ -275,26 +277,26 @@ int main(int argc, char* argv[]){
 		vector<Model> models(opt.nthread);
 		for(size_t i = 0; i < opt.nthread; ++i)
 			models[i].init(opt.alg, opt.algParam);
-		vector<tuple<int, double, Parameter>> data(opt.nthread);
+		vector<tuple<int, double, size_t, Parameter>> data(opt.nthread);
 		vector<double> improvements(opt.nthread);
 		while(!archiver.eof() && archiver.valid()){
 			vector<future<TaskResult>> handlers;
 			int i = 0;
 			while(i < opt.nthread && !archiver.eof() && archiver.valid()){
-				if(!archiver.load(get<0>(data[i]), get<1>(data[i]), get<2>(data[i])))
+				if(!archiver.load(get<0>(data[i]), get<1>(data[i]), get<2>(data[i]), get<3>(data[i])))
 					continue;
 				if(!opt.show && idx % opt.logIter == 0)
 					cout << "  processed: " << idx << endl;
 				if(opt.topk_param != 0 && idx >= opt.topk_param)
 					break;
-				auto& p = get<2>(data[i]);
+				Parameter& p = get<3>(data[i]);
 				handlers.push_back(async(launch::async, &evaluateOne,
 					ref(p), ref(models[i]), withRef, doAccuracy, cref(dh), cref(reference)));
 				++idx;
 				++i;
 			}
 			for(size_t i = 0; i < handlers.size(); ++i){
-				auto& p = get<2>(data[i]);
+				Parameter& p = get<3>(data[i]);
 				improvements[i] = vectorDifference(last, p.weights);
 				last = p.weights;
 			}
