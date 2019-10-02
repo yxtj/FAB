@@ -56,6 +56,7 @@ void Master::probeModeProcess()
 		nPoint = 0;
 		nDelta = 0;
 		iter = 0;
+		gbs /= 2;
 	}
 	broadcastProbeDone();
 	LOG(INFO) << "probe result: " << res;
