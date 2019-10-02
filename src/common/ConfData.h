@@ -34,6 +34,7 @@ struct ConfData {
 
 	bool probe; // probe the hyper-parameters
 	double probeRatio; // the ratio of data points used for each probe
+	double probeMinGBSR; // the minimum global batch ratio used in probing
 	bool probeOnlineLoss; // use accumulated online loss or calculate loss with last model parameter
 	bool probeLossFull; // calcualte the loss with full batch or the probed part
 

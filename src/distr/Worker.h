@@ -91,6 +91,8 @@ private:
 // singal
 public:
 	void handleNormalControl(const std::string& data, const RPCInfo& info);
+	void handleImmediateControl(const std::string& data, const RPCInfo& info);
+
 	void handleReply(const std::string& data, const RPCInfo& info);
 	void handleWorkerList(const std::string& data, const RPCInfo& info);
 	void handleStart(const std::string& data, const RPCInfo& info);
@@ -98,16 +100,13 @@ public:
 	void handleContinue(const std::string& data, const RPCInfo& info);
 	void handleDeltaRequest(const std::string& data, const RPCInfo& info);
 	void handleLossRequest(const std::string& data, const RPCInfo& info);
-	void handleProbeDone(const std::string& data, const RPCInfo& info);
-
 	void handleReset(const std::string& data, const RPCInfo& info);
 	void handleMetaConf(const std::string& data, const RPCInfo& info);
 
-	void handleImmediateControl(const std::string& data, const RPCInfo& info);
 	void handleTerminate(const std::string& data, const RPCInfo& info);
+	void handleProbeDone(const std::string& data, const RPCInfo& info);
 
 	void handleParameterProbe(const std::string& data, const RPCInfo& info);
-
 	void handleParameter(const std::string& data, const RPCInfo& info); // bsp and tap
 	void handleParameterSsp(const std::string& data, const RPCInfo& info); // ssp and sap
 	void handleParameterFsp(const std::string& data, const RPCInfo& info);

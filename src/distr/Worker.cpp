@@ -371,10 +371,21 @@ void Worker::handleNormalControl(const std::string & data, const RPCInfo & info)
 	case MType::DRLoss:
 		handleLossRequest(data.substr(sizeof(int)), info);
 		break;
+		// MType::DParameter is handled directly by message type
+	}
+}
+
+void Worker::handleImmediateControl(const std::string& data, const RPCInfo& info)
+{
+	int type = deserialize<int>(data);
+	//const char* p = data.data() + sizeof(int);
+	switch(type){
+	case MType::CTerminate:
+		handleTerminate(data.substr(sizeof(int)), info);
+		break;
 	case MType::CProbeDone:
 		handleProbeDone(data.substr(sizeof(int)), info);
 		break;
-		// MType::DParameter is handled directly by message type
 	}
 }
 
@@ -438,12 +449,6 @@ void Worker::handleLossRequest(const std::string& data, const RPCInfo& info)
 	suLossReq.notify();
 }
 
-void Worker::handleProbeDone(const std::string& data, const RPCInfo& info)
-{
-	suConf.notify(); // for offline probe mode
-	suProbeDone.notify();
-}
-
 void Worker::handleReset(const std::string& data, const RPCInfo& info)
 {
 	//DLOG(INFO) << "receive reset";
@@ -467,20 +472,16 @@ void Worker::handleMetaConf(const std::string& data, const RPCInfo& info)
 	suConf.notify();
 }
 
-void Worker::handleImmediateControl(const std::string & data, const RPCInfo & info)
-{
-	int type = deserialize<int>(data);
-	//const char* p = data.data() + sizeof(int);
-	switch(type){
-	case MType::CTerminate:
-		handleTerminate(data.substr(sizeof(int)), info);
-		break;
-	}
-}
 void Worker::handleTerminate(const std::string & data, const RPCInfo & info)
 {
 	exitTrain = true;
 	pauseTrain(); // in case if the system is calculating delta
 	suParam.notify(); // in case if the system just calculated a delta (is waiting for new parameter)
 	sendReply(info, MType::CTerminate);
+}
+
+void Worker::handleProbeDone(const std::string& data, const RPCInfo& info)
+{
+	suConf.notify(); // for offline probe mode
+	suProbeDone.notify();
 }

@@ -26,10 +26,10 @@ void Master::probeModeProcess()
 	suLoss.wait_n_reset();
 	double l0 = lossGathered;
 	LOG(INFO) << "initialize loss=" << l0 << " probe size=" << probeNeededPoint;
-	// TODO
-	vector<size_t> gbsList = { conf->batchSize, conf->batchSize / 2, conf->batchSize / 4 };
 	map<size_t, double> res;
-	for(size_t gbs : gbsList){
+	size_t gbs = conf->batchSize;
+	size_t mink = static_cast<size_t>(ceil(conf->probeMinGBSR * nPointTotal));
+	while(gbs > mink && net->unpicked_pkgs() < 10){
 		size_t probeNeededIter = static_cast<size_t>(ceil(pdp / gbs));
 		size_t probeNeededDelta = static_cast<size_t>(ceil(pdp / gbs * nWorker));
 		LOG(INFO) << "probe gbs=" << gbs << " term-point=" << probeNeededPoint

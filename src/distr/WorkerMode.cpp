@@ -31,7 +31,7 @@ void Worker::probeModeProcess()
 		clearDelta();
 		exitTrain = false;
 		allowTrain = true;
-		(this->*processFun)();
+		(this->*processFun)(); // stop by Reset message via setting exitTrain=true
 		LOG(INFO) << "finish one probe";
 		suLossReq.wait_n_reset();
 		double loss = calcLoss(0, probeNeededPoint);

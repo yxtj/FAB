@@ -599,7 +599,7 @@ void Master::broadcastSignalTerminate()
 
 void Master::broadcastProbeDone()
 {
-	net->broadcast(CType::NormalControl, MType::CProbeDone);
+	net->broadcast(CType::ImmediateControl, MType::CProbeDone);
 }
 
 void Master::waitDeltaFromAny(){
