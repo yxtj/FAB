@@ -171,6 +171,9 @@ private:
 	double lossDeltaSum; // the accumulated loss from all delta messages
 	double lossGathered; // the variable used to accumulate loss by gatherLoss()
 	std::vector<double> lastDeltaLoss;
+	std::vector<double> lossDecay;
+	double prevLoss;
+	bool reachMinRndK;
 
 	double timeOffset; // used for accounting time if resumed from previous archive
 	Timer tmrTrain;

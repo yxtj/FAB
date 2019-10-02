@@ -19,7 +19,8 @@ void Master::probeModeInit()
 
 void Master::probeModeProcess()
 {
-	double pdp = ceil(conf->probeRatio * nPointTotal);
+	// double pdp = ceil(conf->probeRatio * nPointTotal);
+	double pdp = conf->probeRatio * nPointTotal;
 	size_t probeNeededPoint = static_cast<size_t>(pdp);
 
 	Parameter p0 = model.getParameter();
@@ -712,7 +713,7 @@ void Master::papOnlineProbeFile()
 
 void Master::papOnlineProbeBenchmark()
 {
-	const double toleranceFactor = 0.0001;
+	const double toleranceFactor = 0.1;
 	double tl = tmrTrain.elapseSd();
 	double maxfk = -1;
 	bool probeReached = false;

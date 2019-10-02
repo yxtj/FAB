@@ -534,8 +534,8 @@ void Worker::papOnlineProbe2()
 			model.setParameter(move(prevParam));
 			double L0 = calcLoss(prevStart, n_probe);
 			sendLoss(L0);
-			prevParam = move(curParam);
 			model.setParameter(curParam);
+			prevParam = move(curParam);
 			t_calcLoss += tmr.elapseSd();
 			VLOG(2) << "Probe recalculate L for lrs=" << localReportSize << " w/n " << n_probe
 					<< "\ttime: " << tmr.elapseSd();
@@ -635,8 +635,8 @@ void Worker::papOnlineProbeBenchmark()
 	size_t prevStart = 0;
 	Parameter prevParam = model.getParameter();
 	size_t n_probe = 0, n_bench = 100;
-	double LB = calcLoss(0, n_bench);
-	sendLoss(LB);
+	double LB = calcLoss(0, n_bench) / n_bench;
+	sendLoss(LB); // send unit init Loss
 
 	while(!exitTrain && !suProbeDone.ready()){
 		VLOG_EVERY_N(ln, 1) << "Iteration " << iter;// << ". msg waiting: " << driver.queSize();
@@ -704,7 +704,7 @@ void Worker::papOnlineProbeBenchmark()
 			Timer tmr;
 			// VLOG(2) << " calc loss 4 cur probe batch from " << prevStart << " for " << n_probe;
 			lock_guard<mutex> lk(mParam); // lock prameter
-			LB = calcLoss(0, n_bench);
+			LB = calcLoss(0, n_bench) / n_bench;
 			sendLoss(LB);
 			t_calcLoss += tmr.elapseSd();
 			VLOG(2) << "Probe recalculate L for n_bench " << n_bench << "\ttime: " << tmr.elapseSd();

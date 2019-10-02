@@ -540,6 +540,7 @@ void Master::updateOnlineLoss(const int source, const double loss)
 	lossOnline = lossOnline * (nWorker - 1) / nWorker + loss;
 	lastDeltaLoss[source] = loss;
 	lossDeltaSum += loss;
+	// VLOG(2) << "GOT delta from " << source << " with loss " << loss << " to " << lossDeltaSum;
 }
 
 void Master::updateIterationTime(const int src, const double time)
