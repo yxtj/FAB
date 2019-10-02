@@ -48,7 +48,7 @@ void Master::probeModeProcess()
 		broadcastReset(0, p0);
 		double time = tmr.elapseSd();
 		double loss = gatherLoss();
-		double gain = loss - l0;
+		double gain = l0 - loss;
 		double rate = gain / time;
 		res[gbs] = rate;
 		LOG(INFO) << "finish one probe: gbs=" << gbs << " loss=" << loss
