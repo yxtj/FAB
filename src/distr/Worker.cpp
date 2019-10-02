@@ -75,6 +75,7 @@ void Worker::run()
 	sendReady();
 	waitStart();
 
+	tmrTrain.restart();
 	localBatchSize = (this->*lbsFun)(conf->batchSize);
 	DLOG(INFO) << "start training with mode: " << conf->mode << ", local batch size: " << localBatchSize;
 	iter = 1;
@@ -85,7 +86,7 @@ void Worker::run()
 		probeModeProcess();
 	}
 
-	DLOG(INFO) << "finish training";
+	DLOG(INFO) << "finish training, local time used:" << tmrTrain.elapseSd();
 	sendClosed();
 	finishStat();
 	delete trainer;
@@ -329,12 +330,39 @@ size_t Worker::calcLocalBatchSizeWhole(const size_t gbs)
 
 void Worker::initSpeedAdjustment()
 {
-	const double fixSlowFactor = conf->adjustSpeedHetero ? conf->speedHeterogenerity[localID] : 0.0;
+	double sfactor = 0.0;
+	constexpr double inf = numeric_limits<double>::infinity();
+	if(conf->adjustSpeedHetero && !conf->speedHeterogenerity.empty()){
+		speedAdjList = conf->speedHeterogenerity[localID];
+		sfactor = speedAdjList[0].first;
+		if(speedAdjList.size() == 1 && speedAdjList[0].second == inf){
+			speedAdjList.clear();
+		}
+	}
 	unsigned seed = static_cast<unsigned>(conf->seed + 123 + localID);
+	LOG(INFO) << "set speed factor to " << sfactor;
 
 	const vector<string>& param = conf->adjustSpeedRandom ? conf->speedRandomParam : vector<string>();
-	DLOG(DEBUG) << param << "," << fixSlowFactor << "," << seed;
-	speedFactor.init(param, fixSlowFactor, seed);
+	DLOG(DEBUG) << param << "," << sfactor << "," << seed;
+	speedFactor.init(param, sfactor, seed);
+}
+
+double Worker::getSpeedFactor()
+{
+	if(!speedAdjList.empty()){
+		double t = tmrTrain.elapseSd();
+		auto it = speedAdjList.begin();
+		while(it != speedAdjList.end() && it->second < t)
+			++it;
+		if(it != speedAdjList.begin()){
+			speedAdjList.erase(speedAdjList.begin(), it);
+			double sfactor = speedAdjList.empty() ? 0.0 : speedAdjList[0].first;
+			LOG(INFO) << "change speed factor to " << sfactor;
+			speedFactor.update(sfactor);
+		}
+	}
+	double dly = speedFactor.generate();
+	return dly;
 }
 
 // handlers

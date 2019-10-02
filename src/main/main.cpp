@@ -25,16 +25,14 @@ string makeSpeedString(const ConfData& conf){
 	}
 	if(conf.adjustSpeedHetero){
 		tmpSpeed += "\n  Heterogenerity: ";
-		double v = conf.speedHeterogenerity[0];
-		size_t f = 0;
-		for(size_t i = 1; i < conf.nw; ++i){
-			if(conf.speedHeterogenerity[i] != v){
-				tmpSpeed += to_string(f) + "-" + to_string(i - 1) + ":" + to_string(v) + ",";
-				v = conf.speedHeterogenerity[i];
-				f = i;
-			}
+		for(size_t i = 0; i < conf.nw; ++i){
+			tmpSpeed += to_string(i) + ":{";
+			for(auto& p : conf.speedHeterogenerity[i])
+				tmpSpeed += "(" + to_string(p.first) + "," + to_string(p.second) + "),";
+			if(!conf.speedHeterogenerity[i].empty())
+				tmpSpeed.pop_back();
+			tmpSpeed += "}\t";
 		}
-		tmpSpeed += to_string(f) + "-" + to_string(conf.nw - 1) + ":" + to_string(v);
 	}
 	return tmpSpeed;
 }

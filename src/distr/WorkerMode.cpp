@@ -62,8 +62,8 @@ void Worker::bspProcess()
 		size_t left = localBatchSize;
 		size_t n_used = 0;
 		double loss = 0.0;
-		double dly = speedFactor.generate();
-		//VLOG_EVERY_N(ln, 2) << "dly=" << dly;
+		double dly = getSpeedFactor();
+		VLOG_EVERY_N(ln, 2) << "  dly=" << dly;
 		clearDelta();
 		do{
 			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
@@ -113,7 +113,7 @@ void Worker::tapProcess()
 			left += localBatchSize * localID / nWorker;
 		size_t n_used = 0;
 		double loss = 0.0;
-		double dly = speedFactor.generate();
+		double dly = getSpeedFactor();
 		clearDelta();
 		do{
 			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
@@ -160,7 +160,7 @@ void Worker::sspProcess()
 		size_t left = localBatchSize;
 		size_t n_used = 0;
 		double loss = 0.0;
-		double dly = speedFactor.generate();
+		double dly = getSpeedFactor();
 		clearDelta();
 		do{
 			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
@@ -213,7 +213,7 @@ void Worker::sapProcess()
 			left += localBatchSize * localID / nWorker;
 		size_t n_used = 0;
 		double loss = 0.0;
-		double dly = speedFactor.generate();
+		double dly = getSpeedFactor();
 		clearDelta();
 		do{
 			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
@@ -263,7 +263,7 @@ void Worker::fspProcess()
 		size_t left = trainer->pd->size();
 		size_t n_used = 0;
 		double loss = 0.0;
-		double dly = speedFactor.generate();
+		double dly = getSpeedFactor();
 		clearDelta();
 		while(allowTrain && !exitTrain && left != 0) {
 			Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
@@ -317,7 +317,7 @@ void Worker::aapProcess()
 			left += localBatchSize * localID / nWorker;
 		size_t n_used = 0;
 		double loss = 0.0;
-		double dly = speedFactor.generate();
+		double dly = getSpeedFactor();
 		clearDelta();
 		bool newBatch = true;
 		while(!exitTrain && left != 0){
@@ -390,7 +390,7 @@ void Worker::papProcess()
 		size_t left = localReportSize;
 		size_t n_used = 0, n_used_since_report = 0;
 		double loss = 0.0, loss_since_report = 0.0;
-		double dly = speedFactor.generate();
+		double dly = getSpeedFactor();
 		clearDelta();
 		while(exitTrain == false && !requestingDelta){
 			tmr.restart(); //
@@ -474,7 +474,7 @@ void Worker::papOnlineProbe2()
 		size_t left = localReportSize;
 		size_t n_used = 0, n_used_since_report = 0;
 		double loss = 0.0, loss_since_report = 0.0;
-		double dly = speedFactor.generate();
+		double dly = getSpeedFactor();
 		clearDelta();
 		while(exitTrain == false && !requestingDelta && !suLossReq.ready() && !suProbeDone.ready()){
 			tmr.restart(); //
@@ -563,7 +563,7 @@ void Worker::papOnlineProbe4()
 		size_t left = localReportSize;
 		size_t n_used = 0, n_used_since_report = 0;
 		double loss = 0.0, loss_since_report = 0.0;
-		double dly = speedFactor.generate();
+		double dly = getSpeedFactor();
 		clearDelta();
 		while(exitTrain == false && !requestingDelta && !suLossReq.ready() && !suProbeDone.ready()){
 			tmr.restart(); //
@@ -646,7 +646,7 @@ void Worker::papOnlineProbeBenchmark()
 		size_t left = localReportSize;
 		size_t n_used = 0, n_used_since_report = 0;
 		double loss = 0.0, loss_since_report = 0.0;
-		double dly = speedFactor.generate();
+		double dly = getSpeedFactor();
 		clearDelta();
 		while(exitTrain == false && !requestingDelta && !suLossReq.ready() && !suProbeDone.ready()){
 			tmr.restart(); //
@@ -720,7 +720,7 @@ void Worker::papOnlineProbeFile()
 {
 	Timer tmr;
 	// DVLOG(3) << "current parameter: " << model.getParameter().weights;
-	double dly = speedFactor.generate();
+	double dly = getSpeedFactor();
 	clearDelta();
 	resumeTrain();
 	Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, localReportSize, false, dly);

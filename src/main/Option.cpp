@@ -3,6 +3,7 @@
 #include <iostream>
 #include <algorithm>
 #include <regex>
+#include <limits>
 #include <boost/program_options.hpp>
 #include "util/Util.h"
 #include "data/DataLoader.h"
@@ -75,8 +76,13 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 			"Format: <type>:<min>:<max>:<distribution parameters...>. "
 			"<type> supports: <empty>, none, exp, norm.")
 		("speed_hetero", value(&tmp_sh)->default_value(""), "The fixed worker speed difference (how much slower than normal).\n"
-			"Format: <n1>-<m1>:<p1>,<n2>-<m2>:<p2>,<n3>:<p3>,... "
-			"<n1>-<m1>:<p1> means worker n1,n1+1,...,m1 are p1 slower than normal. The abscent workers are assumed 0 (working normally).")
+			"Format: <n1>-<m1>:<p1>,<n2>:<p2>,<n3>-<m3>:<p3>:<t3>-<s3>... "
+			"The abscent workers are assumed 0 (working normally)."
+			"  A unit is <wid>:<speed>[:time] . The <wid> can be <n1>-<m1> or <n1>, meaning worker n1,...,m1 or worker n1. "
+			"  The <speed> part is a float number for slower ratio. "
+			"  The <time> part can be <empty>, <t1>-<s1>, <t1> or <t1>-, meaning time duration: [0, inf), [t1, s1), [<0 or previous>, t1) or [t1, inf). "
+			"The time should be increasing. When multiple durations overlap, the earlier one matters. "
+			"Eg. 1:0.2:10,1:0.5:20 means worker 1 works 0.2 slower during [0,10) and 0.5 slower during [10,20), then works normally.")
 		// app - algorithm
 		("algorithm,a", value(&conf.algorighm)->required(), desc_alg.c_str())
 		("parameter,p", value(&conf.algParam)->required(),
@@ -290,26 +296,62 @@ bool Option::processSpeedRandom(const std::string& srandom)
 bool Option::processSpeedHeterogenerity(const std::string& shetero)
 {
 	conf.adjustSpeedHetero = false;
-	conf.speedHeterogenerity.assign(conf.nw, 0);
+	const double inf = numeric_limits<double>::infinity();
+	//conf.speedHeterogenerity.assign(conf.nw, { {0, inf} });
+	conf.speedHeterogenerity.resize(conf.nw);
 	if(!shetero.empty()){
 		conf.adjustSpeedHetero = true;
 		vector<string> vec= getStringList(shetero, ", ");
-		regex reg1("(\\d+)\\:(\\d*.?\\d+)");
-		regex reg2("(\\d+)-(\\d+)\\:(\\d*.?\\d+)");
+		string sregFN("(\\d*.?\\d+)");
+		string sregW("(?:(\\d+)(?:-(\\d+))?)");
+		string sregT1("(?:" + sregFN + ")");
+		string sregT2("(?:" + sregFN + "\\:-" + sregFN + ")");
+		regex reg0(sregW + "\\:" + sregFN);
+		regex reg1(sregW + "\\:" + sregFN + "\\:" + sregT1);
+		regex reg2(sregW + "\\:" + sregFN + "\\:" + sregT2);
 		smatch m;
 		for(string& s : vec){
-			if(regex_match(s, m, reg1)){
+			if(regex_match(s, m, reg0)){
 				int f = stoi(m[1]);
-				conf.speedHeterogenerity[f] = stod(m[2]);
-			} else if(regex_match(s, m, reg2)){
-				int f = stoi(m[1]);
-				int l = stoi(m[2]);
+				int l = m[2].matched ? stoi(m[2]) : f;
 				double v = stod(m[3]);
-				for(; f <= l; ++f)
-					conf.speedHeterogenerity[f] = v;
-			} else{
+				for(; f <= l; ++f){
+					conf.speedHeterogenerity[f].emplace_back(v, inf);
+				}
+			}else if(regex_match(s, m, reg1)){
+				int f = stoi(m[1]);
+				int l = m[2].matched ? stoi(m[2]) : f;
+				double v = stod(m[3]);
+				double t = stod(m[4]);
+				for(; f <= l; ++f){
+					conf.speedHeterogenerity[f].emplace_back(v, t);
+				}
+			}else if(regex_match(s, m, reg2)){
+				int f = stoi(m[1]);
+				int l = m[2].matched ? stoi(m[2]) : f;
+				double v = stod(m[3]);
+				double t = m[4].matched ? stod(m[4]) : 0.0;
+				double s = m[5].matched ? stod(m[5]) : numeric_limits<double>::max();
+				for(; f <= l; ++f){
+					auto& tmp = conf.speedHeterogenerity[f];
+					if(t != 0.0){
+						if(!tmp.empty() && tmp.back().second < t)
+							conf.speedHeterogenerity[f].emplace_back(0.0, t);
+					}
+					conf.speedHeterogenerity[f].emplace_back(v, s);
+				}
+			}else{
 				return false;
 			}
+		}
+		for(size_t i = 0; i < conf.speedHeterogenerity.size(); ++i){
+			if(conf.speedHeterogenerity[i].empty())
+				conf.speedHeterogenerity[i].emplace_back(0.0, inf);
+			else
+				sort(conf.speedHeterogenerity[i].begin(), conf.speedHeterogenerity[i].end(),
+					[](const pair<double, double>& l, const pair<double, double>& r){
+						return l.second < r.second;
+					});
 		}
 	}
 	return true;

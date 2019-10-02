@@ -2,6 +2,7 @@
 #include "Runner.h"
 #include "IDMapper.h"
 #include "math/RandomGenerator.h"
+#include "util/Timer.h"
 #include <atomic>
 #include <random>
 #include <mutex>
@@ -87,6 +88,7 @@ private:
 	size_t calcLocalBatchSizeWhole(const size_t gbs);
 
 	void initSpeedAdjustment();
+	double getSpeedFactor();
 
 // singal
 public:
@@ -126,6 +128,8 @@ private:
 	SyncUnit suStart;
 	SyncUnit suConf;
 
+	Timer tmrTrain;
+
 	SyncUnit suLossReq;
 	size_t lossReqStart, lossReqCount; // the data points to be used for calculating loss
 	
@@ -149,6 +153,7 @@ private:
 	std::atomic<bool> exitTrain;
 
 	// speed adjustment
+	std::vector<std::pair<double, double>> speedAdjList;
 	RandomGenerator speedFactor;
 
 	// online probe

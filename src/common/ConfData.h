@@ -46,7 +46,8 @@ struct ConfData {
 	double speedRandomMin; // the minimum of adjustment factor
 	double speedRandomMax; // the maximum of adjustment factor (larger values are reset to 0)
 	std::vector<std::string> speedRandomParam;
-	std::vector<double> speedHeterogenerity;
+	// one list per worker. pair<speed, time> means the worker is <speed> slower before <time>
+	std::vector<std::vector<std::pair<double, double>>> speedHeterogenerity;
 
 	std::string optimizer;
 	std::vector<std::string> optimizerParam;
