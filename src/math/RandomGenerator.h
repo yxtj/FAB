@@ -11,5 +11,7 @@ public:
 
 	void init(const std::vector<std::string>& param,
 		const double offset = 0.0, const unsigned seed = 123456u);
+	void update(const double off);
+	void update(const std::vector<std::string>& param);
 	double generate();
 };

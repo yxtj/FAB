@@ -13,15 +13,14 @@ struct RandomGenerator::Impl{
 
 	double offset;
 	std::function<double()> fun;
+
+	void parseParam(const std::vector<std::string>& param);
 	void init(const std::vector<std::string>& param,
 		const double offset, const unsigned seed);
 };
 
-void RandomGenerator::Impl::init(const std::vector<std::string>& param,
-	const double offset, const unsigned seed)
+void RandomGenerator::Impl::parseParam(const std::vector<std::string>& param)
 {
-	this->offset = offset;
-	gen.seed(seed);
 	if(param.empty() || param[0].empty() || param[0] == "none"){
 		fun = [&](){ return this->offset; };
 	} else if(param[0] == "exp"){
@@ -34,6 +33,14 @@ void RandomGenerator::Impl::init(const std::vector<std::string>& param,
 		distUni = uniform_real_distribution<double>(stod(param[1]), stod(param[2]));
 		fun = [&](){ return this->offset + distUni(gen); };
 	}
+}
+
+void RandomGenerator::Impl::init(const std::vector<std::string>& param,
+	const double offset, const unsigned seed)
+{
+	this->offset = offset;
+	gen.seed(seed);
+	parseParam(param);
 }
 
 std::vector<std::string> RandomGenerator::supportList()
@@ -61,6 +68,16 @@ void RandomGenerator::init(const std::vector<std::string>& param,
 	if(impl == nullptr)
 		impl = new RandomGenerator::Impl();
 	impl->init(param, offset, seed);
+}
+
+void RandomGenerator::update(const double off)
+{
+	impl->offset = off;
+}
+
+void RandomGenerator::update(const std::vector<std::string>& param)
+{
+	impl->parseParam(param);
 }
 
 double RandomGenerator::generate()
