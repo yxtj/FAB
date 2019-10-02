@@ -22,6 +22,10 @@ def getIdxByVer(ver):
         idx1,idx2=1,3
     elif ver == 4:
         idx1,idx2=0,3
+    elif ver == 5:
+        idx1,idx2=0,4
+    elif ver == 6:
+        idx1,idx2=1,4
     else:
         return ver[0], ver[1]
     return idx1, idx2
