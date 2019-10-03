@@ -285,7 +285,7 @@ bool Option::processSpeedRandom(const std::string& srandom)
 		try{
 			conf.speedRandomMin = stod(vec[1]);
 			conf.speedRandomMax = stod(vec[2]);
-		} catch(exception& e){
+		} catch(...){
 			cerr << "Error in parsing speed randomness bound: " << endl;
 			return false;
 		}
@@ -296,13 +296,13 @@ bool Option::processSpeedRandom(const std::string& srandom)
 bool Option::processSpeedHeterogenerity(const std::string& shetero)
 {
 	conf.adjustSpeedHetero = false;
-	const double inf = numeric_limits<double>::infinity();
+	constexpr double inf = numeric_limits<double>::infinity();
 	//conf.speedHeterogenerity.assign(conf.nw, { {0, inf} });
 	conf.speedHeterogenerity.resize(conf.nw);
 	if(!shetero.empty()){
 		conf.adjustSpeedHetero = true;
 		vector<string> vec= getStringList(shetero, ", ");
-		string sregFN("(\\d*.?\\d+)");
+		string sregFN("(\\d*\\.?\\d+)");
 		string sregW("(?:(\\d+)(?:-(\\d+))?)");
 		string sregT1("(?:" + sregFN + ")");
 		string sregT2("(?:" + sregFN + "-" + sregFN + ")");
@@ -311,12 +311,19 @@ bool Option::processSpeedHeterogenerity(const std::string& shetero)
 		regex reg2(sregW + "\\:" + sregFN + "\\:" + sregT2);
 		smatch m;
 		for(string& s : vec){
-			if(regex_match(s, m, reg0)){
+			if(regex_match(s, m, reg2)){
 				int f = stoi(m[1]);
 				int l = m[2].matched ? stoi(m[2]) : f;
 				double v = stod(m[3]);
+				double t = m[4].matched ? stod(m[4]) : 0.0;
+				double s = m[5].matched ? stod(m[5]) : inf;
 				for(; f <= l; ++f){
-					conf.speedHeterogenerity[f].emplace_back(v, inf);
+					auto& tmp = conf.speedHeterogenerity[f];
+					if(t != 0.0){
+						if(!tmp.empty() && tmp.back().second < t)
+							conf.speedHeterogenerity[f].emplace_back(0.0, t);
+					}
+					conf.speedHeterogenerity[f].emplace_back(v, s);
 				}
 			}else if(regex_match(s, m, reg1)){
 				int f = stoi(m[1]);
@@ -326,19 +333,12 @@ bool Option::processSpeedHeterogenerity(const std::string& shetero)
 				for(; f <= l; ++f){
 					conf.speedHeterogenerity[f].emplace_back(v, t);
 				}
-			}else if(regex_match(s, m, reg2)){
+			}else if(regex_match(s, m, reg0)){
 				int f = stoi(m[1]);
 				int l = m[2].matched ? stoi(m[2]) : f;
 				double v = stod(m[3]);
-				double t = m[4].matched ? stod(m[4]) : 0.0;
-				double s = m[5].matched ? stod(m[5]) : numeric_limits<double>::max();
 				for(; f <= l; ++f){
-					auto& tmp = conf.speedHeterogenerity[f];
-					if(t != 0.0){
-						if(!tmp.empty() && tmp.back().second < t)
-							conf.speedHeterogenerity[f].emplace_back(0.0, t);
-					}
-					conf.speedHeterogenerity[f].emplace_back(v, s);
+					conf.speedHeterogenerity[f].emplace_back(v, inf);
 				}
 			}else{
 				return false;
