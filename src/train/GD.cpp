@@ -1,7 +1,6 @@
 #include "GD.h"
 #include "util/Timer.h"
 #include "logging/logging.h"
-#include <thread> // for sleep
 #include <exception>
 
 using namespace std;
@@ -103,8 +102,8 @@ Trainer::DeltaResult GD::batchDelta(std::atomic<bool>& cond,
 		auto g = pm->backward(pd->get(i));
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
-		double time = tt.elapseSd();
-		this_thread::sleep_for(chrono::duration<double>(time*adjust));
+		long long time = tt.elapseNS();
+		Timer::Sleep(time*adjust);
 	}
 	stat_t_grad_calc += tmr.elapseSd();
 	tmr.restart();

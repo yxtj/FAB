@@ -10,3 +10,6 @@ set(SOURCES
 )
 add_library(util
 	${HEADERS} ${SOURCES})
+target_link_libraries(util
+	${CMAKE_THREAD_LIBS_INIT}
+)

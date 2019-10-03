@@ -70,8 +70,8 @@ Trainer::DeltaResult EM_KMeans::batchDelta(std::atomic<bool>& cond,
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
 		loss += g[nx]; //g.back(); accumulate loss
-		double time = tt.elapseSd();
-		this_thread::sleep_for(chrono::duration<double>(time*adjust));
+		long long time = tt.elapseNS();
+		Timer::Sleep(time * adjust);
 	}
 	return { i , i , move(grad), loss };
 }

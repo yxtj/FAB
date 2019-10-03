@@ -89,8 +89,8 @@ Trainer::DeltaResult EM::batchDelta(std::atomic<bool>& cond,
 		auto g = pm->gradient(pd->get(i), &h[i]);
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
-		double time = tt.elapseSd();
-		this_thread::sleep_for(chrono::duration<double>(time*adjust));
+		long long time = tt.elapseNS();
+		Timer::Sleep(time * adjust);
 	}
 	if(i != start){
 		// this is gradient DESCENT, so rate is set to negative
