@@ -116,6 +116,19 @@ def drawListCmp(prefix, mList1, mList2, mList3=None, n=None, ncol=1, ver=1, xlbl
     plt.show()
 
 
+def drawSpeedUp(prefix, fList, refFile, value, est=False, ncol=1, ver=1, xlbl=None):
+    points=np.array([util.whenReachValue(prefix+fn, value, est, ver) for fn in fList])
+    refV=util.whenReachValue(prefix+refFile)
+    y=points/refV
+    plt.figure()
+    plt.plot(y)
+    if xlbl:
+        plt.xlabel(xlbl)
+    plt.grid(True)
+    plt.legend(fList, ncol=ncol)
+    plt.ylabel('speed-up')
+    plt.tight_layout()
+
 def drawScale(prefix, l_nw, nameList, value, speedup=False, ref=False, fit=False, est=False, refIdx=0, ver=1):
     points=np.array([util.whenReachValue(prefix+fn, value, est, ver) for fn in nameList])
     x=np.array(l_nw)

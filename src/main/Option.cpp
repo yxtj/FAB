@@ -305,7 +305,7 @@ bool Option::processSpeedHeterogenerity(const std::string& shetero)
 		string sregFN("(\\d*.?\\d+)");
 		string sregW("(?:(\\d+)(?:-(\\d+))?)");
 		string sregT1("(?:" + sregFN + ")");
-		string sregT2("(?:" + sregFN + "\\:-" + sregFN + ")");
+		string sregT2("(?:" + sregFN + "-" + sregFN + ")");
 		regex reg0(sregW + "\\:" + sregFN);
 		regex reg1(sregW + "\\:" + sregFN + "\\:" + sregT1);
 		regex reg2(sregW + "\\:" + sregFN + "\\:" + sregT2);

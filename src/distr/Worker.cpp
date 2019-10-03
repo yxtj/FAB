@@ -340,7 +340,7 @@ void Worker::initSpeedAdjustment()
 		}
 	}
 	unsigned seed = static_cast<unsigned>(conf->seed + 123 + localID);
-	LOG(INFO) << "set speed factor to " << sfactor;
+	LOG(INFO) << "init speed factor to " << sfactor;
 
 	const vector<string>& param = conf->adjustSpeedRandom ? conf->speedRandomParam : vector<string>();
 	DLOG(DEBUG) << param << "," << sfactor << "," << seed;
