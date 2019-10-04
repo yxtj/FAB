@@ -1,5 +1,6 @@
 #include "GD.h"
 #include "util/Timer.h"
+#include "util/Sleeper.h"
 #include "logging/logging.h"
 #include <exception>
 
@@ -94,7 +95,9 @@ Trainer::DeltaResult GD::batchDelta(std::atomic<bool>& cond,
 	size_t nx = pm->paramWidth();
 	vector<double> grad(nx, 0.0);
 	double loss = 0.0;
+	Sleeper slp;
 	size_t i;
+	//double xxxx = 0.0, yyyy = 0.0;
 	for(i = start; i < end && cond.load(); ++i){
 		Timer tt;
 		auto p = pm->forward(pd->get(i));
@@ -102,9 +105,15 @@ Trainer::DeltaResult GD::batchDelta(std::atomic<bool>& cond,
 		auto g = pm->backward(pd->get(i));
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
-		long long time = tt.elapseNS();
-		Timer::Sleep(time*adjust);
+		double time = tt.elapseSd();
+		//xxxx += time;
+		//tt.restart();
+		slp.sleep(time*adjust);
+		//yyyy += tt.elapseSd();
+		//DVLOG_EVERY_N(10, 2) << "p-time:" << time * 1e9 << " e-time:" << time * adjust * 1e9 << " s-time:" << tt.elapseSd() * 1e9 << " credit:" << slp.getCredit();
+		//DVLOG_EVERY_N(10, 2) << "credit=" << slp.getCredit();
 	}
+	//DVLOG_EVERY_N(10, 2) << "process time:" << xxxx * 1e9 << " sleep time:" << yyyy * 1e9;
 	stat_t_grad_calc += tmr.elapseSd();
 	tmr.restart();
 	if(i != start){

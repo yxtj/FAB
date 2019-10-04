@@ -5,6 +5,8 @@
 #include "distr/Master.h"
 #include "distr/Worker.h"
 #include "message/MType.h"
+#include "util/Timer.h"
+#include "util/Sleeper.h"
 #include "Option.h"
 #include <string>
 #include <vector>
@@ -38,17 +40,21 @@ string makeSpeedString(const ConfData& conf){
 }
 
 int main(int argc, char* argv[]){
+	iostream::sync_with_stdio(false);
 	initLogger(argc, argv);
 	NetworkThread::Init(argc, argv);
 	NetworkThread* net = NetworkThread::GetInstance();
 	Option opt;
-	if(!opt.parse(argc, argv, net->size() - 1) || net->size() == 1){
+	if(!opt.parse(argc, argv, static_cast<size_t>(net->size()) - 1) || net->size() == 1){
 		NetworkThread::Shutdown();
 		if(net->id() == 0)
 			opt.showUsage();
 		return 1;
 	}
-	DLOG(INFO) << "size=" << net->size() << " id=" << net->id();
+	Timer::Init();
+	Sleeper::Init();
+	DLOG(INFO) << "size=" << net->size() << " id=" << net->id()
+		<< " overhead-measure=" << Sleeper::GetMeasureOverhead() << " overhead-sleep=" << Sleeper::GetSleepOverhead();
 	if(net->id() == 0){
 		string tmpSpeed = makeSpeedString(opt.conf);
 		LOG(INFO) << "Infromation:\nDataset: " << opt.conf.dataset << "\tLocation: " << opt.conf.fnData
@@ -73,13 +79,12 @@ int main(int argc, char* argv[]){
 		DLOG(DEBUG)<<cin.get();
 	}
 #endif
-	iostream::sync_with_stdio(false);
 	if(net->id()==0){
 		Master m;
 		m.init(&opt.conf, 0);
 		m.run();
 	} else{
-		size_t lid = net->id()-1;
+		size_t lid = static_cast<size_t>(net->id()) - 1;
 		Worker w;
 		w.init(&opt.conf, lid);
 		DataHolder dh;

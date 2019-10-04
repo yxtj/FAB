@@ -1,5 +1,6 @@
 #include "EM.h"
 #include "util/Timer.h"
+#include "util/Sleeper.h"
 #include <thread>
 #include <stdexcept>
 
@@ -82,15 +83,20 @@ Trainer::DeltaResult EM::batchDelta(std::atomic<bool>& cond,
 	if(end > pd->size())
 		end = pd->size();
 	size_t nx = pm->paramWidth();
+	double loss = 0.0;
 	vector<double> grad(nx, 0.0);
+	Sleeper slp;
 	size_t i;
 	for(i = start; i < end && cond.load(); ++i){
 		Timer tt;
+		//auto p = pm->forward(pd->get(i));
+		//loss += pm->loss(p, pd->get(i).y);
+		//auto g = pm->backward(pd->get(i), &h[i]);
 		auto g = pm->gradient(pd->get(i), &h[i]);
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
-		long long time = tt.elapseNS();
-		Timer::Sleep(time * adjust);
+		double time = tt.elapseSd();
+		slp.sleep(time * adjust);
 	}
 	if(i != start){
 		// this is gradient DESCENT, so rate is set to negative
@@ -100,5 +106,5 @@ Trainer::DeltaResult EM::batchDelta(std::atomic<bool>& cond,
 		for(auto& v : grad)
 			v *= factor;
 	}
-	return { i - start, i - start, move(grad) };
+	return { i - start, i - start, move(grad), loss };
 }

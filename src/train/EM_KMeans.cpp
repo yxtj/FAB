@@ -1,5 +1,6 @@
 #include "EM_KMeans.h"
 #include "util/Timer.h"
+#include "util/Sleeper.h"
 #include <thread>
 #include <exception>
 using namespace std;
@@ -62,6 +63,7 @@ Trainer::DeltaResult EM_KMeans::batchDelta(std::atomic<bool>& cond,
 	size_t nx = pm->paramWidth();
 	double loss = 0.0;
 	vector<double> grad(nx, 0.0);
+	Sleeper slp;
 	size_t i = 0;
 	for(; i < cnt && cond.load(); ++i){
 		size_t dp = (start + i) % pd->size();
@@ -70,8 +72,8 @@ Trainer::DeltaResult EM_KMeans::batchDelta(std::atomic<bool>& cond,
 		for(size_t j = 0; j < nx; ++j)
 			grad[j] += g[j];
 		loss += g[nx]; //g.back(); accumulate loss
-		long long time = tt.elapseNS();
-		Timer::Sleep(time * adjust);
+		double time = tt.elapseSd();
+		slp.sleep(time * adjust);
 	}
 	return { i , i , move(grad), loss };
 }
