@@ -158,8 +158,8 @@ void NetworkThread::broadcast(Task* req) {
 	lock_guard<recursive_mutex> sl(ps_lock);
 	pending_sends_->emplace_back(req, true);
 	//net->broadcast(req);
-	stat_send_pkg += this->size() - 1;
-	stat_send_byte += size * (this->size() - 1);
+	stat_send_pkg += static_cast<uint64_t>(this->size()) - 1;
+	stat_send_byte += size * static_cast<uint64_t>(this->size() - 1);
 }
 
 void NetworkThread::flush() {

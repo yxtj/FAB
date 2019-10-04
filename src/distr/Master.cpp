@@ -343,7 +343,7 @@ void Master::setTerminateCondition(const double time,
 
 bool Master::terminateCheck()
 {
-	DVLOG(2) << "dp:" << nPoint << " dlt:" << nDelta << " iter:" << iter << " time:" << tmrTrain.elapseSd();
+	//DVLOG(2) << "dp:" << nPoint << " dlt:" << nDelta << " iter:" << iter << " time:" << tmrTrain.elapseSd();
 	return (nPoint > termPoint)
 		|| (nDelta > termDelta)
 		|| (iter > termIter)
