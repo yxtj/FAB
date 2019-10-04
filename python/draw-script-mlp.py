@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 from draw import *
 
 plt.rcParams["figure.figsize"] = [4,3]
+plt.rcParams["font.size"]=14
+#plt.legend([1,2,3,4], prop={'size':10})
 
 os.chdir(r'E:\Code\FSB\score\mlp\784,300,10-60k')
 os.chdir(r'E:\Code\FSB\score\mlp\100,40,20,1-100k')

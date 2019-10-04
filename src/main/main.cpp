@@ -103,8 +103,8 @@ int main(int argc, char* argv[]){
 				dh.normalize(false);
 				DVLOG(2) << "data[0]: " << dh.get(0).x << " -> " << dh.get(0).y;
 			}
-			VLOG(1) << "Shuffle data";
 			if(opt.conf.shuffle){
+				VLOG(1) << "Shuffle data";
 				dh.shuffle();
 			}
 		} catch(exception& e){
