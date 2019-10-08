@@ -86,8 +86,10 @@ private:
 	void archiveProgress(const bool force = false);
 
 	size_t estimateMinGlobalBatchSize(const size_t grs = 0); // if grs is 0, estimate with worst case
-	size_t optFkGlobalBatchSize(); // compute opt k from f(k)
+	size_t optimalGlobalBatchSize(); // compute opt k from f(k)
 	size_t estimateMinLocalReportSize(const size_t gbs);
+	double estimateTimeIteration();
+	double estimateTimeEpoch();
 
 	void updateOnlineLoss(const int source, const double loss);
 	void updateIterationTime(const int src, const double time);

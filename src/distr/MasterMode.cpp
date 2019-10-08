@@ -309,8 +309,6 @@ void Master::papInit()
 	regDSPProcess(MType::DReport, localCBBinder(&Master::handleReportPap));
 }
 
-// ---- pap2
-
 void Master::papProcess()
 {
 	if(conf->papOnlineProbeVersion > 0){
@@ -330,7 +328,7 @@ void Master::papProcess()
 		else
 			LOG(FATAL) << "Online probe version " << conf->papOnlineProbeVersion << " not supported";
 
-		size_t byRate = optFkGlobalBatchSize();
+		size_t byRate = optimalGlobalBatchSize();
 		size_t byTime = estimateMinGlobalBatchSize();
 		size_t gbs = max(byRate, byTime);
 		if(gbs != globalBatchSize){
@@ -374,7 +372,7 @@ void Master::papProcess()
 		// online change globalBatchSize
 		if(conf->papDynamicBatchSize) {
 			tmr.restart();
-			size_t ogbs = optFkGlobalBatchSize();
+			size_t ogbs = optimalGlobalBatchSize();
 			size_t egbs = estimateMinGlobalBatchSize();
 			size_t old_gbs = globalBatchSize;
 			globalBatchSize = max(ogbs, egbs);
@@ -465,13 +463,12 @@ void Master::papOnlineProbe1()
 			double wtc = mean(wtDelta);
 			double wtr = mean(wtReport);
 			// T_dp/N + T_delta/K + T_report/C, N-># worker, K->global batch size, C->global report size
-			double tk1 = (wtd / nWorker + wtc / globalBatchSize + wtr / localReportSize / nWorker);
-			double tk2 = tmrTrain.elapseSd() - lastProbeTime;
-			double fk = gk / tk2;
+			double tk = tmrTrain.elapseSd() - lastProbeTime;
+			double fk = gk / tk;
 			size_t mink = estimateMinGlobalBatchSize();
 
 			VLOG(2) << "probeInfo\tk=" << globalBatchSize << "\titer=" << iter - lastProbeIter << "\tnp=" << nPoint - lastProbeNPoint
-				<< "\ttk=" << tk1 << ", " << tk2 << "\tgk=" << gk << "\tfk=" << gk / tk1 << ", " << gk / tk2
+				<< "\ttk=" << tk << "\tgk=" << gk << "\tfk=" << gk / tk
 				<< "\tloss-onlie=" << nloss1 << "\tloss-recent=" << nloss2 << "\tloss-report=" << nloss3 << "\n"
 				<< "wtd=" << wtd << ", " << wtDatapoint << "\twtc=" << wtc << ", " << wtDelta << "\n"
 				<< "maxfk=" << maxfk << "\tmink=" << mink << "\tun-recv=" << net->unpicked_pkgs();
@@ -558,7 +555,7 @@ void Master::papOnlineProbe2()
 			double wtc = mean(wtDelta);
 			double wtr = mean(wtReport);
 			// T_dp/N + T_delta/K + T_report/C, N-># worker, K->global batch size, C->global report size
-			double tk1 = (wtd / nWorker + wtc / globalBatchSize + wtr / localReportSize / nWorker);
+			double tk1 = (iter - lastProbeIter) * (wtd / nWorker + wtc / globalBatchSize + wtr / localReportSize / nWorker);
 			double tk2 = tmrTrain.elapseSd() - lastProbeTime;
 			double fk = gk / tk2;
 			size_t mink = estimateMinGlobalBatchSize();
@@ -661,16 +658,14 @@ void Master::papOnlineProbe4()
 			double wtd = hmean(wtDatapoint);
 			double wtc = mean(wtDelta);
 			double wtr = mean(wtReport);
-			// T_dp/N + T_delta/K + T_report/C, N-># worker, K->global batch size, C->global report size
-			double tk1 = (wtd / nWorker + wtc / globalBatchSize + wtr / localReportSize / nWorker);
-			double tk2 = time - lastProbeTime;
-			double fk = gk / tk2;
+			double tk = time - lastProbeTime;
+			double fk = gk / tk;
 			size_t mink = estimateMinGlobalBatchSize();
 
 			VLOG(2) << "probe k=" << globalBatchSize << "\titer=" << iter - lastProbeIter 
-				<< "\tnp=" << nPoint - lastProbeNPoint << "\ttk=" << tk1 << ", " << tk2
+				<< "\tnp=" << nPoint - lastProbeNPoint << "\ttk=" << tk
 				<< "\tgk=" << gk << "\tloss-c=" << lossDeltaSum << "\tloss-n=" << lossGathered 
-				<< "\tfk=" << gk / tk1 << ", " << gk / tk2 << "\n"
+				<< "\tfk=" << gk / tk << "\n"
 				<< "wtd=" << wtd << ", " << wtDatapoint << "\twtc=" << wtc << ", " << wtDelta << "\n"
 				<< "maxfk=" << maxfk << "\tmink=" << mink << "\tun-recv=" << net->unpicked_pkgs();
 
@@ -769,7 +764,7 @@ void Master::papOnlineProbeBenchmark()
 			double wtc = mean(wtDelta);
 			double wtr = mean(wtReport);
 			// T_dp/N + T_delta/K + T_report/C, N-># worker, K->global batch size, C->global report size
-			double tk1 =(wtd/nWorker + wtc/globalBatchSize + wtr/localReportSize/nWorker);
+			double tk1 = (iter - lastProbeIter) * (wtd/nWorker + wtc/globalBatchSize + wtr/localReportSize/nWorker);
 			double tk2 = tmrTrain.elapseSd() - lastProbeTime;
 			double fk = gk / tk2;
 			size_t mink = estimateMinGlobalBatchSize();

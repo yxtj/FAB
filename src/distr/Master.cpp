@@ -508,14 +508,43 @@ size_t Master::estimateMinGlobalBatchSize(const size_t C)
 	return max(min(res, nPointTotal), nWorker);
 }
 
-size_t Master::optFkGlobalBatchSize(){
-	double f1=hmean(wtDatapoint) / nWorker;
-	double f2 = mean(wtDelta);
-	auto it = max_element(gkProb.begin(), gkProb.end(),
-		[=](const pair<const size_t, double>& l, const pair<const size_t, double>& r){
-			return l.second / (f1 + f2 / l.first) < r.second / (f1 + f2 / r.first);
-		});
-	return it->first;
+size_t Master::optimalGlobalBatchSize(){
+	if(conf->papDynamicBatchSize == 1){ // correct method
+		double f1 = hmean(wtDatapoint);
+		double f2 = mean(wtDelta);
+		auto it = max_element(gkProb.begin(), gkProb.end(),
+			[=](const pair<const size_t, double>& l, const pair<const size_t, double>& r){
+				return l.second / (f1 + f2 / l.first) < r.second / (f1 + f2 / r.first);
+			});
+		return it->first;
+	} else if(conf->papDynamicBatchSize == 2){ // the simple average way
+		double f1 = mean(wtDatapoint);
+		double f2 = mean(wtDelta);
+		auto it = max_element(gkProb.begin(), gkProb.end(),
+			[=](const pair<const size_t, double>& l, const pair<const size_t, double>& r){
+				return l.second / (f1 + f2 / l.first) < r.second / (f1 + f2 / r.first);
+			});
+		return it->first;
+	} else if(conf->papDynamicBatchSize == 3){ // correct time + estimate in the middle
+		// assume the gain value between gkProbe[a] and gkProbe[b] is linear
+		double f1 = hmean(wtDatapoint);
+		double f2 = mean(wtDelta);
+		// find the best range
+		auto it = max_element(gkProb.begin(), gkProb.end(),
+			[=](const pair<const size_t, double>& l, const pair<const size_t, double>& r){
+				return l.second / (f1 + f2 / l.first) < r.second / (f1 + f2 / r.first);
+			});
+		// search the best value in the ranges around it
+		// g(k) = gkProb[a] + (gkProb[b] - gkProb[a])/(b-a) * k
+		// t(k) = f1 + f2/k
+		if(it == gkProb.begin()){ // search in range [it, it+1]
+
+		} else if(it->first == gkProb.rbegin()->first){ // search in range [it-1, it]
+
+		} else{ // search in range [it-1, it+1]
+
+		}
+	}
 }
 
 size_t Master::estimateMinLocalReportSize(const size_t gbs)
@@ -533,6 +562,24 @@ size_t Master::estimateMinLocalReportSize(const size_t gbs)
 	double down = wtr - nWorker * mtr; // very likely be negative
 	size_t res = static_cast<size_t>(up / down / nWorker); // convert to local report size
 	return max(res, nWorker);
+}
+
+double Master::estimateTimeIteration()
+{
+	// K/n * wtc + C/n * wtr + wtc
+	double wtc = mean(wtDelta);
+	double wtr = mean(wtReport);
+	double wtd = hmean(wtDatapoint);
+	return globalBatchSize / nWorker * wtd + localReportSize * wtr + wtc;
+}
+
+double Master::estimateTimeEpoch()
+{
+	// N/n * wtd + N/n*C/K * wtr + N/K * wtc
+	double wtc = mean(wtDelta);
+	double wtr = mean(wtReport);
+	double wtd = hmean(wtDatapoint);
+	return nPoint * (wtd / nWorker + localReportSize / globalBatchSize * wtr + wtc / globalBatchSize);
 }
 
 void Master::updateOnlineLoss(const int source, const double loss)
