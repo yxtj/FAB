@@ -66,8 +66,8 @@ bool Option::parse(int argc, char * argv[], const size_t nWorker)
 		("probe", bool_switch(&conf.probe)->default_value(false), "Probe the best hyper-parameter like global batch size.")
 		("probe_ratio", value(&conf.probeRatio)->default_value(1.0), "The ratio of data used for each probe.")
 		("probe_min_gbs", value(&conf.probeMinGBSR)->default_value(0.001), "The minimum global batch ratio used in probing.")
-		("probe_loss_online", bool_switch(&conf.probeOnlineLoss)->default_value(false), 
-			"Use the accumulated online loss or calculate loss with last model parameter.")
+		//("probe_loss_online", bool_switch(&conf.probeOnlineLoss)->default_value(false), 
+		//	"Use the accumulated online loss or calculate loss with last model parameter.")
 		("probe_loss_full", bool_switch(&conf.probeLossFull)->default_value(false),
 			"Calcualte the loss with full batch or the probed part.")
 		// setting - machine speed
