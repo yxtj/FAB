@@ -57,18 +57,27 @@ int main(int argc, char* argv[]){
 		<< " overhead-measure=" << Sleeper::GetMeasureOverhead() << " overhead-sleep=" << Sleeper::GetSleepOverhead();
 	if(net->id() == 0){
 		string tmpSpeed = makeSpeedString(opt.conf);
-		LOG(INFO) << "Infromation:\nDataset: " << opt.conf.dataset << "\tLocation: " << opt.conf.fnData
+		LOG(INFO) << "Infromation:"
+			// dataset
+			<< "\nDataset: " << opt.conf.dataset << "\tLocation: " << opt.conf.fnData
 			<< "\n  Normalize: " << opt.conf.normalize << "\tRandom Shuffle: " << opt.conf.shuffle
 			<< "\tTrainPart: " << opt.conf.trainPart
 			<< "\n  Separator: " << opt.conf.sepper << "\tIdx-y: " << opt.conf.idY << "\tIdx-skip: " << opt.conf.idSkip
+			// cluster
 			<< "\nCluster: " << "\tWorker-#: " << opt.conf.nw << "\tSpeed random: " << opt.conf.adjustSpeedRandom
 			<< "\tSpeed heterogenerity: " << opt.conf.adjustSpeedHetero << tmpSpeed
+			// algorithm
 			<< "\nAlgorithm: " << opt.conf.algorighm << "\tParam: " << opt.conf.algParam << "\tSeed: " << opt.conf.seed
 			<< "\n  Interval Estimator: " << opt.conf.intervalParam << "\tMulticast: " << opt.conf.mcastParam
+			// result
 			<< "\nRecord file: " << opt.conf.fnOutput << "\tBinary: " << opt.conf.binary
+			// mode
 			<< "\nTraining configurations:\n  Mode: " << opt.conf.mode
 			<< "\tOptimizer: " << opt.conf.optimizer << "\tParam: " << opt.conf.optimizerParam
 			<< "\tBatch-size: " << opt.conf.batchSize
+			<< "\n  Probe: "<<opt.conf.probe << "\tProbe ratio: " << opt.conf.probeRatio
+			<< "\tMin probe GBS: " << opt.conf.probeMinGBSR
+			// termination & archive & log
 			<< "\nTerminating condition:\n  Max-iteration: " << opt.conf.tcIter << "\tMax-time: " << opt.conf.tcTime
 			<< "\nArchive iteration: " << opt.conf.arvIter << "\tinterval: " << opt.conf.arvTime
 			<< "\nLog iteration: " << opt.conf.logIter;
