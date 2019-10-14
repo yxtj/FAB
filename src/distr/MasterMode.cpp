@@ -40,7 +40,7 @@ void Master::probeModeProcess()
 		model.setParameter(p0);
 		(this->*initFun)();
 		// start workers
-		broadcastSizeConf(gbs, 0);
+		broadcastSizeConf(gbs, gbs / nWorker / 4);
 		setTerminateCondition(0, probeNeededPoint, probeNeededDelta, probeNeededIter);
 		Timer tmr;
 		(this->*processFun)();
