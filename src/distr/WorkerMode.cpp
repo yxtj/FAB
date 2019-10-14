@@ -18,7 +18,8 @@ void Worker::probeModeInit()
 
 void Worker::probeModeProcess()
 {
-	size_t probeNeededPoint = static_cast<size_t>(conf->probeRatio * pdh->size());
+	size_t probeNeededPoint = static_cast<size_t>(
+		(conf->probeLossFull ? 1.0 : conf->probeRatio) * pdh->size());
 	double loss = calcLoss(0, probeNeededPoint);
 	LOG(INFO) << "send initialize loss: " << loss;
 	sendLoss(loss);
@@ -362,6 +363,7 @@ void Worker::aapProcess()
 void Worker::papInit()
 {
 	requestingDelta = false;
+	localReportSize = min(localReportSize, localBatchSize / 2);
 	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterPap));
 }
 
