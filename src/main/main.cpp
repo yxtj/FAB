@@ -76,7 +76,7 @@ int main(int argc, char* argv[]){
 			<< "\tOptimizer: " << opt.conf.optimizer << "\tParam: " << opt.conf.optimizerParam
 			<< "\tBatch-size: " << opt.conf.batchSize
 			<< "\n  Probe: "<<opt.conf.probe << "\tProbe ratio: " << opt.conf.probeRatio
-			<< "\tMin probe GBS: " << opt.conf.probeMinGBSR
+			<< "\tMin probe ratio: " << opt.conf.probeMinGBSR
 			// termination & archive & log
 			<< "\nTerminating condition:\n  Max-iteration: " << opt.conf.tcIter << "\tMax-time: " << opt.conf.tcTime
 			<< "\nArchive iteration: " << opt.conf.arvIter << "\tinterval: " << opt.conf.arvTime
