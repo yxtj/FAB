@@ -482,12 +482,13 @@ void Worker::handleReset(const std::string& data, const RPCInfo& info)
 	//DLOG(INFO) << "receive reset";
 	auto msg = deserialize<pair<int, vector<double>>>(data);
 	iter = msg.first;
-	Parameter p;
-	p.set(move(msg.second));
-	bufferParameter(p);
+	// TODO: use separated data structure to store p
+	//Parameter p;
+	//p.set(move(msg.second));
+	//bufferParameter(p);
 	exitTrain = true;
 	pauseTrain(); // in case if the system is calculating delta
-	suParam.notify(); // in case if the system just calculated a delta (is waiting for new parameter)
+	suParam.notify(); // in case if the system just is waiting for new parameter (just leaved trainer->batchDelta)
 }
 
 void Worker::handleMetaConf(const std::string& data, const RPCInfo& info)

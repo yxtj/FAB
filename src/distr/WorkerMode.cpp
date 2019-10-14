@@ -20,6 +20,7 @@ void Worker::probeModeProcess()
 {
 	size_t probeNeededPoint = static_cast<size_t>(
 		(conf->probeLossFull ? 1.0 : conf->probeRatio) * pdh->size());
+	Parameter p0 = model.getParameter();
 	double loss = calcLoss(0, probeNeededPoint);
 	LOG(INFO) << "send initialize loss: " << loss;
 	sendLoss(loss);
@@ -38,7 +39,8 @@ void Worker::probeModeProcess()
 		double loss = calcLoss(0, probeNeededPoint);
 		LOG(INFO) << "send loss:" << loss;
 		sendLoss(loss);
-		applyBufferParameter(); // reset to the initialing parameter
+		LOG(INFO) << "reset to initializign parameter";
+		model.setParameter(p0); // reset to the initialing parameter
 	}
 	LOG(INFO) << "probe done";
 }
@@ -368,12 +370,10 @@ void Worker::papInit()
 	if(localReportSize == 0)
 		localReportSize = 1;
 	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterPap));
-	LOG(INFO) << "lbs=" << localBatchSize << "\tlrs=" << localReportSize;
 }
 
 void Worker::papProcess()
 {
-	LOG(INFO) << "lbs=" << localBatchSize << "\tlrs=" << localReportSize;
 	if(conf->papOnlineProbeVersion == 1)
 		papOnlineProbe1();
 	else if(conf->papOnlineProbeVersion == 2)
@@ -407,7 +407,7 @@ void Worker::papProcess()
 			left -= dr.n_scanned;
 			n_used += dr.n_reported;
 			loss += dr.loss;
-			DVLOG_EVERY_N(ln, 2) << "  calculate delta with " << dr.n_scanned << " data points";
+			DVLOG_EVERY_N(ln, 2) << "  calculate delta with " << dr.n_scanned << " data points, left: " << left;
 			if(dr.n_reported!= 0){
 				accumulateDelta(dr.delta);
 			}

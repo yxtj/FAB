@@ -44,7 +44,7 @@ void Master::probeModeProcess()
 		setTerminateCondition(0, probeNeededPoint, probeNeededDelta, probeNeededIter);
 		Timer tmr;
 		(this->*processFun)();
-		LOG(INFO) << "reset and gather loss";
+		LOG(INFO) << "gather loss and reset";
 		broadcastReset(0, p0);
 		double time = tmr.elapseSd();
 		double loss = gatherLoss();
