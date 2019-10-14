@@ -365,13 +365,15 @@ void Worker::papInit()
 	requestingDelta = false;
 	if(localReportSize > localBatchSize)
 		localReportSize = localBatchSize / 2;
-	else if(localReportSize == 0)
+	if(localReportSize == 0)
 		localReportSize = 1;
 	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterPap));
+	LOG(INFO) << "lbs=" << localBatchSize << "\tlrs=" << localReportSize;
 }
 
 void Worker::papProcess()
 {
+	LOG(INFO) << "lbs=" << localBatchSize << "\tlrs=" << localReportSize;
 	if(conf->papOnlineProbeVersion == 1)
 		papOnlineProbe1();
 	else if(conf->papOnlineProbeVersion == 2)

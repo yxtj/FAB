@@ -509,7 +509,7 @@ size_t Master::estimateMinGlobalBatchSize(const size_t C)
 }
 
 size_t Master::optimalGlobalBatchSize(){
-	if(conf->papDynamicBatchSize == 1){ // correct method
+	if(conf->papDynamicBatchSize == 0 || conf->papDynamicBatchSize == 1){ // correct method
 		double f1 = hmean(wtDatapoint);
 		double f2 = mean(wtDelta);
 		auto it = max_element(gkProb.begin(), gkProb.end(),
@@ -537,14 +537,42 @@ size_t Master::optimalGlobalBatchSize(){
 		// search the best value in the ranges around it
 		// g(k) = gkProb[a] + (gkProb[b] - gkProb[a])/(b-a) * k
 		// t(k) = f1 + f2/k
-		if(it == gkProb.begin()){ // search in range [it, it+1]
-
-		} else if(it->first == gkProb.rbegin()->first){ // search in range [it-1, it]
-
-		} else{ // search in range [it-1, it+1]
-
+		int ncut = 10;
+		map<size_t, double> temp;
+		temp[it->first] = it->second; // add *it
+		if(it != gkProb.begin()){ // add range [it-1,it)
+			auto jt = it;
+			--it;
+			double s = static_cast<double>(it->first), g = it->second;
+			double sr = (jt->first - it->first) / static_cast<double>(ncut);
+			double gr = (jt->second - it->second) / static_cast<double>(ncut);
+			for(int i = 0; i < ncut; ++i){
+				temp[static_cast<size_t>(s)] = g;
+				s += sr;
+				g += gr;
+			}
 		}
+		if(it->first != gkProb.rbegin()->first){ // add range (it, it+1]
+			auto jt = it;
+			++jt;
+			double s = static_cast<double>(it->first), g = it->second;
+			double sr = (jt->first - it->first) / static_cast<double>(ncut);
+			double gr = (jt->second - it->second) / static_cast<double>(ncut);
+			s += sr;
+			g += gr;
+			for(int i = 0; i < ncut; ++i){
+				temp[static_cast<size_t>(s)] = g;
+				s += sr;
+				g += gr;
+			}
+		}
+		it = max_element(temp.begin(), temp.end(),
+			[=](const pair<const size_t, double>& l, const pair<const size_t, double>& r){
+				return l.second / (f1 + f2 / l.first) < r.second / (f1 + f2 / r.first);
+			});
+		return it->first;
 	}
+	return globalBatchSize;
 }
 
 size_t Master::estimateMinLocalReportSize(const size_t gbs)

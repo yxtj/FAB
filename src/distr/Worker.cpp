@@ -26,7 +26,6 @@ void Worker::init(const ConfData* conf, const size_t lid)
 {
 	this->conf = conf;
 	nWorker = conf->nw;
-	localReportSize = conf->reportSize;
 	localID = lid;
 	ln = conf->logIter;
 	logName = "W"+to_string(localID);
@@ -77,6 +76,7 @@ void Worker::run()
 
 	tmrTrain.restart();
 	localBatchSize = (this->*lbsFun)(conf->batchSize);
+	localReportSize = conf->reportSize;
 	DLOG(INFO) << "start training with mode: " << conf->mode << ", local batch size: " << localBatchSize;
 	iter = 1;
 	iterParam = 1;
@@ -500,7 +500,7 @@ void Worker::handleMetaConf(const std::string& data, const RPCInfo& info)
 	// verify local-report-size
 	if(localReportSize > localBatchSize)
 		localReportSize = localBatchSize / 2;
-	else if(localReportSize == 0)
+	if(localReportSize == 0)
 		localReportSize = 1;
 	suConf.notify();
 }
