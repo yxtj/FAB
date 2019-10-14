@@ -497,7 +497,11 @@ void Worker::handleMetaConf(const std::string& data, const RPCInfo& info)
 		localBatchSize = (this->*lbsFun)(p.first);
 	if(p.second != 0)
 		localReportSize = p.second;
-	localReportSize = max(1, min(localReportSize, localBatchSize));
+	// verify local-report-size
+	if(localReportSize > localBatchSize)
+		localReportSize = localBatchSize / 2;
+	else if(localReportSize == 0)
+		localReportSize = 1;
 	suConf.notify();
 }
 

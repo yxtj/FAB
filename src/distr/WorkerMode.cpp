@@ -363,7 +363,10 @@ void Worker::aapProcess()
 void Worker::papInit()
 {
 	requestingDelta = false;
-	localReportSize = max(1, min(localReportSize, localBatchSize));
+	if(localReportSize > localBatchSize)
+		localReportSize = localBatchSize / 2;
+	else if(localReportSize == 0)
+		localReportSize = 1;
 	regDSPProcess(MType::DParameter, localCBBinder(&Worker::handleParameterPap));
 }
 
