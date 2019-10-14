@@ -455,7 +455,8 @@ void Master::papOnlineProbe1()
 			double nloss2 = sum(lastDeltaLoss) / (nPoint - lastProbeNPoint);
 			double nloss3 = lossReportSum / globalBatchSize;
 			double nloss = max(max(nloss1, nloss2), nloss3);
-			double gk = nloss2 - lastLoss;
+			size_t nProcessed = nPoint - lastProbeNPoint;
+			double gk = (nloss2 - lastLoss) / nProcessed;
 			//lastLoss = nloss1 / globalBatchSize;
 			lastLoss = nloss2;
 			gkProb[globalBatchSize] = gk;
@@ -463,7 +464,7 @@ void Master::papOnlineProbe1()
 			double wtc = mean(wtDelta);
 			double wtr = mean(wtReport);
 			// T_dp/N + T_delta/K + T_report/C, N-># worker, K->global batch size, C->global report size
-			double tk = tmrTrain.elapseSd() - lastProbeTime;
+			double tk = (tmrTrain.elapseSd() - lastProbeTime) / nProcessed * probeSize;
 			double fk = gk / tk;
 			size_t mink = estimateMinGlobalBatchSize();
 
@@ -546,9 +547,11 @@ void Master::papOnlineProbe2()
 		if ((nPoint- lastProbeNPoint) > probeSize) {
 			// current probe loss --> lossDeltaSum
 			VLOG(2) << " wait for loss Gathered ";
+			double time = tmrTrain.elapseSd(); // the time before calculating reference loss
 			double L0 = gatherLoss(); // wait for lossGathered
 			double Lc = lossDeltaSum;
-			double gk = (L0 - Lc) / (nPoint - lastProbeNPoint);
+			size_t nProcessed = nPoint - lastProbeNPoint;
+			double gk = (L0 - Lc) / nProcessed;
 
 			gkProb[globalBatchSize] = gk;
 			double wtd = hmean(wtDatapoint);
@@ -556,7 +559,7 @@ void Master::papOnlineProbe2()
 			double wtr = mean(wtReport);
 			// T_dp/N + T_delta/K + T_report/C, N-># worker, K->global batch size, C->global report size
 			double tk1 = (iter - lastProbeIter) * (wtd / nWorker + wtc / globalBatchSize + wtr / localReportSize / nWorker);
-			double tk2 = tmrTrain.elapseSd() - lastProbeTime;
+			double tk2 = (time - lastProbeTime) / nProcessed * probeSize;
 			double fk = gk / tk2;
 			size_t mink = estimateMinGlobalBatchSize();
 
@@ -652,13 +655,14 @@ void Master::papOnlineProbe4()
 			double time = tmrTrain.elapseSd(); // the time before calculating reference loss
 			VLOG(2) << " wait for loss Gathered ";
 			gatherLoss(); // wait for lossGathered
-			double gk = (lossDeltaSum - lossGathered) / (nPoint - lastProbeNPoint);
+			size_t nProcessed = nPoint - lastProbeNPoint;
+			double gk = (lossDeltaSum - lossGathered) / nProcessed;
 
 			gkProb[globalBatchSize] = gk;
 			double wtd = hmean(wtDatapoint);
 			double wtc = mean(wtDelta);
 			double wtr = mean(wtReport);
-			double tk = time - lastProbeTime;
+			double tk = (time - lastProbeTime) / nProcessed * probeSize;
 			double fk = gk / tk;
 			size_t mink = estimateMinGlobalBatchSize();
 
