@@ -7,6 +7,15 @@ Created on Mon Jun 10 09:56:19 2019
 
 import numpy as np
 import myio
+from scipy.interpolate import interp1d
+
+####
+# reload module for loading new modifications
+import sys, os
+sys.path.insert(0, os.getcwd())
+import imp
+imp.reload(myio)
+####
 
 def genFL(pre, l, post=''):
     return [str(pre)+str(i)+post for i in l]
@@ -35,6 +44,17 @@ def whenReachValue(fn, value, est=True, ver=1):
     else:
         return x[p]
 
+
+def smooth(x, y, n):
+    if len(x) >= n:
+        return (x, y)
+    #f=interp1d(x,y,'cubic')
+    f=interp1d(x,y,'quadratic')
+    #f=interp1d(x,y,'slinear')
+    n = max(n, len(x)*2)
+    x2=np.arange(x[0], x[-1], (x[-1] - x[0])/n)
+    y2=f(x2)
+    return (x2, y2)
 
 '''find the index of the first element in <line> which is <less> than <value>'''
 def findIdxOfValue(line, value, less=True):
