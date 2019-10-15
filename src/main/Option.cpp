@@ -319,9 +319,8 @@ bool Option::processSpeedHeterogenerity(const std::string& shetero)
 				double s = m[5].matched ? stod(m[5]) : inf;
 				for(; f <= l; ++f){
 					auto& tmp = conf.speedHeterogenerity[f];
-					if(t != 0.0){
-						if(!tmp.empty() && tmp.back().second < t)
-							conf.speedHeterogenerity[f].emplace_back(0.0, t);
+					if(t != 0.0 && (tmp.empty() || tmp.back().second < t)){
+						conf.speedHeterogenerity[f].emplace_back(0.0, t);
 					}
 					conf.speedHeterogenerity[f].emplace_back(v, s);
 				}
