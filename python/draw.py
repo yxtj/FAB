@@ -9,20 +9,23 @@ import matplotlib.pyplot as plt
 import myio
 import util
 
+from itertools import cycle
 from util import genFL
 
 #os.chdir('E:/Code/FSB/score/')
 #os.chdir('E:/Code/FSB/score/lr/10-100k/1000-0.1')
 #os.chdir('E:/Code/FSB/score/mlp/10,15,1-100k/1000-0.1')
 
-def drawOne(fn, n=None, ver=0, xlbl=None, ylbl=None, smooth=False, smNum=100):
+__lineStyles__ = ["-","--","-.",":"]
+
+def drawOne(fn, n=None, ver=0, xlbl=None, ylbl=None, ls='-', smooth=False, smNum=100):
     x, y, xr, yr = myio.loadScore(fn, n, ver)
     lgd = fn.replace('.txt','')
     if smooth:
         x, y = util.smooth(x, y, smNum)
-    plt.plot(x, y)
+    plt.plot(x, y, ls)
     xlbl=xlbl if xlbl is not None else xr
-    ylbl=ylbl if ylbl is not None else yr  
+    ylbl=ylbl if ylbl is not None else yr
     plt.xlabel(xlbl)
     plt.ylabel(ylbl)
     plt.legend(lgd)
@@ -42,11 +45,14 @@ def plotUnit(legendList, fn, name, lineMarker, color, n, idx1, idx2,
     return line[0].get_color(), (xr, yr)
 
 def drawList(prefix, mList, n=None, ver=1, xlbl=None, ylbl=None,
-             smooth=False, smNum=100):
+             useLS=False, smooth=False, smNum=100):
     plt.figure();
     idx1,idx2=myio.getIdxByVer(ver)
+    if useLS:
+        lsc = cycle(__lineStyles__)
+    next_ls = lambda : (next(lsc) if useLS else '-' )
     for m in mList:
-        _, xyr = plotUnit(None, prefix+m+'.txt', m, '-', None, n, idx1, idx2, smooth, smNum)
+        _, xyr = plotUnit(None, prefix+m+'.txt', m, next_ls(), None, n, idx1, idx2, smooth, smNum)
     #plt.hold(True)
     plt.legend(myio.renameLegend(mList))
     xr,yr = xyr
@@ -69,13 +75,16 @@ def plotScoreUnit(legendList, d, name, lineMarker, color, n, idx1, idx2,
     return line[0].get_color(), d.shape[1]
 
 def drawScoreList(dataList, nameList, n=None, ver=1, xlbl=None, ylbl=None,
-                  smooth=False, smNum=100):
+                  useLS=False, smooth=False, smNum=100):
     plt.figure();
     idx1,idx2=myio.getIdxByVer(ver)
+    if useLS:
+        lsc = cycle(__lineStyles__)
+    next_ls = lambda : (next(lsc) if useLS else '-' )
     for i in range(len(dataList)):
         d = dataList[i]
         m = nameList[i]
-        _, nc = plotScoreUnit(None, d, m, '-', None, n, idx1, idx2, smooth, smNum)
+        _, nc = plotScoreUnit(None, d, m, next_ls(), None, n, idx1, idx2, smooth, smNum)
     #plt.hold(True)
     plt.legend(myio.renameLegend(nameList))
     xr,yr = myio.getxyLabel(idx1, idx2, nc)
