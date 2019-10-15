@@ -34,6 +34,7 @@ def getIdxByVer(ver):
 __HEADER4__=['time(s)', 'loss', 'difference', 'delta']
 __HEADER5__=['time(s)', 'loss', 'accuracy', 'difference', 'delta']
 __HEADER6__=['iteration', 'time(s)', 'loss', 'accuracy', 'difference', 'delta']
+__HEADER7__=['iteration', 'time(s)', 'data point', 'loss', 'accuracy', 'difference', 'delta']
 def getxyLabel(idx1, idx2, ncol=6):
     if ncol == 4 and idx1 < 4 and idx2 < 4:
         return __HEADER4__[idx1], __HEADER4__[idx2]
@@ -41,6 +42,8 @@ def getxyLabel(idx1, idx2, ncol=6):
         return __HEADER5__[idx1], __HEADER5__[idx2]
     elif ncol == 6 and idx1 < 6 and idx2 < 6:
         return __HEADER6__[idx1], __HEADER6__[idx2]
+    elif ncol == 7 and idx1 < 7 and idx2 < 7:
+        return __HEADER7__[idx1], __HEADER7__[idx2]
     return None, None
 
 
