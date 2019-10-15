@@ -376,12 +376,10 @@ void Master::papProcess()
 			size_t egbs = estimateMinGlobalBatchSize();
 			size_t old_gbs = globalBatchSize;
 			globalBatchSize = max(ogbs, egbs);
-			size_t olrs = globalBatchSize / nWorker / 2;
+			size_t olrs = globalBatchSize / nWorker / 4;
 			size_t elrs = estimateMinLocalReportSize(globalBatchSize);
 			size_t old_lrs = localReportSize;
-			if(conf->papDynamicReportFreq){
-				localReportSize = max(olrs, elrs);
-			}
+			localReportSize = max(olrs, elrs);
 			if(old_gbs != globalBatchSize || old_lrs != localReportSize){
 				VLOG(2) << "change gbs=" << globalBatchSize << " (o=" << ogbs << ", e=" << egbs << ")"
 					<< " lrs=" << localReportSize << "(o=" << olrs << ", e=" << elrs << ")";
@@ -403,7 +401,7 @@ void Master::papProcess()
 // sum_i L(p_i, b_i) - L(p_{i+1}, b_{i+1})
 void Master::papOnlineProbe1()
 {
-	const double toleranceFactor = 0.8;
+	const double toleranceFactor = 0.3;
 	double tl = tmrTrain.elapseSd();
 	double maxfk = -1;
 	bool probeReached = false;
@@ -474,7 +472,7 @@ void Master::papOnlineProbe1()
 				<< "wtd=" << wtd << ", " << wtDatapoint << "\twtc=" << wtc << ", " << wtDelta << "\n"
 				<< "maxfk=" << maxfk << "\tmink=" << mink << "\tun-recv=" << net->unpicked_pkgs();
 
-			if (maxfk < 0 || fk > maxfk * toleranceFactor) {
+			if((maxfk < 0 || fk > maxfk* toleranceFactor) && net->unpicked_pkgs() < 5) {
 				maxfk = max(fk, maxfk);
 				if(globalBatchSize / 2 >= mink) {
 					globalBatchSize /= 2;
@@ -501,7 +499,7 @@ void Master::papOnlineProbe1()
 void Master::papOnlineProbe2()
 {
 	lossDeltaSum = 0;
-	const double toleranceFactor = 0.8;
+	const double toleranceFactor = 0.3;
 	double tl = tmrTrain.elapseSd();
 	double maxfk = -1;
 	bool probeReached = false;
@@ -570,7 +568,7 @@ void Master::papOnlineProbe2()
 				<< "wtd=" << wtd << ", " << wtDatapoint << "\twtc=" << wtc << ", " << wtDelta << "\n"
 				<< "maxfk=" << maxfk << "\tmink=" << mink << "\tun-recv="<< net->unpicked_pkgs();
 		
-			if (maxfk < 0 || fk > maxfk * toleranceFactor) {
+			if((maxfk < 0 || fk > maxfk* toleranceFactor) && net->unpicked_pkgs() < 5) {
 				maxfk = max(fk, maxfk);
 				if(globalBatchSize / 2 >= mink) {
 					globalBatchSize /= 2;
@@ -606,7 +604,7 @@ void Master::papOnlineProbe3()
 // sum_i L(p_i, b_i) - L(p_n, b_i)
 void Master::papOnlineProbe4()
 {
-	const double toleranceFactor = 0.8;
+	const double toleranceFactor = 0.3;
 	lossDeltaSum = 0;
 	double tl = tmrTrain.elapseSd();
 	double maxfk = -1;
@@ -673,7 +671,7 @@ void Master::papOnlineProbe4()
 				<< "wtd=" << wtd << ", " << wtDatapoint << "\twtc=" << wtc << ", " << wtDelta << "\n"
 				<< "maxfk=" << maxfk << "\tmink=" << mink << "\tun-recv=" << net->unpicked_pkgs();
 
-			if(maxfk < 0 || fk > maxfk * toleranceFactor) {
+			if((maxfk < 0 || fk > maxfk * toleranceFactor) && net->unpicked_pkgs() < 5) {
 				maxfk = max(fk, maxfk);
 				if(globalBatchSize / 2 >= mink) {
 					globalBatchSize /= 2;
@@ -780,7 +778,7 @@ void Master::papOnlineProbeBenchmark()
 				<< "wtd=" << wtd << ", " << wtDatapoint << "\twtc=" << wtc << ", " << wtDelta << "\n"
 				<< "maxfk=" << maxfk << "\tmink=" << mink << "\tun-recv=" << net->unpicked_pkgs();
 
-			if (maxfk < 0 || fk > maxfk * toleranceFactor) {
+			if((maxfk < 0 || fk > maxfk* toleranceFactor) && net->unpicked_pkgs() < 5) {
 				maxfk = max(fk, maxfk);
 				if(globalBatchSize / 2 >= mink) {
 					globalBatchSize /= 2;
