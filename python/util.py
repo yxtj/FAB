@@ -22,7 +22,7 @@ def genFL(pre, l, post=''):
 
 
 def whenReachValue(fn, value, est=True, ver=1):
-    x, v, _, _ = myio.loadScore(fn, None)
+    x, v, _, _ = myio.loadScore(fn, None, ver)
     # find the first index where v[p]<=value
     p=np.argmax(v<=value)
     if p==0 and v[0]>value: # failed
