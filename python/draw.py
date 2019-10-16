@@ -141,26 +141,47 @@ def drawListCmp(prefix, mList1, mList2, mList3=None, n=None, ncol=1, ver=1,
 
 
 # bar chart
-def drawSpeedUp(prefix, fList, refFile, value, est=False, width=0.9, ncol=1,
-                ver=1, xtick=None, xlbl=None):
-    # TODO: not finished
-    if not isinstance(fList, list) or len(fList) == 0:
-        return
-    refV=util.whenReachValue(prefix+refFile)
-    if isinstance(fList[0], list):
-        points=np.array([util.whenReachValue(prefix+fn, value, est, ver) for fn in fList])
-    else:
-        points=np.array([util.whenReachValue(prefix+fn, value, est, ver) for fn in fList])
-    
-    y=points/refV
-    x=np.arange(len(fList))
+def drawConvergeTime(prefix, fLists, value, refFiles=None, nameList=None, groupList=None,
+                     est=False, width=0.8, ncol=1, ver=1, xlbl=None):
+    assert isinstance(fLists, list) or isinstance(fLists, np.array)
+    assert refFiles == None or isinstance(refFiles, list) or isinstance(refFiles, str)
+    if not isinstance(fLists[0], list):
+        fLists=[fLists]
+    # fLists is [ [a1, b1, c1], [a2, b2, c2] ]
+    data=[]
+    for fl in fLists:
+        points=[util.whenReachValue(prefix+fn, value, est, ver) for fn in fl]
+        data.append(points)
+    data=np.array(data).transpose()
+    # group into [ [a1, a2], [b1, b2], [c1, c2] ]
+    # num-group, num-bar
+    nb, ng = data.shape
+    if refFiles:
+        if isinstance(refFiles, str):
+            refV=util.whenReachValue(prefix+refFiles, value, est, ver)
+            data/=refV
+        elif isinstance(refFiles, list):
+            refVs=[util.whenReachValue(prefix+rf, value, est, ver) for rf in refFiles]
+            refVs=np.array(refVs).reshape([nb, 1])
+            data=data/refVs
+    barWidth = width/nb
+    x = np.arange(ng)
+    off = -width/2 + barWidth/2
+    #print(ng,nb,x,off,barWidth)
+    #print(data)
     plt.figure()
-    plt.plot(y)
+    for i in range(nb):
+        y=data[i,:]
+        #print(y)
+        plt.bar(x + off + barWidth*i, y, barWidth)
+    if nameList:
+        plt.legend(nameList, ncol=ncol)
+    if groupList:
+        plt.xticks(x, groupList)
     if xlbl:
         plt.xlabel(xlbl)
-    plt.grid(True)
-    plt.legend(fList, ncol=ncol)
-    plt.ylabel('speed-up')
+    ylbl = 'speed-up' if refFiles else 'time (s)'
+    plt.ylabel(ylbl)
     plt.tight_layout()
 
 
