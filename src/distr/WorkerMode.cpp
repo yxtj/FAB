@@ -730,7 +730,9 @@ void Worker::papOnlineProbeFile()
 	double dly = getSpeedFactor();
 	clearDelta();
 	resumeTrain();
-	Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, localReportSize, false, dly);
+	size_t probeSize = static_cast<size_t>(pdh->size() * conf->probeRatio);
+	size_t left = max(probeSize, 1);
+	Trainer::DeltaResult dr = trainer->batchDelta(allowTrain, dataPointer, left, false, dly);
 	updatePointer(dr.n_scanned, dr.n_reported);
 	size_t n_used = dr.n_reported;
 	DVLOG_EVERY_N(ln, 2) << "  calculate delta with " << dr.n_scanned << " data points";
