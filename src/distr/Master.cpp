@@ -466,17 +466,17 @@ void Master::archiveProgress(const bool force)
 	}, iter, timeOffset + tmrTrain.elapseSd(), nPoint, ref(model.getParameter()));
 }
 
-size_t Master::estimateMinGlobalBatchSize(const size_t C)
+size_t Master::estimateMinGlobalBatchSize(const size_t lrs)
 {
-	// K -> global batch size, C -> global report size (a worker send a report every C/n data points)
-	// n <= C <=K
-	// K/n*wtd + C/n*wtr + wtc > n*mtu + n*mtb + C*mtr + mto
-	// K > ( n^2*(mtu + mtb) + n*C*mtr + n*(mto - wtc) - C*wtr ) / wtd
+	// K -> global batch size, C -> local report size (a worker send a report every C data points)
+	// 1 <= C <= K/n
+	// K/n*wtd + K/n/C*wtr + wtc > n*mtu + n*mtb + K/C*mtr + mto
+	// K > ( n^2*(mtu + mtb) + n*(mto - wtc) ) / ( wtd + (wtr - n*mtr)/C )
 
-	// when C=K: K > ( n^2*(mtu + mtb) + n*(mto - wtc) ) / (wtd + wtr - n * mtr)
-	// when C=n: K > ( n^2*(mtu + mtb + mtr) + n * (mto - wtc - wtr) ) / wtd
-	// when C=1: K > ( n^2*(mtu + mtb) + n*(mtr + mto - wtc) - wtr ) / wtd
-	// when C=0: K > ( n^2*(mtu + mtb) + n*(mto - wtc) ) / wtd
+	// when C=K:   K > ( n^2*(mtu + mtb) + n*(mto + mtr - wtc) - wtr ) / wtd
+	// when C=K/n: K > ( n^2*(mtu + mtb + mtr) + n*(mto - wtr - wtc) ) / wtd
+	// when C=n:   K > ( n^2*(mtu + mtb) + n*(mto - wtc) ) / ( wtd + wtr/n - mtr )
+	// when C=1:   K > ( n^2*(mtu + mtb) + n*(mto - wtc) ) / ( wtd + wtr - n*mtr )
 	double mtu = mtDeltaSum / nDelta;
 	double mtb = mtParameterSum / stat.n_par_send;
 	double mtr = mtReportSum / nReport;
@@ -486,26 +486,15 @@ size_t Master::estimateMinGlobalBatchSize(const size_t C)
 	double wtc = mean(wtDelta);
 	double wtr = mean(wtReport);
 	
-	double up;
-	double down = wtd;
-	if(C != 0){ // C is provided
-		up = nWorker * (nWorker * (mtu + mtb) + mto - wtc + C * mtr) - C * wtr;
-	} else{ // C is not provided, assume the worst case
-		down = wtd + wtr - nWorker * mtr;
-		if(down > 0.0){
-			up = nWorker * (nWorker * (mtu + mtb) + mto - wtc);
-		} else{
-			up = nWorker * (nWorker * (mtu + mtb + mtr) + mto - wtc - wtr);
-			down = wtd;
-		}
-	}
+	double up = nWorker * (nWorker * (mtu + mtb) + mto - wtc);
+	double down = wtd + (wtr - nWorker * mtr) / (lrs > 0 ? lrs : 1);
 
 	VLOG(3) << "e gbs: up=" << up << "\tdn=" << down << "\tmtu=" << mtu << "\tmtb=" 
 		<< mtb << "\tmtr=" << mtr << "\tmto=" << mto << "\twtd=" << wtd << "\twtc=" 
 		<< wtc << "\twtr=" << wtr;
 
 	size_t res = static_cast<size_t>(up / down);
-	return max(min(res, nPointTotal), nWorker);
+	return max(min<size_t>(res, nPointTotal), nWorker);
 }
 
 size_t Master::optimalGlobalBatchSize(){
@@ -577,6 +566,7 @@ size_t Master::optimalGlobalBatchSize(){
 
 size_t Master::estimateMinLocalReportSize(const size_t gbs)
 {
+	// C <= K*(wtr - n*mtr) / ( n^2 * (mtu + mtb) + n * (mto - wtc) - K*wtd)
 	double mtr = mtReportSum / nReport;
 	double mtu = mtDeltaSum / nDelta;
 	double mtb = mtParameterSum / stat.n_par_send;
@@ -586,28 +576,28 @@ size_t Master::estimateMinLocalReportSize(const size_t gbs)
 	double wtr = mean(wtReport);
 	double wtd = hmean(wtDatapoint);
 
-	double up = nWorker * (nWorker * (mtu + mtb) + mto - wtc) + gbs * wtd;
-	double down = wtr - nWorker * mtr; // very likely be negative
+	double up = gbs * (wtr - nWorker * mtr); // very likely to be negative
+	double down = nWorker * (nWorker * (mtu + mtb) + mto - wtc) - gbs * wtd;
 	size_t res = static_cast<size_t>(up / down / nWorker); // convert to local report size
-	return max(min(res, gbs / nWorker / 4), nWorker);
+	return max(min<size_t>(res, gbs / nWorker), static_cast<size_t>(1));
 }
 
 double Master::estimateTimeIteration()
 {
-	// K/n * wtc + C/n * wtr + wtc
+	// K/n * wtc + K/n/C * wtr + wtc
 	double wtc = mean(wtDelta);
 	double wtr = mean(wtReport);
 	double wtd = hmean(wtDatapoint);
-	return globalBatchSize / nWorker * wtd + localReportSize * wtr + wtc;
+	return globalBatchSize / nWorker * wtd + globalBatchSize / nWorker / localReportSize * wtr + wtc;
 }
 
 double Master::estimateTimeEpoch()
 {
-	// N/n * wtd + N/n*C/K * wtr + N/K * wtc
+	// N/n * wtd + N/n/C * wtr + N/K * wtc
 	double wtc = mean(wtDelta);
 	double wtr = mean(wtReport);
 	double wtd = hmean(wtDatapoint);
-	return nPoint * (wtd / nWorker + localReportSize / globalBatchSize * wtr + wtc / globalBatchSize);
+	return nPointTotal * (wtd / nWorker + wtr / nWorker / localReportSize + wtc / globalBatchSize);
 }
 
 void Master::updateOnlineLoss(const int source, const double loss)

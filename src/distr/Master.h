@@ -85,7 +85,7 @@ private:
 	bool needArchive();
 	void archiveProgress(const bool force = false);
 
-	size_t estimateMinGlobalBatchSize(const size_t grs = 0); // if grs is 0, estimate with worst case
+	size_t estimateMinGlobalBatchSize(const size_t lrs = 1);
 	size_t optimalGlobalBatchSize(); // compute opt k from f(k)
 	size_t estimateMinLocalReportSize(const size_t gbs);
 	double estimateTimeIteration();
