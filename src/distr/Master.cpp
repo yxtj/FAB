@@ -589,7 +589,7 @@ size_t Master::estimateMinLocalReportSize(const size_t gbs)
 	double up = nWorker * (nWorker * (mtu + mtb) + mto - wtc) + gbs * wtd;
 	double down = wtr - nWorker * mtr; // very likely be negative
 	size_t res = static_cast<size_t>(up / down / nWorker); // convert to local report size
-	return max(res, nWorker);
+	return max(min(res, gbs / nWorker / 4), nWorker);
 }
 
 double Master::estimateTimeIteration()
