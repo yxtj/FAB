@@ -18,6 +18,10 @@ imp.reload(myio)
 ####
 
 def genFL(pre, l, post=''):
+    if isinstance(pre, list) and isinstance(l, str) and post == '':
+        post=l
+        l=pre
+        pre=''
     return [str(pre)+str(i)+post for i in l]
 
 
