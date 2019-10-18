@@ -376,7 +376,7 @@ void Master::papProcess()
 			size_t egbs = estimateMinGlobalBatchSize();
 			size_t old_gbs = globalBatchSize;
 			globalBatchSize = max(ogbs, egbs);
-			size_t olrs = globalBatchSize / nWorker / 4;
+			size_t olrs = globalBatchSize / nWorker / nWorker;
 			size_t elrs = estimateMinLocalReportSize(globalBatchSize);
 			size_t old_lrs = localReportSize;
 			localReportSize = max(olrs, elrs);
