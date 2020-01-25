@@ -16,6 +16,15 @@ from util import genFL
 #os.chdir('E:/Code/FSB/score/lr/10-100k/1000-0.1')
 #os.chdir('E:/Code/FSB/score/mlp/10,15,1-100k/1000-0.1')
 
+def set_small_figure():
+    plt.rcParams["figure.figsize"] = [4,3]
+    plt.rcParams["font.size"]=12
+
+
+def set_large_figure():
+    plt.rcParams["figure.figsize"] = [6,4.5]
+    plt.rcParams["font.size"] = 16
+
 __lineStyles__ = ["-","--","-.",":"]
 
 def drawOne(fn, n=None, ver=0, xlbl=None, ylbl=None, ls='-', smooth=False, smNum=100):
@@ -183,6 +192,7 @@ def drawConvergeTime(prefix, fLists, value, refFiles=None, nameList=None, groupL
     ylbl = 'speed-up' if refFiles else 'time (s)'
     plt.ylabel(ylbl)
     plt.tight_layout()
+    return data
 
 
 def drawScale(prefix, l_nw, nameList, value, speedup=False, ref=False,

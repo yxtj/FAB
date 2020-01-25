@@ -14,6 +14,9 @@ plt.rcParams["figure.figsize"] = [4,3]
 plt.rcParams["font.size"]=12
 plt.rcParams["font.size"]=14
 
+plt.rcParams["figure.figsize"] = [6,4.5]
+plt.rcParams["font.size"] = 16
+
 ln=[1,2,4,8,12,16,20,24]
 ln2=[4,8,12,16,20,24]
 lmode=['bsp','tap','aap']
