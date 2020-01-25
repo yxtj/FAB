@@ -92,6 +92,9 @@ def drawDistribution(data, nbins, noTrailingZero=False, cumulative=True, lgd=Non
     plt.grid(True)
     if lgd is not None:
         plt.legend(lgd)
+    plt.xlabel('priority')
+    plt.ylabel('probatility' if cumulative else 'density')
+    plt.tight_layout()
     plt.show()
 
 
@@ -101,7 +104,7 @@ def drawContribution(data, nbins, cumulative=True, lgd=None):
     n, m = data.shape # n->iter, m->point
     assert(n<m)
     x = np.arange(0, nbins+1)/nbins*100
-    bins = np.linspace(0, n-1, nbins+1, dtype=int)
+    bins = np.linspace(0, m-1, nbins+1, dtype=int)
     s = np.cumsum(np.sort(data.T, 0), 0)[bins, :] # n->point, m->iter
     s[0,:] = 0
     plt.figure()
@@ -116,30 +119,55 @@ def drawContribution(data, nbins, cumulative=True, lgd=None):
     if lgd is not None:
         plt.legend(lgd)
     plt.xlabel('percentile (%)')
-    plt.ylabel('contribution (%)')
+    plt.ylabel('contribution (%)' if cumulative else 'contribution rate')
     plt.tight_layout()
     plt.show()
 
 
 # select some iterations
-def drawContributionOfTop(data, topPoints, ncol=1):
+def drawContributionOfTop(data, topPoints, xOnIter=True, iterList=None,
+                          width=0.8, ncol=1):
+    '''
+    If xOnIter is true, x is iteration, bar is top-ratio
+    If xOnIter is false, x is top-ratio, bar is iteration
+    '''
     assert(data.ndim == 2)
     n, m = data.shape # n->iter, m->point
     assert(n<m)
+    assert(iterList is None or n == len(iterList))
     bins=np.array((1-np.array(topPoints))*m, dtype=int)
+    nbin=len(bins)
     data=np.sort(data.T, 0) # n->point, m->iter
     s=data.sum(0)
+    y=np.zeros([nbin, n])
+    for i in range(nbin):
+        b=bins[i]
+        y[i,:]=data[b:,:].sum(0)/s
     plt.figure()
-    for b in bins:
-        y=data[b:,:].sum(0)/s
-        plt.plot(y*100)
-    plt.grid(True)
-    plt.legend(['top-'+str(t*100)+'%' for t in topPoints], ncol=ncol)
-    plt.xlabel('iteration')
+    if xOnIter:
+        x=np.arange(n)
+        w0=width/nbin
+        offset=-width/2+w0/2
+        for i in range(nbin):
+            plt.bar(x+offset+w0*i, y[i,:]*100, w0)
+        plt.xlabel('iteration')
+        if iterList is not None:
+            plt.xticks(x, iterList)
+        plt.legend(['top-%g%%'%(round(v*100,1)) for v in topPoints], ncol=ncol)
+    else:
+        x=np.arange(nbin)
+        w0=width/n
+        offset=-width/2+w0/2
+        for i in range(n):
+            plt.bar(x+offset+w0*i, y[:,i]*100, w0)
+        plt.xlabel('top ratio (%)')
+        plt.xticks(x, [str(round(v*100,1)) for v in topPoints])
+        if iterList is not None:
+            plt.legend(['iter-%d'%v for v in iterList], ncol=ncol)
+    #plt.grid(True)
     plt.ylabel('contribution (%)')
     plt.tight_layout()
     plt.show()
-
 
 # select some iterations
 def drawDeltaLoss(data, nbins, lgd=None):
