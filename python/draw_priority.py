@@ -377,4 +377,5 @@ def fitLogPriority(data, interval, deg=2, dynamic=True):
 #r=np.random.randint(0,60000,10)
 #r=np.array([ 9372,  3584, 40396, 34916,  3171, 13232, 31886,  3578, 25493, 29979])
 #drawPriorityDecayTrend(pmlp2[:,r],False)
+#plt.legend([('data-%d'%i) for i in r[:5]])
 #drawPriorityDecayTrend(pmlp2[:,r],True)

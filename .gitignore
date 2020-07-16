@@ -107,3 +107,10 @@ conf/
 /bin
 log
 *.log
+
+/archive*/
+/score/
+/ec2/
+/grad/
+/figure/
+/dbg/

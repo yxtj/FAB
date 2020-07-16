@@ -146,3 +146,18 @@ mpirun -n $((i+1)) src/main/main -m $m -a $ALG -p $PARAM --dataset mnist -d $DAT
 src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$fn.csv --dataset mnist -d $DATA_TEST -b -o $SCRDIR/$fn.txt $DO_ACCURACY -w 6;
 
 
+# heterogeneous
+p=1
+--speed_hetero 3:$p:20,3:$((2*p)):40,3:$((4*p))
+for xdh in 1v3:1:5,3:2:10,3:3:15,3:4:20,3:5:25,3:6:30,3:7:35,3:8 2v0-3:2:5-10,0-3:3:15-20,0-3:1:25-30,0-3:5:35-40,0-3:2:45-50; do
+x=$(echo $xdh | sed 's/v.*//'); dh=$(echo $xdh | sed 's/.*v//'); echo $x;
+fn=$m-$i-dh$x; echo $fn - $(date);
+mpirun -n $((i+1)) src/main/main --probe_ratio 0.01 -m $m -a $ALG -p $PARAM -d $DATA_TRAIN -r $RESDIR/$fn.csv -y $YLIST -o gd:$lr -s $bs -b --report_size $((bs/i/4)) --term_iter 10k --term_time 120 --arch_iter 10 --arch_time $ARVTIME --log_iter 100 --speed_hetero $dh --v=2 > $LOGDIR/$fn; killall main;
+src/main/postprocess -a $ALG -p $PARAM -r $RESDIR/$fn.csv -d $DATA_TEST -y $YLIST -b -o $SCRDIR/$fn.txt $DO_ACCURACY -w 6;
+done
+
+
+# k-means
+YLIST=-1 # default
+SKIP=-1
+mpirun -n $((i+1)) src/main/main --probe_ratio 0.01 -m $m -a $ALG -p $PARAM -d $DATA_TRAIN -r $RESDIR/$fn.csv --skip $SKIP -o 'kmeans' -s $bs --report_size $((bs/i/4)) --term_iter 10k --term_time 60 --arch_iter 100 --arch_time $ARVTIME --log_iter 100 --v=2 > $LOGDIR/$fn;
