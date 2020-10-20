@@ -16,14 +16,15 @@ from util import genFL
 #os.chdir('E:/Code/FSB/score/lr/10-100k/1000-0.1')
 #os.chdir('E:/Code/FSB/score/mlp/10,15,1-100k/1000-0.1')
 
-def set_small_figure():
+def set_small_figure(fontsize=12):
     plt.rcParams["figure.figsize"] = [4,3]
-    plt.rcParams["font.size"]=12
+    plt.rcParams["font.size"] = fontsize
 
 
-def set_large_figure():
+def set_large_figure(fontsize=16):
     plt.rcParams["figure.figsize"] = [6,4.5]
-    plt.rcParams["font.size"] = 16
+    plt.rcParams["font.size"] = fontsize
+
 
 __lineStyles__ = ["-","--","-.",":"]
 
